@@ -45,7 +45,7 @@ const C = {
 const s = StyleSheet.create({
   page: {
     padding: 0,
-    fontSize: 9.5,
+    fontSize: 10.5,
     fontFamily: "Montserrat",
     color: C.dark,
     backgroundColor: C.white,
@@ -74,7 +74,7 @@ const s = StyleSheet.create({
     color: C.dark,
   },
   businessDetail: {
-    fontSize: 8.5,
+    fontSize: 9.5,
     color: C.mid,
     marginTop: 2,
     lineHeight: 1.5,
@@ -94,13 +94,13 @@ const s = StyleSheet.create({
     letterSpacing: 3,
   },
   invoiceMeta: {
-    fontSize: 9,
+    fontSize: 9.5,
     color: C.mid,
     textAlign: "right",
     marginTop: 2,
   },
   invoiceNumber: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: "Montserrat",
     fontWeight: 700,
     color: C.dark,
@@ -124,8 +124,8 @@ const s = StyleSheet.create({
   infoRow: {
     flexDirection: "row",
     paddingHorizontal: 48,
-    paddingTop: 24,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
     gap: 32,
   },
   infoCard: {
@@ -144,14 +144,14 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   infoName: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontFamily: "Montserrat",
     fontWeight: 700,
     color: C.dark,
     marginBottom: 3,
   },
   infoDetail: {
-    fontSize: 8.5,
+    fontSize: 9.5,
     color: C.mid,
     lineHeight: 1.5,
   },
@@ -172,14 +172,14 @@ const s = StyleSheet.create({
   tableHeadText: {
     fontFamily: "Montserrat",
     fontWeight: 700,
-    fontSize: 7.5,
+    fontSize: 8.5,
     color: C.white,
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 9,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderColor: C.faint,
@@ -191,14 +191,14 @@ const s = StyleSheet.create({
   cellQty: { flex: 1, textAlign: "right" },
   cellAmt: { flex: 1.5, textAlign: "right" },
   cellTot: { flex: 1.5, textAlign: "right" },
-  cellText: { fontSize: 9.5, color: C.dark },
-  cellTextBold: { fontSize: 9.5, fontFamily: "Montserrat",
+  cellText: { fontSize: 10.5, color: C.dark },
+  cellTextBold: { fontSize: 10.5, fontFamily: "Montserrat",
     fontWeight: 700, color: C.dark },
 
   /* ── totals ── */
   totalsContainer: {
     paddingHorizontal: 48,
-    marginTop: 12,
+    marginTop: 8,
     alignItems: "flex-end",
   },
   totalsBox: {
@@ -219,17 +219,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: 4,
   },
-  totalLabel: { fontSize: 9, color: C.mid },
-  totalValue: { fontSize: 9, color: C.dark },
+  totalLabel: { fontSize: 10, color: C.mid },
+  totalValue: { fontSize: 10, color: C.dark },
   totalLabelFinal: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontFamily: "Montserrat",
     fontWeight: 700,
     color: C.white,
     letterSpacing: 1,
   },
   totalValueFinal: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: "Montserrat",
     fontWeight: 700,
     color: C.white,
@@ -239,7 +239,7 @@ const s = StyleSheet.create({
   paymentSection: {
     flexDirection: "row",
     paddingHorizontal: 48,
-    marginTop: 28,
+    marginTop: 18,
     gap: 20,
   },
   paymentInfo: {
@@ -258,12 +258,12 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   paymentText: {
-    fontSize: 8.5,
+    fontSize: 9.5,
     color: C.mid,
     lineHeight: 1.6,
   },
   paymentHighlight: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: "Montserrat",
     fontWeight: 700,
     color: C.dark,
@@ -273,7 +273,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: C.highlight,
     borderRadius: 6,
-    padding: 16,
+    padding: 14,
     width: 150,
   },
   qr: { width: 105, height: 105, borderRadius: 4 },
@@ -285,7 +285,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   qrAmount: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontFamily: "Montserrat",
     fontWeight: 700,
     color: C.dark,
@@ -354,8 +354,8 @@ export default function InvoicePdf({
               <Image
                 src={logo}
                 style={{
-                  height: 72,
-                  width: 220,
+                  height: 88,
+                  width: 260,
                   objectFit: "contain",
                   objectPosition: "left center",
                   marginBottom: 8,
