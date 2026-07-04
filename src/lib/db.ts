@@ -73,6 +73,8 @@ export async function setPaid(id: string, paid: boolean): Promise<void> {
   }).eq("id", id).select().single());
 }
 
-export async function deleteInvoice(id: string): Promise<void> {
-  ok(await db().from("invoices").delete().eq("id", id).select());
+/** Deletes an invoice. If it held the most recently issued number, the
+ *  sequence rewinds so that number is reused. Returns true when rewound. */
+export async function deleteInvoice(id: string): Promise<boolean> {
+  return ok(await db().rpc("delete_invoice_rewind", { inv_id: id }));
 }

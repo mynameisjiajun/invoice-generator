@@ -155,6 +155,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
               <div key={k}>
                 <label className="input-label">{k[0].toUpperCase() + k.slice(1)}</label>
                 <input className="input" placeholder={k[0].toUpperCase() + k.slice(1)}
+                  type={k === "phone" ? "tel" : k === "email" ? "email" : "text"}
+                  autoComplete={k === "phone" ? "tel" : k === "email" ? "email" : k === "name" ? "name" : "street-address"}
                   value={f.newCustomer![k]}
                   onChange={(e) => set({ newCustomer: { ...f.newCustomer!, [k]: e.target.value } })} />
               </div>
@@ -306,7 +308,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       )}
 
       {editingFinalized ? (
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="action-bar">
           <button onClick={() => router.push(`/invoices/${f.invoiceId}`)} disabled={busy !== ""}
             className="btn btn-secondary" style={{ flex: 1 }}>
             Cancel
@@ -318,7 +320,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="action-bar">
           <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
             {busy === "draft" ? "Saving…" : "Save Draft"}
           </button>

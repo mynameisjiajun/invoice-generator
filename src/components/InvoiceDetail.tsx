@@ -117,7 +117,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     const inv = invoice!;
     const msg = inv.status === "draft"
       ? "Delete this draft?"
-      : `Delete invoice ${inv.invoice_number}?\n\nThis can't be undone, and the number ${inv.invoice_number} won't be reused.`;
+      : `Delete invoice ${inv.invoice_number}?\n\nThis can't be undone. If it's your most recent invoice, its number will be reused for the next one.`;
     if (!confirm(msg)) return;
     try {
       await deleteInvoice(inv.id);

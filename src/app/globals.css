@@ -520,3 +520,52 @@ textarea.input {
 .transition-all {
   transition: all 0.2s ease;
 }
+
+/* ── UX polish pass ── */
+
+/* 16px inputs stop iOS Safari zooming on focus */
+.input { font-size: 1rem; }
+
+/* Comfortable touch targets + pointer on all button variants */
+.btn-ghost,
+.btn-danger {
+  cursor: pointer;
+  border: none;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Visible keyboard focus */
+.btn:focus-visible,
+.btn-ghost:focus-visible,
+.btn-danger:focus-visible,
+.nav-link:focus-visible,
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* iPhone notch / home-indicator safe areas (PWA standalone) */
+.nav { padding-top: calc(8px + env(safe-area-inset-top)); }
+.page-container { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+
+/* Sticky action bar: primary buttons stay reachable on long forms */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg-primary) 70%, transparent);
+  display: flex;
+  gap: 10px;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
