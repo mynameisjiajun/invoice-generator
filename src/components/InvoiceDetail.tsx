@@ -36,6 +36,23 @@ export default function InvoiceDetail({ id }: { id: string }) {
     </div>
   );
 
+  async function fetchLogo(): Promise<string | null> {
+    try {
+      const res = await fetch("/logo.png");
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      if (!blob.type.startsWith("image/")) return null;
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async function generatePdfBlob(): Promise<{ blob: Blob; filename: string }> {
     const inv = invoice!; const st = settings!;
     const payload = paynowPayload({
@@ -44,10 +61,10 @@ export default function InvoiceDetail({ id }: { id: string }) {
       reference: inv.invoice_number ?? "",
       merchantName: st.payee_name.toUpperCase(),
     });
-    const qr = await qrDataUrl(payload);
+    const [qr, logo] = await Promise.all([qrDataUrl(payload), fetchLogo()]);
     const { pdf } = await import("@react-pdf/renderer");
     const { default: InvoicePdf } = await import("@/components/InvoicePdf");
-    const blob = await pdf(<InvoicePdf invoice={inv} settings={st} qr={qr} />).toBlob();
+    const blob = await pdf(<InvoicePdf invoice={inv} settings={st} qr={qr} logo={logo} />).toBlob();
     const filename = `Invoice ${inv.invoice_number ?? "DRAFT"}.pdf`;
     return { blob, filename };
   }

@@ -16,3 +16,4 @@ Task 9: complete (commits 38aa493..0cfb9e4, review clean)
 Task 10: complete (commits 0cfb9e4..493d861 incl. fix). Invoice detail page with client-side PDF + PayNow QR. Real-device QR scan pending human verification.
 Task 11: complete (commit 21828d1, review clean). Stats page with yearly/monthly/client breakdowns. 3 new tests, 21 total passing.
 Task 12: complete (commit 7d178bf, review clean). PWA manifest, icons, layout metadata + viewport. Build verified. Vercel deploy pending user action.
+Post-plan (2026-07-04): Antigravity/Opus completed Tasks 11-12 externally + UI polish pass (checkpointed b8f1fcd). Claude fixed: CSS @import order build error (Inter now via next/font), stale dev server on :3000 was serving broken build. Added: delete any invoice, edit finalized invoice (keeps number, no localStorage autosave), paid toggle + delete on detail page (9b6f8be). Full Playwright E2E passed. Pending: Vercel deploy (user auth), real-device PayNow QR scan.

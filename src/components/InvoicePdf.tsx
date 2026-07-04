@@ -281,8 +281,8 @@ const s = StyleSheet.create({
   },
 });
 
-export default function InvoicePdf({ invoice, settings, qr }: {
-  invoice: Invoice; settings: Settings; qr: string;
+export default function InvoicePdf({ invoice, settings, qr, logo }: {
+  invoice: Invoice; settings: Settings; qr: string; logo?: string | null;
 }) {
   const sub = invoice.subtotal_cents;
   const disc = discountCents(sub, invoice.discount_type, invoice.discount_value);
@@ -296,7 +296,14 @@ export default function InvoicePdf({ invoice, settings, qr }: {
         {/* ── header ── */}
         <View style={s.header}>
           <View>
-            <Text style={s.businessName}>{settings.business_name.toUpperCase()}</Text>
+            {logo ? (
+              <Image
+                src={logo}
+                style={{ height: 48, width: 170, objectFit: "contain", objectPosition: "left center", marginBottom: 6 }}
+              />
+            ) : (
+              <Text style={s.businessName}>{settings.business_name.toUpperCase()}</Text>
+            )}
             <Text style={s.businessDetail}>{settings.address}</Text>
             <Text style={s.businessDetail}>{settings.phone}  ·  {settings.email}</Text>
           </View>
@@ -306,6 +313,9 @@ export default function InvoicePdf({ invoice, settings, qr }: {
             </View>
             <Text style={s.invoiceNumber}>{invoice.invoice_number ?? "DRAFT"}</Text>
             <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
+            {invoice.customer_id != null && (
+              <Text style={s.invoiceMeta}>Customer ID: {invoice.customer_id}</Text>
+            )}
           </View>
         </View>
 
@@ -361,7 +371,7 @@ export default function InvoicePdf({ invoice, settings, qr }: {
                   <Text style={s.totalLabel}>
                     Discount{invoice.discount_type === "percent" ? ` (${invoice.discount_value}%)` : ""}
                   </Text>
-                  <Text style={[s.totalValue, { color: "#D14343" }]}>−{formatSGD(disc)}</Text>
+                  <Text style={[s.totalValue, { color: "#D14343" }]}>-{formatSGD(disc)}</Text>
                 </View>
               </>
             )}
@@ -401,7 +411,7 @@ export default function InvoicePdf({ invoice, settings, qr }: {
         <View style={s.footer} fixed>
           <View style={s.footerBar}>
             <Text style={s.footerText}>THANK YOU FOR YOUR BUSINESS</Text>
-            <Text style={s.footerDot}>●</Text>
+            <Text style={s.footerDot}>·</Text>
             <Text style={s.footerText}>{settings.business_name.toUpperCase()}</Text>
           </View>
         </View>
