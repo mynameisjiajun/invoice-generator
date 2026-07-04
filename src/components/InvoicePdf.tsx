@@ -10,21 +10,18 @@ import {
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import type { Invoice, Settings } from "@/lib/types";
 
-/* Montserrat (Proxima Nova-style geometric sans). Files live in public/fonts;
-   the browser fetches them from the site root, the pdf-preview script (node)
-   reads them from the filesystem. */
-const fontSrc = (file: string) =>
-  typeof window === "undefined"
-    ? `${process.cwd()}/public/fonts/${file}`
-    : `/fonts/${file}`;
-
+/* Montserrat (Proxima Nova-style geometric sans), served from public/fonts.
+   This file is bundled for the browser (dynamically imported by
+   InvoiceDetail), so it must only ever reference browser-safe URLs — no
+   Node APIs like process.cwd() here. The node-only pdf-preview script
+   re-registers this family with filesystem paths before rendering. */
 Font.register({
   family: "Montserrat",
   fonts: [
-    { src: fontSrc("Montserrat-Regular.ttf"), fontWeight: 400 },
-    { src: fontSrc("Montserrat-SemiBold.ttf"), fontWeight: 600 },
-    { src: fontSrc("Montserrat-Bold.ttf"), fontWeight: 700 },
-    { src: fontSrc("Montserrat-ExtraBold.ttf"), fontWeight: 800 },
+    { src: "/fonts/Montserrat-Regular.ttf", fontWeight: 400 },
+    { src: "/fonts/Montserrat-SemiBold.ttf", fontWeight: 600 },
+    { src: "/fonts/Montserrat-Bold.ttf", fontWeight: 700 },
+    { src: "/fonts/Montserrat-ExtraBold.ttf", fontWeight: 800 },
   ],
 });
 

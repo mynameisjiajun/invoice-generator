@@ -1,11 +1,30 @@
 // Dev-only: render a sample invoice PDF to inspect the design.
 // Run: npx tsx scripts/pdf-preview.tsx <output.pdf>
 import React from "react";
-import { renderToFile } from "@react-pdf/renderer";
+import path from "path";
+import { renderToFile, Font } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import InvoicePdf from "../src/components/InvoicePdf";
 import { paynowPayload } from "../src/lib/paynow";
 import type { Invoice, Settings } from "../src/lib/types";
+
+// InvoicePdf.tsx registers Montserrat with browser paths (/fonts/...) since
+// it's bundled for the client; that registration already ran when the
+// import above was evaluated. Font.register is additive per-family (it
+// pushes sources, doesn't replace them), so drop just the Montserrat entry
+// before re-registering it with real file paths — Font.clear() would also
+// wipe react-pdf's built-in Helvetica/Times/Courier registrations.
+delete (Font as unknown as { fontFamilies: Record<string, unknown> }).fontFamilies.Montserrat;
+const fontsDir = path.join(__dirname, "..", "public", "fonts");
+Font.register({
+  family: "Montserrat",
+  fonts: [
+    { src: path.join(fontsDir, "Montserrat-Regular.ttf"), fontWeight: 400 },
+    { src: path.join(fontsDir, "Montserrat-SemiBold.ttf"), fontWeight: 600 },
+    { src: path.join(fontsDir, "Montserrat-Bold.ttf"), fontWeight: 700 },
+    { src: path.join(fontsDir, "Montserrat-ExtraBold.ttf"), fontWeight: 800 },
+  ],
+});
 
 const settings: Settings = {
   id: 1,
