@@ -35,9 +35,9 @@ export default function InvoiceDetail({ id }: { id: string }) {
       const { pdf } = await import("@react-pdf/renderer");
       const { default: InvoicePdf } = await import("@/components/InvoicePdf");
       const blob = await pdf(<InvoicePdf invoice={inv} settings={st} qr={qr} />).toBlob();
-      const file = new File([blob], `Invoice ${inv.invoice_number}.pdf`, { type: "application/pdf" });
+      const file = new File([blob], `Invoice ${inv.invoice_number ?? "DRAFT"}.pdf`, { type: "application/pdf" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Invoice ${inv.invoice_number}` });
+        await navigator.share({ files: [file], title: `Invoice ${inv.invoice_number ?? "DRAFT"}` });
       } else {
         const url = URL.createObjectURL(blob);
         const a = Object.assign(document.createElement("a"), { href: url, download: file.name });
@@ -53,7 +53,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
   return (
     <main className="max-w-xl mx-auto p-4 space-y-4 text-sm">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{invoice.invoice_number}</h1>
+        <h1 className="text-xl font-bold">{invoice.invoice_number ?? "Draft"}</h1>
         <span className="text-gray-500">{invoice.status.toUpperCase()}</span>
       </div>
       <div className="border rounded-xl p-4 space-y-1">

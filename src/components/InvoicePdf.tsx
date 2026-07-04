@@ -23,7 +23,7 @@ export default function InvoicePdf({ invoice, settings, qr }: {
   const sub = invoice.subtotal_cents;
   const disc = discountCents(sub, invoice.discount_type, invoice.discount_value);
   return (
-    <Document title={`Invoice ${invoice.invoice_number}`}>
+    <Document title={`Invoice ${invoice.invoice_number ?? "DRAFT"}`}>
       <Page size="A4" style={s.page}>
         <View style={[s.row, { justifyContent: "space-between", marginBottom: 24 }]}>
           <View>
