@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSettings, saveSettings, listPresets, createPreset, deletePreset } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import type { Preset, Settings } from "@/lib/types";
@@ -19,32 +19,74 @@ export default function SettingsPage() {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [saved, setSaved] = useState(false);
   const [np, setNp] = useState({ name: "", description: "", price: "", qty: "1" });
+  const [error, setError] = useState<string | null>(null);
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    getSettings().then(setSettings);
-    listPresets().then(setPresets);
+    getSettings().then(setSettings).catch((e) => setError(e instanceof Error ? e.message : "Failed to load settings"));
+    listPresets().then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
   }, []);
 
-  if (!settings) return <p className="p-6">Loading…</p>;
+  useEffect(() => {
+    return () => {
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
+    };
+  }, []);
+
+  if (!settings) return <p className="p-6">{error ? <span className="text-red-600">{error}</span> : "Loading…"}</p>;
 
   async function onSave() {
-    await saveSettings(settings!);
-    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    try {
+      await saveSettings(settings!);
+      setSaved(true);
+      setError(null);
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
+      savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save settings");
+    }
   }
 
   async function onAddPreset() {
-    const p = await createPreset({
-      name: np.name, description: np.description,
-      unit_price_cents: Math.round(parseFloat(np.price || "0") * 100),
-      default_qty: parseFloat(np.qty || "1"),
-    });
-    setPresets([...presets, p]);
-    setNp({ name: "", description: "", price: "", qty: "1" });
+    const price = parseFloat(np.price || "0");
+    const qty = parseFloat(np.qty || "1");
+    if (Number.isNaN(price) || price < 0) {
+      setError("Unit price must be a valid non-negative number");
+      return;
+    }
+    if (Number.isNaN(qty) || qty <= 0) {
+      setError("Quantity must be a valid positive number");
+      return;
+    }
+    try {
+      const p = await createPreset({
+        name: np.name, description: np.description,
+        unit_price_cents: Math.round(price * 100),
+        default_qty: qty,
+      });
+      setPresets([...presets, p]);
+      setNp({ name: "", description: "", price: "", qty: "1" });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add preset");
+    }
+  }
+
+  async function onDeletePreset(p: Preset) {
+    if (!confirm(`Delete preset "${p.name}"?`)) return;
+    try {
+      await deletePreset(p.id);
+      setPresets(presets.filter((x) => x.id !== p.id));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete preset");
+    }
   }
 
   return (
     <main className="max-w-xl mx-auto p-4 space-y-6">
       <h1 className="text-xl font-bold">Settings</h1>
+      {error && <p className="text-red-600 text-sm">{error}</p>}
       <section className="space-y-3">
         {FIELDS.map(({ key, label }) => (
           <label key={key} className="block text-sm">
@@ -68,7 +110,7 @@ export default function SettingsPage() {
               <div className="text-gray-500">{p.description}</div>
             </div>
             <div>{formatSGD(p.unit_price_cents)}</div>
-            <button onClick={async () => { await deletePreset(p.id); setPresets(presets.filter(x => x.id !== p.id)); }}
+            <button onClick={() => onDeletePreset(p)}
               className="text-red-600 px-2">Delete</button>
           </div>
         ))}
