@@ -4,6 +4,9 @@ import Link from "next/link";
 import { deleteInvoice, listInvoices, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { isOverdue, type Invoice } from "@/lib/types";
+import FocusFrame from "@/components/FocusFrame";
+import OnboardingBanner from "@/components/OnboardingBanner";
+import { IconCamera, IconCheck, IconCopy, IconEdit, IconSearch, IconTrash, IconUndo } from "@/components/icons";
 
 export default function Dashboard() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
@@ -80,36 +83,45 @@ export default function Dashboard() {
       <h1 className="page-title">Invoices</h1>
       <p className="page-subtitle">Manage your invoices and track payments</p>
 
+      <OnboardingBanner />
+
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
-        <div className="stat-card">
-          <div className="stat-value">{formatSGD(outstanding)}</div>
+        <div className="stat-card stat-card--money">
+          <div className="stat-value money">{formatSGD(outstanding)}</div>
           <div className="stat-label">Outstanding</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-card--warning">
           <div className="stat-value">{unpaidCount}</div>
           <div className="stat-label">Unpaid</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-card--success">
           <div className="stat-value">{paidCount}</div>
           <div className="stat-label">Collected</div>
         </div>
       </div>
 
       {invoices.length > 3 && (
-        <input
-          className="input"
-          type="search"
-          placeholder="Search by client, event, or invoice no."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ marginBottom: 16 }}
-        />
+        <div style={{ position: "relative", marginBottom: 16 }}>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", pointerEvents: "none", display: "flex" }}>
+            <IconSearch size={16} />
+          </span>
+          <input
+            className="input"
+            type="search"
+            placeholder="Search by client, event, or invoice no."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{ paddingLeft: 38 }}
+          />
+        </div>
       )}
 
       {invoices.length === 0 && (
         <div className="empty-state">
-          <div className="empty-state-icon">📄</div>
+          <FocusFrame color="accent">
+            <div className="empty-state-icon"><IconCamera size={28} /></div>
+          </FocusFrame>
           <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>No invoices yet</p>
           <p style={{ marginBottom: 20 }}>Create your first invoice to get started.</p>
           <Link href="/invoices/new" className="btn btn-accent">Create invoice</Link>
@@ -140,26 +152,27 @@ export default function Dashboard() {
                   {inv.issue_date}
                 </div>
               </Link>
-              <div style={{ fontWeight: 800, fontSize: "1.05rem", whiteSpace: "nowrap" }}>
+              <div className="money" style={{ fontWeight: 800, fontSize: "1.05rem", whiteSpace: "nowrap" }}>
                 {formatSGD(inv.total_cents)}
               </div>
             </div>
             <div style={{ display: "flex", gap: 4, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
               {inv.status !== "draft" && (
-                <button onClick={() => togglePaid(inv)} className="btn-ghost">
-                  {inv.status === "paid" ? "Undo paid" : "✓ Mark paid"}
+                <button onClick={() => togglePaid(inv)} className="btn-ghost icon-btn">
+                  {inv.status === "paid" ? <IconUndo /> : <IconCheck />}
+                  {inv.status === "paid" ? "Undo paid" : "Mark paid"}
                 </button>
               )}
               {inv.status !== "paid" && (
-                <Link href={`/invoices/new?draft=${inv.id}`} className="btn-ghost" style={{ textDecoration: "none" }}>
-                  Edit
+                <Link href={`/invoices/new?draft=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
+                  <IconEdit /> Edit
                 </Link>
               )}
-              <Link href={`/invoices/new?duplicate=${inv.id}`} className="btn-ghost" style={{ textDecoration: "none" }}>
-                Duplicate
+              <Link href={`/invoices/new?duplicate=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
+                <IconCopy /> Duplicate
               </Link>
-              <button onClick={() => removeInvoice(inv)} className="btn-danger" style={{ marginLeft: "auto" }}>
-                Delete
+              <button onClick={() => removeInvoice(inv)} className="btn-danger icon-btn" style={{ marginLeft: "auto" }}>
+                <IconTrash /> Delete
               </button>
             </div>
           </div>

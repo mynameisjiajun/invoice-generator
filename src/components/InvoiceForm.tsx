@@ -7,6 +7,7 @@ import {
 import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib/formStorage";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import type { Customer, Preset } from "@/lib/types";
+import { IconClose } from "@/components/icons";
 
 export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: string; draftId?: string }) {
   const router = useRouter();
@@ -239,12 +240,14 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
                     onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, unitPriceCents: Math.round((parseFloat(e.target.value) || 0) * 100) } : x) })} />
                 </div>
                 <div style={{ textAlign: "right", minWidth: 80, paddingTop: 20 }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  <span className="money" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
                     {formatSGD(Math.round(li.qty * li.unitPriceCents))}
                   </span>
                 </div>
-                <button className="btn-danger" style={{ marginTop: 16 }}
-                  onClick={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })}>✕</button>
+                <button className="btn-danger" style={{ marginTop: 16 }} aria-label="Remove line"
+                  onClick={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })}>
+                  <IconClose size={14} />
+                </button>
               </div>
             </div>
           ))}
@@ -279,7 +282,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       <div className="totals-section" style={{ marginBottom: 20 }}>
         <div className="total-row">
           <span>Subtotal</span>
-          <span style={{ fontWeight: 600 }}>{formatSGD(totals.sub)}</span>
+          <span className="money" style={{ fontWeight: 600 }}>{formatSGD(totals.sub)}</span>
         </div>
         {totals.disc > 0 && (
           <div className="total-row">

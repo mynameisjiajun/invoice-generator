@@ -2,12 +2,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { IconAdd, IconCamera, IconChart, IconSettings, IconSignOut } from "@/components/icons";
 
 const links = [
-  { href: "/", label: "Invoices", icon: "📄" },
-  { href: "/invoices/new", label: "New", icon: "✚" },
-  { href: "/stats", label: "Stats", icon: "📊" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
+  { href: "/", label: "Invoices", Icon: IconCamera },
+  { href: "/invoices/new", label: "New", Icon: IconAdd },
+  { href: "/stats", label: "Stats", Icon: IconChart },
+  { href: "/settings", label: "Settings", Icon: IconSettings },
 ];
 
 export default function NavBar() {
@@ -23,17 +24,23 @@ export default function NavBar() {
 
   return (
     <nav className="nav">
+      <span className="nav-brand">
+        <IconCamera size={18} />
+        <span className="hidden sm:inline">JJ Visuals</span>
+      </span>
       {links.map((l) => {
         const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
         return (
-          <Link key={l.href} href={l.href}
-            className={`nav-link ${active ? "nav-link-active" : ""}`}>
-            {l.label}
+          <Link key={l.href} href={l.href} aria-label={l.label}
+            className={`nav-link icon-btn ${active ? "nav-link-active" : ""}`}>
+            <l.Icon size={15} />
+            <span className="hidden sm:inline">{l.label}</span>
           </Link>
         );
       })}
-      <button onClick={signOut} className="btn-ghost ml-auto">
-        Sign out
+      <button onClick={signOut} className="btn-ghost icon-btn ml-auto" aria-label="Sign out">
+        <IconSignOut size={16} />
+        <span className="hidden sm:inline">Sign out</span>
       </button>
     </nav>
   );

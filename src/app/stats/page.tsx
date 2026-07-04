@@ -4,6 +4,7 @@ import { listInvoices } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { clientStats, monthlyStats, yearlyStats } from "@/lib/stats";
 import type { Invoice } from "@/lib/types";
+import { IconFileExport } from "@/components/icons";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -62,22 +63,22 @@ export default function StatsPage() {
           <h1 className="page-title">Stats</h1>
           <p className="page-subtitle">Revenue overview and analytics</p>
         </div>
-        <button onClick={exportCsv} className="btn btn-secondary" style={{ padding: "8px 14px", fontSize: "0.8rem" }}>
-          Export CSV
+        <button onClick={exportCsv} className="btn btn-secondary icon-btn" style={{ padding: "8px 14px", fontSize: "0.8rem" }}>
+          <IconFileExport size={15} /> Export CSV
         </button>
       </div>
 
       {/* Summary stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
-        <div className="stat-card">
+        <div className="stat-card stat-card--warning">
           <div className="stat-value" style={{ color: "var(--warning)" }}>{formatSGD(outstanding)}</div>
           <div className="stat-label">Outstanding</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">{formatSGD(totalInvoiced)}</div>
+        <div className="stat-card stat-card--money">
+          <div className="stat-value money">{formatSGD(totalInvoiced)}</div>
           <div className="stat-label">Invoiced</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-card--success">
           <div className="stat-value" style={{ color: "var(--success)" }}>{formatSGD(totalCollected)}</div>
           <div className="stat-label">Collected</div>
         </div>
@@ -144,7 +145,7 @@ export default function StatsPage() {
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{c.name}</span>
-                <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>{formatSGD(c.invoicedCents)}</span>
+                <span className="money" style={{ fontWeight: 700, fontSize: "0.9rem" }}>{formatSGD(c.invoicedCents)}</span>
               </div>
               <div style={{
                 height: 4,

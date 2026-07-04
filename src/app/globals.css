@@ -25,6 +25,11 @@
   --info: #0984E3;
   --info-bg: #E8F4FD;
 
+  /* Warm "light-meter gold" — reserved for money figures only, so amounts
+     always carry the same visual weight wherever they appear. */
+  --money: #B8862E;
+  --money-bg: #FBF3E4;
+
   --shadow-sm: 0 1px 2px rgba(26, 26, 46, 0.04);
   --shadow-md: 0 4px 12px rgba(26, 26, 46, 0.06);
   --shadow-lg: 0 8px 24px rgba(26, 26, 46, 0.08);
@@ -67,6 +72,9 @@
     --warning-bg: rgba(225, 112, 85, 0.14);
     --info: #58A9F5;
     --info-bg: rgba(9, 132, 227, 0.14);
+
+    --money: #E0AD52;
+    --money-bg: rgba(184, 134, 46, 0.16);
 
     --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.04);
     --shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -133,7 +141,7 @@ body {
 .page-container {
   max-width: 640px;
   margin: 0 auto;
-  padding: 24px 20px 100px;
+  padding: 24px 20px calc(100px + env(safe-area-inset-bottom));
   animation: fadeIn 0.3s ease-out;
 }
 
@@ -262,7 +270,7 @@ body {
   border: 1.5px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: 12px 14px;
-  font-size: 0.875rem;
+  font-size: 1rem; /* 16px stops iOS Safari auto-zoom on focus */
   color: var(--text-primary);
   background: var(--bg-surface);
   transition: all 0.2s ease;
@@ -331,18 +339,27 @@ textarea.input {
 }
 
 /* ── Stat Cards ── */
+/* Each stat gets a 3px top rule in its own semantic color — a quick,
+   color-coded read of "is this good or does it need attention" at a glance,
+   instead of three identical gray boxes. */
 .stat-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--stat-accent, var(--border-default));
   border-radius: var(--radius-lg);
   padding: 16px 20px;
   box-shadow: var(--shadow-sm);
 }
+.stat-card--money { --stat-accent: var(--money); }
+.stat-card--warning { --stat-accent: var(--warning); }
+.stat-card--success { --stat-accent: var(--success); }
+.stat-card--info { --stat-accent: var(--info); }
 
 .stat-value {
   font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
 }
 
@@ -352,6 +369,30 @@ textarea.input {
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* ── Money ── */
+/* Every dollar figure that matters (hero totals, PayNow amounts) uses this
+   warm gold so the eye learns "gold = an amount," everywhere in the app. */
+.money {
+  color: var(--money);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Icon buttons ── */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.icon-btn svg { flex-shrink: 0; }
+
+.btn-whatsapp {
+  color: #1F9E52;
+  border-color: #1F9E52 !important;
+}
+.btn-whatsapp:hover:not(:disabled) {
+  background: rgba(37, 211, 102, 0.08);
 }
 
 /* ── Bar Chart ── */
@@ -406,11 +447,24 @@ textarea.input {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 8px 12px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 6px;
+  margin-right: 4px;
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: -0.01em;
+}
+.nav-brand svg { color: var(--accent); }
 
 .nav-link {
   padding: 8px 14px;
@@ -476,10 +530,41 @@ textarea.input {
 }
 
 .empty-state-icon {
-  font-size: 3rem;
-  margin-bottom: 12px;
-  opacity: 0.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  color: var(--text-tertiary);
 }
+
+/* ── Onboarding banner ── */
+.onboarding-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-accent-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.onboarding-banner svg { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+.onboarding-dismiss {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  padding: 4px;
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.onboarding-dismiss:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
 
 /* ── Divider ── */
 .divider {
@@ -523,9 +608,6 @@ textarea.input {
 
 /* ── UX polish pass ── */
 
-/* 16px inputs stop iOS Safari zooming on focus */
-.input { font-size: 1rem; }
-
 /* Comfortable touch targets + pointer on all button variants */
 .btn-ghost,
 .btn-danger {
@@ -546,10 +628,6 @@ textarea.input {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-
-/* iPhone notch / home-indicator safe areas (PWA standalone) */
-.nav { padding-top: calc(8px + env(safe-area-inset-top)); }
-.page-container { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
 
 /* Sticky action bar: primary buttons stay reachable on long forms */
 .action-bar {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getSettings, saveSettings, listPresets, createPreset, deletePreset } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import type { Preset, Settings } from "@/lib/types";
+import { IconAdd, IconCheck, IconTrash } from "@/components/icons";
 
 const FIELDS: Array<{ key: keyof Settings; label: string }> = [
   { key: "business_name", label: "Business name" },
@@ -121,9 +122,9 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
-        <button onClick={onSave} className={`btn ${saved ? "btn-accent" : "btn-primary"}`}
+        <button onClick={onSave} className={`btn icon-btn ${saved ? "btn-accent" : "btn-primary"}`}
           style={{ marginTop: 16 }}>
-          {saved ? "✓ Saved" : "Save Settings"}
+          {saved && <IconCheck size={15} />} {saved ? "Saved" : "Save Settings"}
         </button>
       </div>
 
@@ -151,11 +152,11 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
+                <div className="money" style={{ fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
                   {formatSGD(p.unit_price_cents)}
                 </div>
-                <button onClick={() => onDeletePreset(p)} className="btn-danger">
-                  Delete
+                <button onClick={() => onDeletePreset(p)} className="btn-danger icon-btn" aria-label={`Delete preset ${p.name}`}>
+                  <IconTrash size={14} />
                 </button>
               </div>
             ))}
@@ -190,8 +191,8 @@ export default function SettingsPage() {
               </div>
             </div>
             <button onClick={onAddPreset} disabled={!np.name || !np.price}
-              className="btn btn-secondary" style={{ alignSelf: "flex-start" }}>
-              + Add Preset
+              className="btn btn-secondary icon-btn" style={{ alignSelf: "flex-start" }}>
+              <IconAdd size={15} /> Add Preset
             </button>
           </div>
         </div>

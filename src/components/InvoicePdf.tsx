@@ -408,6 +408,9 @@ export default function InvoicePdf({
             {invoice.customers?.email ? (
               <Text style={s.infoDetail}>{invoice.customers.email}</Text>
             ) : null}
+            {!invoice.customers?.address && !invoice.customers?.phone && !invoice.customers?.email && (
+              <Text style={[s.infoDetail, { fontStyle: "italic" }]}>No contact details on file</Text>
+            )}
           </View>
           <View style={s.infoCard}>
             <Text style={s.label}>Job Details</Text>
