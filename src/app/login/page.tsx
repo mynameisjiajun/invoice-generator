@@ -46,7 +46,7 @@ export default function LoginPage() {
             marginBottom: 16,
             boxShadow: "var(--shadow-lg)",
           }}>
-            <span style={{ color: "white", fontWeight: 800, fontSize: "1.25rem", letterSpacing: 2 }}>JJ</span>
+            <span style={{ color: "var(--text-on-accent)", fontWeight: 800, fontSize: "1.25rem", letterSpacing: 2 }}>JJ</span>
           </div>
           <h1 style={{
             fontSize: "1.5rem",

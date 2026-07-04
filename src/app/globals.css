@@ -35,6 +35,48 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 9999px;
+
+  --nav-bg: rgba(255, 255, 255, 0.85);
+
+  color-scheme: light;
+}
+
+/* ── Dark mode (follows system setting) ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0F1016;
+    --bg-surface: #171922;
+    --bg-surface-hover: #1F2230;
+    --bg-accent: #EDEDF5;
+    --bg-accent-hover: #FFFFFF;
+    --bg-accent-subtle: #262940;
+
+    --text-primary: #EDEDF5;
+    --text-secondary: #A6A6C3;
+    --text-tertiary: #6E6E8C;
+    --text-on-accent: #14151E;
+
+    --border-default: rgba(255, 255, 255, 0.12);
+    --border-subtle: rgba(255, 255, 255, 0.07);
+
+    --accent: #8A7BFF;
+    --accent-hover: #9C8FFF;
+    --success: #2BD9A9;
+    --success-bg: rgba(0, 184, 148, 0.14);
+    --warning: #FF8A70;
+    --warning-bg: rgba(225, 112, 85, 0.14);
+    --info: #58A9F5;
+    --info-bg: rgba(9, 132, 227, 0.14);
+
+    --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+
+    --nav-bg: rgba(15, 16, 22, 0.85);
+
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
@@ -360,7 +402,7 @@ textarea.input {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--nav-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);

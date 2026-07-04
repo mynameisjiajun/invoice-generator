@@ -1,6 +1,35 @@
-import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  Image,
+  StyleSheet,
+  Font,
+} from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import type { Invoice, Settings } from "@/lib/types";
+
+/* Montserrat (Proxima Nova-style geometric sans). Files live in public/fonts;
+   the browser fetches them from the site root, the pdf-preview script (node)
+   reads them from the filesystem. */
+const fontSrc = (file: string) =>
+  typeof window === "undefined"
+    ? `${process.cwd()}/public/fonts/${file}`
+    : `/fonts/${file}`;
+
+Font.register({
+  family: "Montserrat",
+  fonts: [
+    { src: fontSrc("Montserrat-Regular.ttf"), fontWeight: 400 },
+    { src: fontSrc("Montserrat-SemiBold.ttf"), fontWeight: 600 },
+    { src: fontSrc("Montserrat-Bold.ttf"), fontWeight: 700 },
+    { src: fontSrc("Montserrat-ExtraBold.ttf"), fontWeight: 800 },
+  ],
+});
+
+// Keep names/addresses whole — no hyphenation
+Font.registerHyphenationCallback((word) => [word]);
 
 /* ── colour palette ─────────────────────────────────── */
 const C = {
@@ -20,7 +49,7 @@ const s = StyleSheet.create({
   page: {
     padding: 0,
     fontSize: 9.5,
-    fontFamily: "Helvetica",
+    fontFamily: "Montserrat",
     color: C.dark,
     backgroundColor: C.white,
   },
@@ -42,7 +71,8 @@ const s = StyleSheet.create({
   },
   businessName: {
     fontSize: 22,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     letterSpacing: 3,
     color: C.dark,
   },
@@ -62,7 +92,8 @@ const s = StyleSheet.create({
   invoiceBadgeText: {
     color: C.white,
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     letterSpacing: 3,
   },
   invoiceMeta: {
@@ -73,7 +104,8 @@ const s = StyleSheet.create({
   },
   invoiceNumber: {
     fontSize: 13,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.dark,
     textAlign: "right",
     marginTop: 4,
@@ -107,7 +139,8 @@ const s = StyleSheet.create({
   },
   label: {
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.light,
     textTransform: "uppercase",
     letterSpacing: 1.5,
@@ -115,7 +148,8 @@ const s = StyleSheet.create({
   },
   infoName: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.dark,
     marginBottom: 3,
   },
@@ -139,7 +173,8 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   tableHeadText: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     fontSize: 7.5,
     color: C.white,
     textTransform: "uppercase",
@@ -160,7 +195,8 @@ const s = StyleSheet.create({
   cellAmt: { flex: 1.5, textAlign: "right" },
   cellTot: { flex: 1.5, textAlign: "right" },
   cellText: { fontSize: 9.5, color: C.dark },
-  cellTextBold: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: C.dark },
+  cellTextBold: { fontSize: 9.5, fontFamily: "Montserrat",
+    fontWeight: 700, color: C.dark },
 
   /* ── totals ── */
   totalsContainer: {
@@ -190,13 +226,15 @@ const s = StyleSheet.create({
   totalValue: { fontSize: 9, color: C.dark },
   totalLabelFinal: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.white,
     letterSpacing: 1,
   },
   totalValueFinal: {
     fontSize: 13,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.white,
   },
 
@@ -215,7 +253,8 @@ const s = StyleSheet.create({
   },
   paymentLabel: {
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.light,
     textTransform: "uppercase",
     letterSpacing: 1.5,
@@ -228,7 +267,8 @@ const s = StyleSheet.create({
   },
   paymentHighlight: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.dark,
   },
   qrContainer: {
@@ -249,7 +289,8 @@ const s = StyleSheet.create({
   },
   qrAmount: {
     fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: C.dark,
     marginTop: 2,
     textAlign: "center",
@@ -281,11 +322,23 @@ const s = StyleSheet.create({
   },
 });
 
-export default function InvoicePdf({ invoice, settings, qr, logo }: {
-  invoice: Invoice; settings: Settings; qr: string; logo?: string | null;
+export default function InvoicePdf({
+  invoice,
+  settings,
+  qr,
+  logo,
+}: {
+  invoice: Invoice;
+  settings: Settings;
+  qr: string;
+  logo?: string | null;
 }) {
   const sub = invoice.subtotal_cents;
-  const disc = discountCents(sub, invoice.discount_type, invoice.discount_value);
+  const disc = discountCents(
+    sub,
+    invoice.discount_type,
+    invoice.discount_value,
+  );
 
   return (
     <Document title={`Invoice ${invoice.invoice_number ?? "DRAFT"}`}>
@@ -299,22 +352,36 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
             {logo ? (
               <Image
                 src={logo}
-                style={{ height: 56, width: 170, objectFit: "contain", objectPosition: "left center", marginBottom: 8 }}
+                style={{
+                  height: 72,
+                  width: 220,
+                  objectFit: "contain",
+                  objectPosition: "left center",
+                  marginBottom: 8,
+                }}
               />
             ) : (
-              <Text style={s.businessName}>{settings.business_name.toUpperCase()}</Text>
+              <Text style={s.businessName}>
+                {settings.business_name.toUpperCase()}
+              </Text>
             )}
             <Text style={s.businessDetail}>{settings.address}</Text>
-            <Text style={s.businessDetail}>{settings.phone}  ·  {settings.email}</Text>
+            <Text style={s.businessDetail}>
+              {settings.phone} · {settings.email}
+            </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <View style={s.invoiceBadge}>
               <Text style={s.invoiceBadgeText}>INVOICE</Text>
             </View>
-            <Text style={s.invoiceNumber}>{invoice.invoice_number ?? "DRAFT"}</Text>
+            <Text style={s.invoiceNumber}>
+              {invoice.invoice_number ?? "DRAFT"}
+            </Text>
             <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
             {invoice.customer_id != null && (
-              <Text style={s.invoiceMeta}>Customer ID: {invoice.customer_id}</Text>
+              <Text style={s.invoiceMeta}>
+                Customer ID: {invoice.customer_id}
+              </Text>
             )}
           </View>
         </View>
@@ -326,15 +393,25 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
           <View style={s.infoCard}>
             <Text style={s.label}>Bill To</Text>
             <Text style={s.infoName}>{invoice.customers?.name}</Text>
-            {invoice.customers?.address ? <Text style={s.infoDetail}>{invoice.customers.address}</Text> : null}
-            {invoice.customers?.phone ? <Text style={s.infoDetail}>{invoice.customers.phone}</Text> : null}
-            {invoice.customers?.email ? <Text style={s.infoDetail}>{invoice.customers.email}</Text> : null}
+            {invoice.customers?.address ? (
+              <Text style={s.infoDetail}>{invoice.customers.address}</Text>
+            ) : null}
+            {invoice.customers?.phone ? (
+              <Text style={s.infoDetail}>{invoice.customers.phone}</Text>
+            ) : null}
+            {invoice.customers?.email ? (
+              <Text style={s.infoDetail}>{invoice.customers.email}</Text>
+            ) : null}
           </View>
           <View style={s.infoCard}>
             <Text style={s.label}>Job Details</Text>
             <Text style={s.infoName}>{invoice.job_event}</Text>
-            {invoice.job_date ? <Text style={s.infoDetail}>{invoice.job_date}</Text> : null}
-            {invoice.job_location ? <Text style={s.infoDetail}>{invoice.job_location}</Text> : null}
+            {invoice.job_date ? (
+              <Text style={s.infoDetail}>{invoice.job_date}</Text>
+            ) : null}
+            {invoice.job_location ? (
+              <Text style={s.infoDetail}>{invoice.job_location}</Text>
+            ) : null}
             <Text style={[s.label, { marginTop: 10 }]}>Payment Terms</Text>
             <Text style={s.infoDetail}>{settings.payment_terms}</Text>
           </View>
@@ -349,11 +426,18 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
             <Text style={[s.tableHeadText, s.cellTot]}>Amount</Text>
           </View>
           {invoice.line_items.map((li, i) => (
-            <View key={i} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
+            <View
+              key={i}
+              style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
+            >
               <Text style={[s.cellText, s.cellDesc]}>{li.description}</Text>
               <Text style={[s.cellText, s.cellQty]}>{li.qty}</Text>
-              <Text style={[s.cellText, s.cellAmt]}>{formatSGD(li.unitPriceCents)}</Text>
-              <Text style={[s.cellTextBold, s.cellTot]}>{formatSGD(lineTotalCents(li))}</Text>
+              <Text style={[s.cellText, s.cellAmt]}>
+                {formatSGD(li.unitPriceCents)}
+              </Text>
+              <Text style={[s.cellTextBold, s.cellTot]}>
+                {formatSGD(lineTotalCents(li))}
+              </Text>
             </View>
           ))}
         </View>
@@ -369,15 +453,22 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
                 </View>
                 <View style={s.totalRow}>
                   <Text style={s.totalLabel}>
-                    Discount{invoice.discount_type === "percent" ? ` (${invoice.discount_value}%)` : ""}
+                    Discount
+                    {invoice.discount_type === "percent"
+                      ? ` (${invoice.discount_value}%)`
+                      : ""}
                   </Text>
-                  <Text style={[s.totalValue, { color: "#D14343" }]}>-{formatSGD(disc)}</Text>
+                  <Text style={[s.totalValue, { color: "#D14343" }]}>
+                    -{formatSGD(disc)}
+                  </Text>
                 </View>
               </>
             )}
             <View style={s.totalRowFinal}>
               <Text style={s.totalLabelFinal}>TOTAL DUE</Text>
-              <Text style={s.totalValueFinal}>{formatSGD(invoice.total_cents)}</Text>
+              <Text style={s.totalValueFinal}>
+                {formatSGD(invoice.total_cents)}
+              </Text>
             </View>
           </View>
         </View>
@@ -392,7 +483,8 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
               <Text style={s.paymentHighlight}>{settings.paynow_number}</Text>
             </Text>
             <Text style={[s.paymentText, { marginTop: 4 }]}>
-              Reference: <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
+              Reference:{" "}
+              <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
             </Text>
             <Text style={[s.paymentText, { marginTop: 8 }]}>
               Cheques crossed, payable to{" "}
@@ -412,7 +504,9 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
           <View style={s.footerBar}>
             <Text style={s.footerText}>THANK YOU FOR YOUR BUSINESS</Text>
             <Text style={s.footerDot}>·</Text>
-            <Text style={s.footerText}>{settings.business_name.toUpperCase()}</Text>
+            <Text style={s.footerText}>
+              {settings.business_name.toUpperCase()}
+            </Text>
           </View>
         </View>
       </Page>
