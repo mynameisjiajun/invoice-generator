@@ -299,7 +299,7 @@ export default function InvoicePdf({ invoice, settings, qr, logo }: {
             {logo ? (
               <Image
                 src={logo}
-                style={{ height: 48, width: 170, objectFit: "contain", objectPosition: "left center", marginBottom: 6 }}
+                style={{ height: 56, width: 170, objectFit: "contain", objectPosition: "left center", marginBottom: 8 }}
               />
             ) : (
               <Text style={s.businessName}>{settings.business_name.toUpperCase()}</Text>

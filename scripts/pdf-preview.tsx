@@ -63,7 +63,7 @@ async function main() {
   });
   const qr = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 512 });
   let logo: string | null = null;
-  const logoPath = new URL("../public/logo.png", import.meta.url).pathname;
+  const logoPath = decodeURIComponent(new URL("../public/logo.png", import.meta.url).pathname);
   const fs = await import("fs");
   if (fs.existsSync(logoPath)) {
     logo = `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
