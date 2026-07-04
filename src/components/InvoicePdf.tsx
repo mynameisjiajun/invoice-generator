@@ -327,11 +327,13 @@ export default function InvoicePdf({
   settings,
   qr,
   logo,
+  variant = "invoice",
 }: {
   invoice: Invoice;
   settings: Settings;
   qr: string;
   logo?: string | null;
+  variant?: "invoice" | "receipt";
 }) {
   const sub = invoice.subtotal_cents;
   const disc = discountCents(
@@ -339,9 +341,11 @@ export default function InvoicePdf({
     invoice.discount_type,
     invoice.discount_value,
   );
+  const isReceipt = variant === "receipt";
+  const docWord = isReceipt ? "Receipt" : "Invoice";
 
   return (
-    <Document title={`Invoice ${invoice.invoice_number ?? "DRAFT"}`}>
+    <Document title={`${docWord} ${invoice.invoice_number ?? "DRAFT"}`}>
       <Page size="A4" style={s.page}>
         {/* ── top accent bar ── */}
         <View style={s.topBar} />
@@ -371,13 +375,18 @@ export default function InvoicePdf({
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <View style={s.invoiceBadge}>
-              <Text style={s.invoiceBadgeText}>INVOICE</Text>
+            <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: "#0B7A5C" } : {}]}>
+              <Text style={s.invoiceBadgeText}>{isReceipt ? "RECEIPT" : "INVOICE"}</Text>
             </View>
             <Text style={s.invoiceNumber}>
               {invoice.invoice_number ?? "DRAFT"}
             </Text>
             <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
+            {isReceipt && invoice.paid_date && (
+              <Text style={[s.invoiceMeta, { color: "#0B7A5C", fontWeight: 700 }]}>
+                Paid {invoice.paid_date}
+              </Text>
+            )}
             {invoice.customer_id != null && (
               <Text style={s.invoiceMeta}>
                 Customer ID: {invoice.customer_id}
@@ -464,8 +473,8 @@ export default function InvoicePdf({
                 </View>
               </>
             )}
-            <View style={s.totalRowFinal}>
-              <Text style={s.totalLabelFinal}>TOTAL DUE</Text>
+            <View style={[s.totalRowFinal, isReceipt ? { backgroundColor: "#0B7A5C" } : {}]}>
+              <Text style={s.totalLabelFinal}>{isReceipt ? "TOTAL PAID" : "TOTAL DUE"}</Text>
               <Text style={s.totalValueFinal}>
                 {formatSGD(invoice.total_cents)}
               </Text>
@@ -473,7 +482,24 @@ export default function InvoicePdf({
           </View>
         </View>
 
-        {/* ── payment info + QR ── */}
+        {/* ── payment info + QR (invoice) / confirmation (receipt) ── */}
+        {isReceipt ? (
+          <View style={s.paymentSection}>
+            <View style={[s.paymentInfo, { backgroundColor: "#E8FBF5" }]}>
+              <Text style={[s.paymentLabel, { color: "#0B7A5C" }]}>Payment Received</Text>
+              <Text style={s.paymentText}>
+                Payment of{" "}
+                <Text style={s.paymentHighlight}>{formatSGD(invoice.total_cents)}</Text>
+                {" "}for invoice{" "}
+                <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
+                {invoice.paid_date ? ` was received on ${invoice.paid_date}.` : " has been received."}
+              </Text>
+              <Text style={[s.paymentText, { marginTop: 6 }]}>
+                No further payment is due. Thank you!
+              </Text>
+            </View>
+          </View>
+        ) : (
         <View style={s.paymentSection}>
           <View style={s.paymentInfo}>
             <Text style={s.paymentLabel}>Payment Information</Text>
@@ -498,6 +524,7 @@ export default function InvoicePdf({
             <Text style={s.qrAmount}>{formatSGD(invoice.total_cents)}</Text>
           </View>
         </View>
+        )}
 
         {/* ── footer ── */}
         <View style={s.footer} fixed>

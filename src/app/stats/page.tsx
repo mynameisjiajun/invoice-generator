@@ -29,10 +29,43 @@ export default function StatsPage() {
   const totalInvoiced = years.reduce((s, y) => s + y.invoicedCents, 0);
   const totalCollected = years.reduce((s, y) => s + y.collectedCents, 0);
 
+  function exportCsv() {
+    const esc = (v: string | number | null | undefined) => {
+      const str = String(v ?? "");
+      return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+    const rows = [
+      ["Invoice No", "Status", "Issue Date", "Paid Date", "Customer", "Event", "Location",
+       "Subtotal (SGD)", "Discount Type", "Discount Value", "Total (SGD)"],
+      ...invoices!.map((i) => [
+        i.invoice_number ?? "DRAFT", i.status, i.issue_date, i.paid_date ?? "",
+        i.customers?.name ?? "", i.job_event, i.job_location,
+        (i.subtotal_cents / 100).toFixed(2), i.discount_type, i.discount_value,
+        (i.total_cents / 100).toFixed(2),
+      ]),
+    ];
+    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), {
+      href: url,
+      download: `jj-visuals-invoices-${new Date().toISOString().slice(0, 10)}.csv`,
+    });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <main className="page-container animate-fade-in">
-      <h1 className="page-title">Stats</h1>
-      <p className="page-subtitle">Revenue overview and analytics</p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <h1 className="page-title">Stats</h1>
+          <p className="page-subtitle">Revenue overview and analytics</p>
+        </div>
+        <button onClick={exportCsv} className="btn btn-secondary" style={{ padding: "8px 14px", fontSize: "0.8rem" }}>
+          Export CSV
+        </button>
+      </div>
 
       {/* Summary stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>

@@ -8,6 +8,7 @@ import { isOverdue, type Invoice } from "@/lib/types";
 export default function Dashboard() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     listInvoices()
@@ -95,6 +96,17 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {invoices.length > 3 && (
+        <input
+          className="input"
+          type="search"
+          placeholder="Search by client, event, or invoice no."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {invoices.length === 0 && (
         <div className="empty-state">
           <div className="empty-state-icon">📄</div>
@@ -105,7 +117,12 @@ export default function Dashboard() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {invoices.map((inv, idx) => (
+        {invoices.filter((inv) => {
+          const q = query.trim().toLowerCase();
+          if (!q) return true;
+          return [inv.customers?.name, inv.job_event, inv.invoice_number]
+            .some((v) => v?.toLowerCase().includes(q));
+        }).map((inv, idx) => (
           <div key={inv.id} className="card animate-fade-in" style={{ animationDelay: `${idx * 0.03}s` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Link href={inv.status === "draft" ? `/invoices/new?draft=${inv.id}` : `/invoices/${inv.id}`}

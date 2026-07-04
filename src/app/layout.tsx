@@ -23,6 +23,10 @@ export const metadata: Metadata = {
   title: "JJ Visuals Invoices",
   description: "Invoice generator for JJ Visuals",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Invoices" },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {

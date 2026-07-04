@@ -68,7 +68,11 @@ async function main() {
   if (fs.existsSync(logoPath)) {
     logo = `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
   }
-  await renderToFile(<InvoicePdf invoice={invoice} settings={settings} qr={qr} logo={logo} />, out);
+  const variant = (process.argv[3] as "invoice" | "receipt") ?? "invoice";
+  const inv = variant === "receipt"
+    ? { ...invoice, status: "paid" as const, paid_date: "2026-07-04" }
+    : invoice;
+  await renderToFile(<InvoicePdf invoice={inv} settings={settings} qr={qr} logo={logo} variant={variant} />, out);
   console.log("wrote", out, logo ? "(with logo)" : "(no logo yet)");
 }
 
