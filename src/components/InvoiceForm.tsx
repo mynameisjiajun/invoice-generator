@@ -15,6 +15,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   const [presets, setPresets] = useState<Preset[]>([]);
   const [busy, setBusy] = useState<"" | "draft" | "final">("");
   const [error, setError] = useState<string | null>(null);
+  const [loadedStatus, setLoadedStatus] = useState<"draft" | "unpaid" | "paid">("draft");
+  const [loadedNumber, setLoadedNumber] = useState<string | null>(null);
 
   useEffect(() => {
     listCustomers().then(setCustomers).catch((e) => setError(e instanceof Error ? e.message : "Failed to load customers"));
@@ -22,6 +24,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     (async () => {
       if (draftId) {
         const inv = await getInvoice(draftId);
+        setLoadedStatus(inv.status);
+        setLoadedNumber(inv.invoice_number);
         setForm({
           invoiceId: inv.id, issueDate: inv.issue_date, customerId: inv.customer_id,
           newCustomer: null, jobEvent: inv.job_event, jobDate: inv.job_date,
@@ -42,7 +46,9 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     })().catch((e) => setError(e instanceof Error ? e.message : "Failed to load invoice"));
   }, [draftId, duplicateId]);
 
-  useEffect(() => { if (form) storeForm(form); }, [form]);
+  // Autosave to localStorage — but never for finalized invoices being edited,
+  // so a finalized edit can't resurface later as a stray "new invoice" form.
+  useEffect(() => { if (form && loadedStatus === "draft") storeForm(form); }, [form, loadedStatus]);
 
   const totals = useMemo(() => {
     if (!form) return { sub: 0, disc: 0, total: 0 };
@@ -106,10 +112,29 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     }
   }
 
+  async function onSaveChanges() {
+    setBusy("final"); setError(null);
+    try {
+      const id = await persistDraft();
+      router.push(`/invoices/${id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save changes");
+      setBusy("");
+    }
+  }
+
+  const editingFinalized = loadedStatus !== "draft";
+
   return (
     <main className="page-container animate-fade-in">
-      <h1 className="page-title">{f.invoiceId ? "Edit Draft" : "New Invoice"}</h1>
-      <p className="page-subtitle">Fill in the details below</p>
+      <h1 className="page-title">
+        {editingFinalized ? `Edit ${loadedNumber}` : f.invoiceId ? "Edit Draft" : "New Invoice"}
+      </h1>
+      <p className="page-subtitle">
+        {editingFinalized
+          ? `Fix details on this invoice — its number (${loadedNumber}) stays the same`
+          : "Fill in the details below"}
+      </p>
 
       {/* Customer section */}
       <div className="card" style={{ marginBottom: 16 }}>
@@ -280,16 +305,30 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
-          {busy === "draft" ? "Saving…" : "Save Draft"}
-        </button>
-        <button onClick={onFinalize}
-          disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
-          className="btn btn-primary" style={{ flex: 1 }}>
-          {busy === "final" ? "Finalizing…" : "Finalize Invoice"}
-        </button>
-      </div>
+      {editingFinalized ? (
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => router.push(`/invoices/${f.invoiceId}`)} disabled={busy !== ""}
+            className="btn btn-secondary" style={{ flex: 1 }}>
+            Cancel
+          </button>
+          <button onClick={onSaveChanges}
+            disabled={busy !== "" || totals.total <= 0}
+            className="btn btn-primary" style={{ flex: 2 }}>
+            {busy === "final" ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
+            {busy === "draft" ? "Saving…" : "Save Draft"}
+          </button>
+          <button onClick={onFinalize}
+            disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
+            className="btn btn-primary" style={{ flex: 1 }}>
+            {busy === "final" ? "Finalizing…" : "Finalize Invoice"}
+          </button>
+        </div>
+      )}
     </main>
   );
 }

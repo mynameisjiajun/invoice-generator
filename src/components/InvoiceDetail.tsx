@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getInvoice, getSettings } from "@/lib/db";
+import { useRouter } from "next/navigation";
+import { deleteInvoice, getInvoice, getSettings, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { paynowPayload } from "@/lib/paynow";
 import { qrDataUrl } from "@/lib/qr";
 import type { Invoice, Settings } from "@/lib/types";
 
 export default function InvoiceDetail({ id }: { id: string }) {
+  const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,6 +85,31 @@ export default function InvoiceDetail({ id }: { id: string }) {
     setBusy(false);
   }
 
+  async function onTogglePaid() {
+    const inv = invoice!;
+    try {
+      const paid = inv.status !== "paid";
+      await setPaid(inv.id, paid);
+      setInvoice({ ...inv, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    }
+  }
+
+  async function onDelete() {
+    const inv = invoice!;
+    const msg = inv.status === "draft"
+      ? "Delete this draft?"
+      : `Delete invoice ${inv.invoice_number}?\n\nThis can't be undone, and the number ${inv.invoice_number} won't be reused.`;
+    if (!confirm(msg)) return;
+    try {
+      await deleteInvoice(inv.id);
+      router.push("/");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    }
+  }
+
   const statusBadge = invoice.status === "paid"
     ? <span className="badge badge-paid">Paid</span>
     : invoice.status === "draft"
@@ -135,11 +162,29 @@ export default function InvoiceDetail({ id }: { id: string }) {
         </button>
       </div>
 
-      <Link href={`/invoices/new?duplicate=${invoice.id}`}
-        className="btn btn-ghost"
-        style={{ display: "block", textAlign: "center", textDecoration: "none", width: "100%" }}>
-        Duplicate this invoice
-      </Link>
+      {/* Manage row */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {invoice.status !== "draft" && (
+          <button onClick={onTogglePaid} className="btn btn-ghost" style={{ flex: 1 }}>
+            {invoice.status === "paid" ? "Undo paid" : "✓ Mark paid"}
+          </button>
+        )}
+        {invoice.status !== "paid" && (
+          <Link href={`/invoices/new?draft=${invoice.id}`} className="btn btn-ghost"
+            style={{ flex: 1, textAlign: "center", textDecoration: "none" }}>
+            Edit
+          </Link>
+        )}
+        <Link href={`/invoices/new?duplicate=${invoice.id}`} className="btn btn-ghost"
+          style={{ flex: 1, textAlign: "center", textDecoration: "none" }}>
+          Duplicate
+        </Link>
+      </div>
+
+      <button onClick={onDelete} className="btn-danger"
+        style={{ display: "block", width: "100%", padding: "10px", borderRadius: "var(--radius-sm)" }}>
+        Delete invoice
+      </button>
     </main>
   );
 }

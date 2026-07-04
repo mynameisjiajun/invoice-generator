@@ -54,8 +54,11 @@ export default function Dashboard() {
     }
   }
 
-  async function removeDraft(inv: Invoice) {
-    if (!confirm("Delete this draft?")) return;
+  async function removeInvoice(inv: Invoice) {
+    const msg = inv.status === "draft"
+      ? "Delete this draft?"
+      : `Delete invoice ${inv.invoice_number}?\n\nThis can't be undone, and the number ${inv.invoice_number} won't be reused.`;
+    if (!confirm(msg)) return;
     try {
       await deleteInvoice(inv.id);
       setInvoices(invoices!.filter((i) => i.id !== inv.id));
@@ -127,17 +130,20 @@ export default function Dashboard() {
             <div style={{ display: "flex", gap: 4, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
               {inv.status !== "draft" && (
                 <button onClick={() => togglePaid(inv)} className="btn-ghost">
-                  {inv.status === "paid" ? "Mark unpaid" : "✓ Mark paid"}
+                  {inv.status === "paid" ? "Undo paid" : "✓ Mark paid"}
                 </button>
+              )}
+              {inv.status !== "paid" && (
+                <Link href={`/invoices/new?draft=${inv.id}`} className="btn-ghost" style={{ textDecoration: "none" }}>
+                  Edit
+                </Link>
               )}
               <Link href={`/invoices/new?duplicate=${inv.id}`} className="btn-ghost" style={{ textDecoration: "none" }}>
                 Duplicate
               </Link>
-              {inv.status === "draft" && (
-                <button onClick={() => removeDraft(inv)} className="btn-danger">
-                  Delete
-                </button>
-              )}
+              <button onClick={() => removeInvoice(inv)} className="btn-danger" style={{ marginLeft: "auto" }}>
+                Delete
+              </button>
             </div>
           </div>
         ))}
