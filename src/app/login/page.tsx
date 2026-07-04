@@ -22,18 +22,84 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-dvh flex items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-bold">JJ Visuals Invoices</h1>
-        <input className="w-full border rounded-lg p-3" type="email" placeholder="Email"
-               value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-        <input className="w-full border rounded-lg p-3" type="password" placeholder="Password"
-               value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        <button className="w-full rounded-lg bg-black text-white p-3 disabled:opacity-50" disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
+    <main style={{
+      minHeight: "100dvh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      background: "linear-gradient(135deg, #F8F9FC 0%, #EEEDF5 50%, #E8F4FD 100%)",
+    }}>
+      <div className="animate-slide-up" style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{
+          textAlign: "center",
+          marginBottom: 32,
+        }}>
+          <div style={{
+            width: 64,
+            height: 64,
+            borderRadius: 16,
+            background: "var(--bg-accent)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+            boxShadow: "var(--shadow-lg)",
+          }}>
+            <span style={{ color: "white", fontWeight: 800, fontSize: "1.25rem", letterSpacing: 2 }}>JJ</span>
+          </div>
+          <h1 style={{
+            fontSize: "1.5rem",
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+            color: "var(--text-primary)",
+            marginBottom: 4,
+          }}>
+            JJ Visuals
+          </h1>
+          <p style={{ color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+            Sign in to manage your invoices
+          </p>
+        </div>
+
+        <form onSubmit={onSubmit} className="card" style={{
+          padding: 28,
+          boxShadow: "var(--shadow-xl)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}>
+          <div>
+            <label className="input-label">Email</label>
+            <input className="input" type="email" placeholder="your@email.com"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              required autoComplete="email" />
+          </div>
+          <div>
+            <label className="input-label">Password</label>
+            <input className="input" type="password" placeholder="••••••••"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              required autoComplete="current-password" />
+          </div>
+
+          {error && (
+            <div style={{
+              background: "var(--warning-bg)",
+              color: "var(--warning)",
+              padding: "10px 14px",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+            }}>
+              {error}
+            </div>
+          )}
+
+          <button className="btn btn-primary" disabled={busy} style={{ width: "100%", padding: "14px 20px", marginTop: 4 }}>
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

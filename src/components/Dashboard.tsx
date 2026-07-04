@@ -18,14 +18,29 @@ export default function Dashboard() {
   }, []);
 
   if (error) {
-    return <p className="p-6 text-red-600">Error: {error}</p>;
+    return (
+      <div className="page-container">
+        <div className="card" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
+          <p style={{ color: "var(--warning)", fontWeight: 600 }}>Error: {error}</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!invoices) return <p className="p-6">Loading…</p>;
+  if (!invoices) return (
+    <div className="page-container">
+      <div className="card animate-pulse-soft" style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--text-tertiary)" }}>Loading invoices…</p>
+      </div>
+    </div>
+  );
 
   const outstanding = invoices
     .filter((i) => i.status === "unpaid")
     .reduce((s, i) => s + i.total_cents, 0);
+
+  const unpaidCount = invoices.filter((i) => i.status === "unpaid").length;
+  const paidCount = invoices.filter((i) => i.status === "paid").length;
 
   async function togglePaid(inv: Invoice) {
     try {
@@ -50,49 +65,83 @@ export default function Dashboard() {
   }
 
   function badge(inv: Invoice) {
-    if (inv.status === "draft") return <span className="text-xs rounded-full bg-gray-200 px-2 py-1">Draft</span>;
-    if (inv.status === "paid") return <span className="text-xs rounded-full bg-green-100 text-green-700 px-2 py-1">Paid</span>;
-    if (isOverdue(inv)) return <span className="text-xs rounded-full bg-red-100 text-red-700 px-2 py-1">Overdue</span>;
-    return <span className="text-xs rounded-full bg-amber-100 text-amber-700 px-2 py-1">Unpaid</span>;
+    if (inv.status === "draft") return <span className="badge badge-draft">Draft</span>;
+    if (inv.status === "paid") return <span className="badge badge-paid">Paid</span>;
+    if (isOverdue(inv)) return <span className="badge badge-overdue">Overdue</span>;
+    return <span className="badge badge-unpaid">Unpaid</span>;
   }
 
   return (
-    <main className="max-w-xl mx-auto p-4 space-y-4 text-sm">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold">Invoices</h1>
-        <p className="text-gray-500">Outstanding: <span className="font-semibold text-black">{formatSGD(outstanding)}</span></p>
+    <main className="page-container">
+      <h1 className="page-title">Invoices</h1>
+      <p className="page-subtitle">Manage your invoices and track payments</p>
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+        <div className="stat-card">
+          <div className="stat-value">{formatSGD(outstanding)}</div>
+          <div className="stat-label">Outstanding</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{unpaidCount}</div>
+          <div className="stat-label">Unpaid</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{paidCount}</div>
+          <div className="stat-label">Collected</div>
+        </div>
       </div>
 
       {invoices.length === 0 && (
-        <p className="text-gray-500">No invoices yet. <Link className="underline" href="/invoices/new">Create your first one.</Link></p>
+        <div className="empty-state">
+          <div className="empty-state-icon">📄</div>
+          <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>No invoices yet</p>
+          <p style={{ marginBottom: 20 }}>Create your first invoice to get started.</p>
+          <Link href="/invoices/new" className="btn btn-accent">Create invoice</Link>
+        </div>
       )}
 
-      {invoices.map((inv) => (
-        <div key={inv.id} className="border rounded-xl p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <Link href={inv.status === "draft" ? `/invoices/new?draft=${inv.id}` : `/invoices/${inv.id}`}
-              className="flex-1 min-w-0">
-              <div className="font-semibold truncate">
-                {inv.invoice_number ?? "Draft"} · {inv.customers?.name ?? "—"}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {invoices.map((inv, idx) => (
+          <div key={inv.id} className="card animate-fade-in" style={{ animationDelay: `${idx * 0.03}s` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Link href={inv.status === "draft" ? `/invoices/new?draft=${inv.id}` : `/invoices/${inv.id}`}
+                style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                    {inv.invoice_number ?? "Draft"}
+                  </span>
+                  {badge(inv)}
+                </div>
+                <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                  {inv.customers?.name ?? "—"} · {inv.job_event || "No event"}
+                </div>
+                <div style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", marginTop: 2 }}>
+                  {inv.issue_date}
+                </div>
+              </Link>
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", whiteSpace: "nowrap" }}>
+                {formatSGD(inv.total_cents)}
               </div>
-              <div className="text-gray-500 truncate">{inv.job_event || "No event"} · {inv.issue_date}</div>
-            </Link>
-            <div className="font-semibold">{formatSGD(inv.total_cents)}</div>
-            {badge(inv)}
+            </div>
+            <div style={{ display: "flex", gap: 4, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
+              {inv.status !== "draft" && (
+                <button onClick={() => togglePaid(inv)} className="btn-ghost">
+                  {inv.status === "paid" ? "Mark unpaid" : "✓ Mark paid"}
+                </button>
+              )}
+              <Link href={`/invoices/new?duplicate=${inv.id}`} className="btn-ghost" style={{ textDecoration: "none" }}>
+                Duplicate
+              </Link>
+              {inv.status === "draft" && (
+                <button onClick={() => removeDraft(inv)} className="btn-danger">
+                  Delete
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-3 text-xs text-gray-600">
-            {inv.status !== "draft" && (
-              <button onClick={() => togglePaid(inv)} className="underline">
-                {inv.status === "paid" ? "Mark unpaid" : "Mark paid"}
-              </button>
-            )}
-            <Link href={`/invoices/new?duplicate=${inv.id}`} className="underline">Duplicate</Link>
-            {inv.status === "draft" && (
-              <button onClick={() => removeDraft(inv)} className="underline text-red-600">Delete</button>
-            )}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </main>
   );
 }

@@ -9,7 +9,7 @@ const FIELDS: Array<{ key: keyof Settings; label: string }> = [
   { key: "address", label: "Address" },
   { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
-  { key: "paynow_number", label: "PayNow number (e.g. +6596561716)" },
+  { key: "paynow_number", label: "PayNow number" },
   { key: "payee_name", label: "Payee name (for cheques)" },
   { key: "bank_details", label: "Bank details" },
 ];
@@ -33,7 +33,13 @@ export default function SettingsPage() {
     };
   }, []);
 
-  if (!settings) return <p className="p-6">{error ? <span className="text-red-600">{error}</span> : "Loading…"}</p>;
+  if (!settings) return (
+    <div className="page-container">
+      <p style={{ color: error ? "var(--warning)" : "var(--text-tertiary)" }}>
+        {error || "Loading…"}
+      </p>
+    </div>
+  );
 
   async function onSave() {
     try {
@@ -84,51 +90,112 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="max-w-xl mx-auto p-4 space-y-6">
-      <h1 className="text-xl font-bold">Settings</h1>
-      {error && <p className="text-red-600 text-sm">{error}</p>}
-      <section className="space-y-3">
-        {FIELDS.map(({ key, label }) => (
-          <label key={key} className="block text-sm">
-            <span className="text-gray-500">{label}</span>
-            <input className="mt-1 w-full border rounded-lg p-2"
-              value={String(settings[key] ?? "")}
-              onChange={(e) => setSettings({ ...settings, [key]: e.target.value })} />
-          </label>
-        ))}
-        <button onClick={onSave} className="rounded-lg bg-black text-white px-4 py-2">
-          {saved ? "Saved ✓" : "Save settings"}
-        </button>
-      </section>
+    <main className="page-container animate-fade-in">
+      <h1 className="page-title">Settings</h1>
+      <p className="page-subtitle">Manage your business profile and service presets</p>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Service presets</h2>
-        {presets.map((p) => (
-          <div key={p.id} className="flex items-center gap-2 border rounded-lg p-3 text-sm">
-            <div className="flex-1">
-              <div className="font-medium">{p.name}</div>
-              <div className="text-gray-500">{p.description}</div>
-            </div>
-            <div>{formatSGD(p.unit_price_cents)}</div>
-            <button onClick={() => onDeletePreset(p)}
-              className="text-red-600 px-2">Delete</button>
-          </div>
-        ))}
-        <div className="border rounded-lg p-3 space-y-2 text-sm">
-          <input className="w-full border rounded p-2" placeholder="Name (e.g. Photo & Video, no edit)"
-            value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} />
-          <input className="w-full border rounded p-2" placeholder="Description"
-            value={np.description} onChange={(e) => setNp({ ...np, description: e.target.value })} />
-          <div className="flex gap-2">
-            <input className="flex-1 border rounded p-2" placeholder="Unit price ($)" inputMode="decimal"
-              value={np.price} onChange={(e) => setNp({ ...np, price: e.target.value })} />
-            <input className="w-24 border rounded p-2" placeholder="Qty" inputMode="decimal"
-              value={np.qty} onChange={(e) => setNp({ ...np, qty: e.target.value })} />
-          </div>
-          <button onClick={onAddPreset} disabled={!np.name || !np.price}
-            className="rounded-lg bg-black text-white px-4 py-2 disabled:opacity-50">Add preset</button>
+      {error && (
+        <div style={{
+          background: "var(--warning-bg)",
+          color: "var(--warning)",
+          padding: "10px 14px",
+          borderRadius: "var(--radius-sm)",
+          fontSize: "0.85rem",
+          fontWeight: 600,
+          marginBottom: 16,
+        }}>
+          {error}
         </div>
-      </section>
+      )}
+
+      {/* Business info */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Business Information</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {FIELDS.map(({ key, label }) => (
+            <div key={key}>
+              <label className="input-label">{label}</label>
+              <input className="input"
+                value={String(settings[key] ?? "")}
+                onChange={(e) => setSettings({ ...settings, [key]: e.target.value })} />
+            </div>
+          ))}
+        </div>
+        <button onClick={onSave} className={`btn ${saved ? "btn-accent" : "btn-primary"}`}
+          style={{ marginTop: 16 }}>
+          {saved ? "✓ Saved" : "Save Settings"}
+        </button>
+      </div>
+
+      {/* Service presets */}
+      <div className="card">
+        <div className="section-label">Service Presets</div>
+
+        {presets.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+            {presets.map((p) => (
+              <div key={p.id} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 14px",
+                borderRadius: "var(--radius-md)",
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{p.name}</div>
+                  {p.description && (
+                    <div style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 2 }}>
+                      {p.description}
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
+                  {formatSGD(p.unit_price_cents)}
+                </div>
+                <button onClick={() => onDeletePreset(p)} className="btn-danger">
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* New preset form */}
+        <div style={{
+          background: "var(--bg-primary)",
+          border: "1px dashed var(--border-default)",
+          borderRadius: "var(--radius-md)",
+          padding: 16,
+        }}>
+          <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 12 }}>
+            Add new preset
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input className="input" placeholder="Name (e.g. Photo & Video, no edit)"
+              value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} />
+            <input className="input" placeholder="Description (optional)"
+              value={np.description} onChange={(e) => setNp({ ...np, description: e.target.value })} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label className="input-label">Unit price ($)</label>
+                <input className="input" placeholder="0.00" inputMode="decimal"
+                  value={np.price} onChange={(e) => setNp({ ...np, price: e.target.value })} />
+              </div>
+              <div style={{ width: 100 }}>
+                <label className="input-label">Default qty</label>
+                <input className="input" placeholder="1" inputMode="decimal"
+                  value={np.qty} onChange={(e) => setNp({ ...np, qty: e.target.value })} />
+              </div>
+            </div>
+            <button onClick={onAddPreset} disabled={!np.name || !np.price}
+              className="btn btn-secondary" style={{ alignSelf: "flex-start" }}>
+              + Add Preset
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

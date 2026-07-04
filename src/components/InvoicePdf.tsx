@@ -2,19 +2,283 @@ import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/render
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import type { Invoice, Settings } from "@/lib/types";
 
+/* ── colour palette ─────────────────────────────────── */
+const C = {
+  black: "#0F0F0F",
+  dark: "#1A1A2E",
+  accent: "#16213E",
+  mid: "#5A5A7A",
+  light: "#9494B8",
+  faint: "#E8E8F0",
+  white: "#FFFFFF",
+  highlight: "#F7F7FB",
+  gold: "#C8A951",
+};
+
+/* ── styles ─────────────────────────────────────────── */
 const s = StyleSheet.create({
-  page: { padding: 48, fontSize: 10, fontFamily: "Helvetica", color: "#111" },
-  row: { flexDirection: "row" },
-  h1: { fontSize: 28, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
-  label: { color: "#777", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 },
-  block: { marginBottom: 16 },
-  tableHead: { flexDirection: "row", borderBottomWidth: 1, borderColor: "#111", paddingBottom: 4, marginBottom: 6 },
-  cellDesc: { flex: 5 }, cellQty: { flex: 1, textAlign: "right" },
-  cellAmt: { flex: 1.5, textAlign: "right" }, cellTot: { flex: 1.5, textAlign: "right" },
-  bold: { fontFamily: "Helvetica-Bold" },
-  totalRow: { flexDirection: "row", justifyContent: "flex-end", gap: 24, marginTop: 4 },
-  qr: { width: 110, height: 110 },
-  footer: { position: "absolute", bottom: 40, left: 48, right: 48, textAlign: "center", color: "#999", fontSize: 8 },
+  page: {
+    padding: 0,
+    fontSize: 9.5,
+    fontFamily: "Helvetica",
+    color: C.dark,
+    backgroundColor: C.white,
+  },
+
+  /* ── top accent bar ── */
+  topBar: {
+    height: 6,
+    backgroundColor: C.dark,
+  },
+
+  /* ── header area ── */
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: 48,
+    paddingTop: 36,
+    paddingBottom: 28,
+  },
+  businessName: {
+    fontSize: 22,
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 3,
+    color: C.dark,
+  },
+  businessDetail: {
+    fontSize: 8.5,
+    color: C.mid,
+    marginTop: 2,
+    lineHeight: 1.5,
+  },
+  invoiceBadge: {
+    backgroundColor: C.dark,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 3,
+    marginBottom: 8,
+  },
+  invoiceBadgeText: {
+    color: C.white,
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 3,
+  },
+  invoiceMeta: {
+    fontSize: 9,
+    color: C.mid,
+    textAlign: "right",
+    marginTop: 2,
+  },
+  invoiceNumber: {
+    fontSize: 13,
+    fontFamily: "Helvetica-Bold",
+    color: C.dark,
+    textAlign: "right",
+    marginTop: 4,
+  },
+
+  /* ── divider ── */
+  divider: {
+    height: 1,
+    backgroundColor: C.faint,
+    marginHorizontal: 48,
+  },
+  dividerAccent: {
+    height: 2,
+    backgroundColor: C.dark,
+    marginHorizontal: 48,
+  },
+
+  /* ── info cards ── */
+  infoRow: {
+    flexDirection: "row",
+    paddingHorizontal: 48,
+    paddingTop: 24,
+    paddingBottom: 20,
+    gap: 32,
+  },
+  infoCard: {
+    flex: 1,
+    backgroundColor: C.highlight,
+    borderRadius: 6,
+    padding: 14,
+  },
+  label: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: C.light,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  infoName: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: C.dark,
+    marginBottom: 3,
+  },
+  infoDetail: {
+    fontSize: 8.5,
+    color: C.mid,
+    lineHeight: 1.5,
+  },
+
+  /* ── table ── */
+  tableContainer: {
+    paddingHorizontal: 48,
+    marginTop: 8,
+  },
+  tableHead: {
+    flexDirection: "row",
+    backgroundColor: C.dark,
+    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  tableHeadText: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 7.5,
+    color: C.white,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderColor: C.faint,
+  },
+  tableRowAlt: {
+    backgroundColor: C.highlight,
+  },
+  cellDesc: { flex: 5 },
+  cellQty: { flex: 1, textAlign: "right" },
+  cellAmt: { flex: 1.5, textAlign: "right" },
+  cellTot: { flex: 1.5, textAlign: "right" },
+  cellText: { fontSize: 9.5, color: C.dark },
+  cellTextBold: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: C.dark },
+
+  /* ── totals ── */
+  totalsContainer: {
+    paddingHorizontal: 48,
+    marginTop: 12,
+    alignItems: "flex-end",
+  },
+  totalsBox: {
+    width: 220,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  totalRowFinal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: C.dark,
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  totalLabel: { fontSize: 9, color: C.mid },
+  totalValue: { fontSize: 9, color: C.dark },
+  totalLabelFinal: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: C.white,
+    letterSpacing: 1,
+  },
+  totalValueFinal: {
+    fontSize: 13,
+    fontFamily: "Helvetica-Bold",
+    color: C.white,
+  },
+
+  /* ── payment section ── */
+  paymentSection: {
+    flexDirection: "row",
+    paddingHorizontal: 48,
+    marginTop: 28,
+    gap: 20,
+  },
+  paymentInfo: {
+    flex: 1,
+    backgroundColor: C.highlight,
+    borderRadius: 6,
+    padding: 16,
+  },
+  paymentLabel: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: C.light,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  paymentText: {
+    fontSize: 8.5,
+    color: C.mid,
+    lineHeight: 1.6,
+  },
+  paymentHighlight: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: C.dark,
+  },
+  qrContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.highlight,
+    borderRadius: 6,
+    padding: 16,
+    width: 150,
+  },
+  qr: { width: 105, height: 105, borderRadius: 4 },
+  qrCaption: {
+    fontSize: 7,
+    color: C.light,
+    marginTop: 6,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  qrAmount: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: C.dark,
+    marginTop: 2,
+    textAlign: "center",
+  },
+
+  /* ── footer ── */
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  footerBar: {
+    height: 40,
+    backgroundColor: C.dark,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  footerText: {
+    fontSize: 8,
+    color: C.light,
+    letterSpacing: 2,
+  },
+  footerDot: {
+    fontSize: 8,
+    color: C.gold,
+  },
 });
 
 export default function InvoicePdf({ invoice, settings, qr }: {
@@ -22,87 +286,125 @@ export default function InvoicePdf({ invoice, settings, qr }: {
 }) {
   const sub = invoice.subtotal_cents;
   const disc = discountCents(sub, invoice.discount_type, invoice.discount_value);
+
   return (
     <Document title={`Invoice ${invoice.invoice_number ?? "DRAFT"}`}>
       <Page size="A4" style={s.page}>
-        <View style={[s.row, { justifyContent: "space-between", marginBottom: 24 }]}>
+        {/* ── top accent bar ── */}
+        <View style={s.topBar} />
+
+        {/* ── header ── */}
+        <View style={s.header}>
           <View>
-            <Text style={s.h1}>{settings.business_name.toUpperCase()}</Text>
-            <Text>{settings.address}</Text>
-            <Text>{settings.phone} · {settings.email}</Text>
+            <Text style={s.businessName}>{settings.business_name.toUpperCase()}</Text>
+            <Text style={s.businessDetail}>{settings.address}</Text>
+            <Text style={s.businessDetail}>{settings.phone}  ·  {settings.email}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={[s.bold, { fontSize: 16 }]}>INVOICE</Text>
-            <Text>No. {invoice.invoice_number}</Text>
-            <Text>Date: {invoice.issue_date}</Text>
-            {invoice.customer_id != null && <Text>Customer ID: {invoice.customer_id}</Text>}
+            <View style={s.invoiceBadge}>
+              <Text style={s.invoiceBadgeText}>INVOICE</Text>
+            </View>
+            <Text style={s.invoiceNumber}>{invoice.invoice_number ?? "DRAFT"}</Text>
+            <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
           </View>
         </View>
 
-        <View style={[s.row, { gap: 32 }, s.block]}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.label}>Bill to</Text>
-            <Text style={s.bold}>{invoice.customers?.name}</Text>
-            {invoice.customers?.address ? <Text>{invoice.customers.address}</Text> : null}
-            {invoice.customers?.phone ? <Text>{invoice.customers.phone}</Text> : null}
-            {invoice.customers?.email ? <Text>{invoice.customers.email}</Text> : null}
+        <View style={s.divider} />
+
+        {/* ── bill-to + job info cards ── */}
+        <View style={s.infoRow}>
+          <View style={s.infoCard}>
+            <Text style={s.label}>Bill To</Text>
+            <Text style={s.infoName}>{invoice.customers?.name}</Text>
+            {invoice.customers?.address ? <Text style={s.infoDetail}>{invoice.customers.address}</Text> : null}
+            {invoice.customers?.phone ? <Text style={s.infoDetail}>{invoice.customers.phone}</Text> : null}
+            {invoice.customers?.email ? <Text style={s.infoDetail}>{invoice.customers.email}</Text> : null}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.label}>Job</Text>
-            <Text style={s.bold}>{invoice.job_event}</Text>
-            {invoice.job_date ? <Text>{invoice.job_date}</Text> : null}
-            {invoice.job_location ? <Text>{invoice.job_location}</Text> : null}
-            <Text style={[s.label, { marginTop: 8 }]}>Payment terms</Text>
-            <Text>{settings.payment_terms}</Text>
+          <View style={s.infoCard}>
+            <Text style={s.label}>Job Details</Text>
+            <Text style={s.infoName}>{invoice.job_event}</Text>
+            {invoice.job_date ? <Text style={s.infoDetail}>{invoice.job_date}</Text> : null}
+            {invoice.job_location ? <Text style={s.infoDetail}>{invoice.job_location}</Text> : null}
+            <Text style={[s.label, { marginTop: 10 }]}>Payment Terms</Text>
+            <Text style={s.infoDetail}>{settings.payment_terms}</Text>
           </View>
         </View>
 
-        <View style={s.tableHead}>
-          <Text style={[s.cellDesc, s.bold]}>DESCRIPTION</Text>
-          <Text style={[s.cellQty, s.bold]}>QTY</Text>
-          <Text style={[s.cellAmt, s.bold]}>UNIT</Text>
-          <Text style={[s.cellTot, s.bold]}>TOTAL</Text>
-        </View>
-        {invoice.line_items.map((li, i) => (
-          <View key={i} style={[s.row, { marginBottom: 6 }]}>
-            <Text style={s.cellDesc}>{li.description}</Text>
-            <Text style={s.cellQty}>{li.qty}</Text>
-            <Text style={s.cellAmt}>{formatSGD(li.unitPriceCents)}</Text>
-            <Text style={s.cellTot}>{formatSGD(lineTotalCents(li))}</Text>
+        {/* ── line items table ── */}
+        <View style={s.tableContainer}>
+          <View style={s.tableHead}>
+            <Text style={[s.tableHeadText, s.cellDesc]}>Description</Text>
+            <Text style={[s.tableHeadText, s.cellQty]}>Qty</Text>
+            <Text style={[s.tableHeadText, s.cellAmt]}>Unit Price</Text>
+            <Text style={[s.tableHeadText, s.cellTot]}>Amount</Text>
           </View>
-        ))}
-
-        <View style={{ borderTopWidth: 1, borderColor: "#111", marginTop: 8, paddingTop: 8 }}>
-          {disc > 0 && (
-            <>
-              <View style={s.totalRow}><Text>Subtotal</Text><Text>{formatSGD(sub)}</Text></View>
-              <View style={s.totalRow}>
-                <Text>Discount{invoice.discount_type === "percent" ? ` (${invoice.discount_value}%)` : ""}</Text>
-                <Text>−{formatSGD(disc)}</Text>
-              </View>
-            </>
-          )}
-          <View style={s.totalRow}>
-            <Text style={[s.bold, { fontSize: 13 }]}>TOTAL DUE</Text>
-            <Text style={[s.bold, { fontSize: 13 }]}>{formatSGD(invoice.total_cents)}</Text>
-          </View>
+          {invoice.line_items.map((li, i) => (
+            <View key={i} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
+              <Text style={[s.cellText, s.cellDesc]}>{li.description}</Text>
+              <Text style={[s.cellText, s.cellQty]}>{li.qty}</Text>
+              <Text style={[s.cellText, s.cellAmt]}>{formatSGD(li.unitPriceCents)}</Text>
+              <Text style={[s.cellTextBold, s.cellTot]}>{formatSGD(lineTotalCents(li))}</Text>
+            </View>
+          ))}
         </View>
 
-        <View style={[s.row, { marginTop: 32, gap: 24 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.label}>Payment</Text>
-            <Text>Scan the QR to PayNow the exact amount, or PayNow to &quot;{settings.paynow_number}&quot;.</Text>
-            <Text>Reference: {invoice.invoice_number}</Text>
-            <Text style={{ marginTop: 6 }}>Cheques crossed, payable to &quot;{settings.payee_name}&quot;.</Text>
-            <Text>{settings.bank_details}</Text>
+        {/* ── totals ── */}
+        <View style={s.totalsContainer}>
+          <View style={s.totalsBox}>
+            {disc > 0 && (
+              <>
+                <View style={s.totalRow}>
+                  <Text style={s.totalLabel}>Subtotal</Text>
+                  <Text style={s.totalValue}>{formatSGD(sub)}</Text>
+                </View>
+                <View style={s.totalRow}>
+                  <Text style={s.totalLabel}>
+                    Discount{invoice.discount_type === "percent" ? ` (${invoice.discount_value}%)` : ""}
+                  </Text>
+                  <Text style={[s.totalValue, { color: "#D14343" }]}>−{formatSGD(disc)}</Text>
+                </View>
+              </>
+            )}
+            <View style={s.totalRowFinal}>
+              <Text style={s.totalLabelFinal}>TOTAL DUE</Text>
+              <Text style={s.totalValueFinal}>{formatSGD(invoice.total_cents)}</Text>
+            </View>
           </View>
-          <View style={{ alignItems: "center" }}>
+        </View>
+
+        {/* ── payment info + QR ── */}
+        <View style={s.paymentSection}>
+          <View style={s.paymentInfo}>
+            <Text style={s.paymentLabel}>Payment Information</Text>
+            <Text style={s.paymentText}>
+              Scan the QR code to PayNow the exact amount,{"\n"}
+              or PayNow directly to{" "}
+              <Text style={s.paymentHighlight}>{settings.paynow_number}</Text>
+            </Text>
+            <Text style={[s.paymentText, { marginTop: 4 }]}>
+              Reference: <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
+            </Text>
+            <Text style={[s.paymentText, { marginTop: 8 }]}>
+              Cheques crossed, payable to{" "}
+              <Text style={s.paymentHighlight}>{settings.payee_name}</Text>
+            </Text>
+            <Text style={s.paymentText}>{settings.bank_details}</Text>
+          </View>
+          <View style={s.qrContainer}>
             <Image style={s.qr} src={qr} />
-            <Text style={{ fontSize: 8, marginTop: 4 }}>PayNow · {formatSGD(invoice.total_cents)}</Text>
+            <Text style={s.qrCaption}>PAYNOW</Text>
+            <Text style={s.qrAmount}>{formatSGD(invoice.total_cents)}</Text>
           </View>
         </View>
 
-        <Text style={s.footer}>THANK YOU FOR YOUR BUSINESS!</Text>
+        {/* ── footer ── */}
+        <View style={s.footer} fixed>
+          <View style={s.footerBar}>
+            <Text style={s.footerText}>THANK YOU FOR YOUR BUSINESS</Text>
+            <Text style={s.footerDot}>●</Text>
+            <Text style={s.footerText}>{settings.business_name.toUpperCase()}</Text>
+          </View>
+        </View>
       </Page>
     </Document>
   );

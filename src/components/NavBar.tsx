@@ -4,10 +4,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const links = [
-  { href: "/", label: "Invoices" },
-  { href: "/invoices/new", label: "New" },
-  { href: "/stats", label: "Stats" },
-  { href: "/settings", label: "Settings" },
+  { href: "/", label: "Invoices", icon: "📄" },
+  { href: "/invoices/new", label: "New", icon: "✚" },
+  { href: "/stats", label: "Stats", icon: "📊" },
+  { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
 export default function NavBar() {
@@ -22,14 +22,17 @@ export default function NavBar() {
   }
 
   return (
-    <nav className="sticky top-0 z-10 bg-white border-b flex items-center gap-1 px-3 py-2 text-sm">
-      {links.map((l) => (
-        <Link key={l.href} href={l.href}
-          className={`px-3 py-2 rounded-lg ${pathname === l.href ? "bg-black text-white" : "hover:bg-gray-100"}`}>
-          {l.label}
-        </Link>
-      ))}
-      <button onClick={signOut} className="ml-auto px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-100">
+    <nav className="nav">
+      {links.map((l) => {
+        const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+        return (
+          <Link key={l.href} href={l.href}
+            className={`nav-link ${active ? "nav-link-active" : ""}`}>
+            {l.label}
+          </Link>
+        );
+      })}
+      <button onClick={signOut} className="btn-ghost ml-auto">
         Sign out
       </button>
     </nav>

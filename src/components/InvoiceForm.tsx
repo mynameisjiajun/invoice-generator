@@ -42,7 +42,6 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     })().catch((e) => setError(e instanceof Error ? e.message : "Failed to load invoice"));
   }, [draftId, duplicateId]);
 
-  // autosave locally on every change (not for DB drafts being resumed — those too, harmless)
   useEffect(() => { if (form) storeForm(form); }, [form]);
 
   const totals = useMemo(() => {
@@ -55,7 +54,14 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     };
   }, [form]);
 
-  if (!form) return <p className="p-6">{error ? <span className="text-red-600">{error}</span> : "Loading…"}</p>;
+  if (!form) return (
+    <div className="page-container">
+      <p style={{ color: error ? "var(--warning)" : "var(--text-tertiary)" }}>
+        {error || "Loading…"}
+      </p>
+    </div>
+  );
+
   const f = form;
   const set = (patch: Partial<FormState>) => setForm({ ...f, ...patch });
 
@@ -100,54 +106,71 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     }
   }
 
-  const inputCls = "w-full border rounded-lg p-2";
   return (
-    <main className="max-w-xl mx-auto p-4 space-y-5 text-sm">
-      <h1 className="text-xl font-bold">{f.invoiceId ? "Edit draft" : "New invoice"}</h1>
+    <main className="page-container animate-fade-in">
+      <h1 className="page-title">{f.invoiceId ? "Edit Draft" : "New Invoice"}</h1>
+      <p className="page-subtitle">Fill in the details below</p>
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">Customer</h2>
-        <select className={inputCls} value={f.newCustomer ? "new" : f.customerId ?? ""}
+      {/* Customer section */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Customer</div>
+        <select className="input" value={f.newCustomer ? "new" : f.customerId ?? ""}
           onChange={(e) => {
             const v = e.target.value;
             if (v === "new") set({ newCustomer: { name: "", phone: "", email: "", address: "" }, customerId: null });
             else set({ customerId: v ? Number(v) : null, newCustomer: null });
           }}>
-          <option value="">— pick customer —</option>
+          <option value="">— Select customer —</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name} (#{c.id})</option>)}
           <option value="new">+ New customer</option>
         </select>
         {f.newCustomer && (
-          <div className="space-y-2 border rounded-lg p-3">
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
             {(["name", "phone", "email", "address"] as const).map((k) => (
-              <input key={k} className={inputCls} placeholder={k[0].toUpperCase() + k.slice(1)}
-                value={f.newCustomer![k]}
-                onChange={(e) => set({ newCustomer: { ...f.newCustomer!, [k]: e.target.value } })} />
+              <div key={k}>
+                <label className="input-label">{k[0].toUpperCase() + k.slice(1)}</label>
+                <input className="input" placeholder={k[0].toUpperCase() + k.slice(1)}
+                  value={f.newCustomer![k]}
+                  onChange={(e) => set({ newCustomer: { ...f.newCustomer!, [k]: e.target.value } })} />
+              </div>
             ))}
           </div>
         )}
-      </section>
+      </div>
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">Job</h2>
-        <input className={inputCls} placeholder="Event name (e.g. Jordan Birthday Party Shoot)"
-          value={f.jobEvent} onChange={(e) => set({ jobEvent: e.target.value })} />
-        <input className={inputCls} placeholder="Event date & time (e.g. 20 June 2026, 7-9PM)"
-          value={f.jobDate} onChange={(e) => set({ jobDate: e.target.value })} />
-        <input className={inputCls} placeholder="Location"
-          value={f.jobLocation} onChange={(e) => set({ jobLocation: e.target.value })} />
-        <label className="block">
-          <span className="text-gray-500">Invoice date</span>
-          <input type="date" className={inputCls} value={f.issueDate}
-            onChange={(e) => set({ issueDate: e.target.value })} />
-        </label>
-      </section>
+      {/* Job section */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Job Details</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label className="input-label">Event name</label>
+            <input className="input" placeholder="e.g. Jordan Birthday Party Shoot"
+              value={f.jobEvent} onChange={(e) => set({ jobEvent: e.target.value })} />
+          </div>
+          <div>
+            <label className="input-label">Event date & time</label>
+            <input className="input" placeholder="e.g. 20 June 2026, 7-9PM"
+              value={f.jobDate} onChange={(e) => set({ jobDate: e.target.value })} />
+          </div>
+          <div>
+            <label className="input-label">Location</label>
+            <input className="input" placeholder="e.g. Marina Bay Sands"
+              value={f.jobLocation} onChange={(e) => set({ jobLocation: e.target.value })} />
+          </div>
+          <div>
+            <label className="input-label">Invoice date</label>
+            <input type="date" className="input" value={f.issueDate}
+              onChange={(e) => set({ issueDate: e.target.value })} />
+          </div>
+        </div>
+      </div>
 
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Line items</h2>
+      {/* Line items */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div className="section-label" style={{ marginBottom: 0 }}>Line Items</div>
           {presets.length > 0 && (
-            <select className="border rounded-lg p-2" value=""
+            <select className="input" style={{ width: "auto", padding: "6px 32px 6px 10px", fontSize: "0.8rem" }} value=""
               onChange={(e) => {
                 const p = presets.find((x) => x.id === e.target.value);
                 if (p) set({
@@ -156,65 +179,115 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
                       qty: p.default_qty, unitPriceCents: p.unit_price_cents }],
                 });
               }}>
-              <option value="">+ preset</option>
+              <option value="">+ Add preset</option>
               {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
         </div>
-        {f.lineItems.map((li, i) => (
-          <div key={i} className="border rounded-lg p-3 space-y-2">
-            <textarea className={inputCls} rows={3} placeholder="Description (event, time, shoot type, location)"
-              value={li.description}
-              onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, description: e.target.value } : x) })} />
-            <div className="flex gap-2 items-center">
-              <input className="w-20 border rounded p-2" inputMode="decimal" placeholder="Qty"
-                value={li.qty || ""}
-                onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, qty: parseFloat(e.target.value) || 0 } : x) })} />
-              <input className="flex-1 border rounded p-2" inputMode="decimal" placeholder="Unit price ($)"
-                value={li.unitPriceCents ? li.unitPriceCents / 100 : ""}
-                onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, unitPriceCents: Math.round((parseFloat(e.target.value) || 0) * 100) } : x) })} />
-              <span className="w-20 text-right">{formatSGD(Math.round(li.qty * li.unitPriceCents))}</span>
-              <button className="text-red-600 px-1" onClick={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })}>✕</button>
-            </div>
-          </div>
-        ))}
-        <button className="border rounded-lg px-3 py-2"
-          onClick={() => set({ lineItems: [...f.lineItems, { description: "", qty: 1, unitPriceCents: 0 }] })}>
-          + Add line
-        </button>
-      </section>
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">Discount</h2>
-        <div className="flex gap-2">
-          <select className="border rounded-lg p-2" value={f.discountType}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {f.lineItems.map((li, i) => (
+            <div key={i} style={{
+              background: "var(--bg-primary)",
+              borderRadius: "var(--radius-md)",
+              padding: 14,
+              border: "1px solid var(--border-subtle)",
+            }}>
+              <textarea className="input" rows={2} placeholder="Description (event, time, shoot type, location)"
+                style={{ marginBottom: 10, minHeight: 60 }}
+                value={li.description}
+                onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, description: e.target.value } : x) })} />
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ width: 72 }}>
+                  <label className="input-label">Qty</label>
+                  <input className="input" inputMode="decimal" placeholder="1"
+                    style={{ textAlign: "center" }}
+                    value={li.qty || ""}
+                    onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, qty: parseFloat(e.target.value) || 0 } : x) })} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label className="input-label">Unit price ($)</label>
+                  <input className="input" inputMode="decimal" placeholder="0.00"
+                    value={li.unitPriceCents ? li.unitPriceCents / 100 : ""}
+                    onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, unitPriceCents: Math.round((parseFloat(e.target.value) || 0) * 100) } : x) })} />
+                </div>
+                <div style={{ textAlign: "right", minWidth: 80, paddingTop: 20 }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                    {formatSGD(Math.round(li.qty * li.unitPriceCents))}
+                  </span>
+                </div>
+                <button className="btn-danger" style={{ marginTop: 16 }}
+                  onClick={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })}>✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }}
+          onClick={() => set({ lineItems: [...f.lineItems, { description: "", qty: 1, unitPriceCents: 0 }] })}>
+          + Add line item
+        </button>
+      </div>
+
+      {/* Discount */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Discount</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <select className="input" style={{ width: "auto", flex: "0 0 auto" }} value={f.discountType}
             onChange={(e) => set({ discountType: e.target.value as FormState["discountType"] })}>
             <option value="none">None</option>
             <option value="amount">Amount ($)</option>
             <option value="percent">Percent (%)</option>
           </select>
           {f.discountType !== "none" && (
-            <input className="flex-1 border rounded-lg p-2" inputMode="decimal"
+            <input className="input" inputMode="decimal" placeholder={f.discountType === "amount" ? "0.00" : "10"}
+              style={{ flex: 1 }}
               value={f.discountValue || ""}
               onChange={(e) => set({ discountValue: parseFloat(e.target.value) || 0 })} />
           )}
         </div>
-      </section>
+      </div>
 
-      <section className="border-t pt-3 space-y-1 text-right">
-        <p>Subtotal: {formatSGD(totals.sub)}</p>
-        {totals.disc > 0 && <p>Discount: −{formatSGD(totals.disc)}</p>}
-        <p className="text-lg font-bold">Total due: {formatSGD(totals.total)}</p>
-      </section>
+      {/* Totals */}
+      <div className="totals-section" style={{ marginBottom: 20 }}>
+        <div className="total-row">
+          <span>Subtotal</span>
+          <span style={{ fontWeight: 600 }}>{formatSGD(totals.sub)}</span>
+        </div>
+        {totals.disc > 0 && (
+          <div className="total-row">
+            <span>Discount</span>
+            <span style={{ color: "var(--warning)", fontWeight: 600 }}>−{formatSGD(totals.disc)}</span>
+          </div>
+        )}
+        <div className="total-row-final">
+          <span>Total Due</span>
+          <span>{formatSGD(totals.total)}</span>
+        </div>
+      </div>
 
-      {error && <p className="text-red-600">{error}</p>}
-      <div className="flex gap-2">
-        <button onClick={onSaveDraft} disabled={busy !== ""} className="flex-1 border rounded-lg p-3 disabled:opacity-50">
-          {busy === "draft" ? "Saving…" : "Save draft"}
+      {error && (
+        <div style={{
+          background: "var(--warning-bg)",
+          color: "var(--warning)",
+          padding: "10px 14px",
+          borderRadius: "var(--radius-sm)",
+          fontSize: "0.85rem",
+          fontWeight: 600,
+          marginBottom: 16,
+        }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
+          {busy === "draft" ? "Saving…" : "Save Draft"}
         </button>
-        <button onClick={onFinalize} disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
-          className="flex-1 rounded-lg bg-black text-white p-3 disabled:opacity-50">
-          {busy === "final" ? "Finalizing…" : "Finalize invoice"}
+        <button onClick={onFinalize}
+          disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
+          className="btn btn-primary" style={{ flex: 1 }}>
+          {busy === "final" ? "Finalizing…" : "Finalize Invoice"}
         </button>
       </div>
     </main>
