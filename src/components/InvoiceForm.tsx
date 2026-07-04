@@ -168,7 +168,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
               onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, description: e.target.value } : x) })} />
             <div className="flex gap-2 items-center">
               <input className="w-20 border rounded p-2" inputMode="decimal" placeholder="Qty"
-                value={li.qty}
+                value={li.qty || ""}
                 onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, qty: parseFloat(e.target.value) || 0 } : x) })} />
               <input className="flex-1 border rounded p-2" inputMode="decimal" placeholder="Unit price ($)"
                 value={li.unitPriceCents ? li.unitPriceCents / 100 : ""}
@@ -212,7 +212,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         <button onClick={onSaveDraft} disabled={busy !== ""} className="flex-1 border rounded-lg p-3 disabled:opacity-50">
           {busy === "draft" ? "Saving…" : "Save draft"}
         </button>
-        <button onClick={onFinalize} disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name)}
+        <button onClick={onFinalize} disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
           className="flex-1 rounded-lg bg-black text-white p-3 disabled:opacity-50">
           {busy === "final" ? "Finalizing…" : "Finalize invoice"}
         </button>
