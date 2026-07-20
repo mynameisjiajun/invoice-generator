@@ -151,14 +151,19 @@ export default function SettingsPage() {
               background: "var(--bg-primary)",
               border: b.id === activeBusiness.id ? "1px solid var(--accent)" : "1px solid var(--border-subtle)",
             }}>
-              <span style={{ flex: 1, fontWeight: 600, fontSize: "0.9rem" }}>{b.name}</span>
+              <span style={{
+                flex: 1, minWidth: 0, fontWeight: 600, fontSize: "0.9rem",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>{b.name}</span>
               {b.id !== activeBusiness.id && (
-                <button onClick={() => setActiveBusinessId(b.id)} className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.78rem" }}>
+                <button onClick={() => setActiveBusinessId(b.id)} className="btn btn-ghost"
+                  style={{ padding: "4px 10px", fontSize: "0.78rem", flexShrink: 0 }}>
                   Switch to
                 </button>
               )}
               {businesses.filter((x) => !x.archived_at).length > 1 && (
-                <button onClick={() => onArchiveBusiness(b)} className="btn-danger icon-btn" aria-label={`Archive ${b.name}`}>
+                <button onClick={() => onArchiveBusiness(b)} className="btn-danger icon-btn"
+                  style={{ flexShrink: 0 }} aria-label={`Archive ${b.name}`}>
                   <IconTrash size={14} />
                 </button>
               )}
