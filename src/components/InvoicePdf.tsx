@@ -8,7 +8,7 @@ import {
   Font,
 } from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
-import type { Invoice, Settings } from "@/lib/types";
+import type { Business, Invoice } from "@/lib/types";
 
 /* Montserrat (Proxima Nova-style geometric sans), served from public/fonts.
    This file is bundled for the browser (dynamically imported by
@@ -321,13 +321,13 @@ const s = StyleSheet.create({
 
 export default function InvoicePdf({
   invoice,
-  settings,
+  business,
   qr,
   logo,
   variant = "invoice",
 }: {
   invoice: Invoice;
-  settings: Settings;
+  business: Business;
   qr: string;
   logo?: string | null;
   variant?: "invoice" | "receipt";
@@ -363,12 +363,12 @@ export default function InvoicePdf({
               />
             ) : (
               <Text style={s.businessName}>
-                {settings.business_name.toUpperCase()}
+                {business.name.toUpperCase()}
               </Text>
             )}
-            <Text style={s.businessDetail}>{settings.address}</Text>
+            <Text style={s.businessDetail}>{business.address}</Text>
             <Text style={s.businessDetail}>
-              {settings.phone} · {settings.email}
+              {business.phone} · {business.email}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
@@ -422,7 +422,7 @@ export default function InvoicePdf({
               <Text style={s.infoDetail}>{invoice.job_location}</Text>
             ) : null}
             <Text style={[s.label, { marginTop: 10 }]}>Payment Terms</Text>
-            <Text style={s.infoDetail}>{settings.payment_terms}</Text>
+            <Text style={s.infoDetail}>{business.payment_terms}</Text>
           </View>
         </View>
 
@@ -506,7 +506,7 @@ export default function InvoicePdf({
             <Text style={s.paymentText}>
               Scan the QR code to PayNow the exact amount,{"\n"}
               or PayNow directly to{" "}
-              <Text style={s.paymentHighlight}>{settings.paynow_number}</Text>
+              <Text style={s.paymentHighlight}>{business.paynow_number}</Text>
             </Text>
             <Text style={[s.paymentText, { marginTop: 4 }]}>
               Reference:{" "}
@@ -514,9 +514,9 @@ export default function InvoicePdf({
             </Text>
             <Text style={[s.paymentText, { marginTop: 8 }]}>
               Cheques crossed, payable to{" "}
-              <Text style={s.paymentHighlight}>{settings.payee_name}</Text>
+              <Text style={s.paymentHighlight}>{business.payee_name}</Text>
             </Text>
-            <Text style={s.paymentText}>{settings.bank_details}</Text>
+            <Text style={s.paymentText}>{business.bank_details}</Text>
           </View>
           <View style={s.qrContainer}>
             <Image style={s.qr} src={qr} />
@@ -532,7 +532,7 @@ export default function InvoicePdf({
             <Text style={s.footerText}>THANK YOU FOR YOUR BUSINESS</Text>
             <Text style={s.footerDot}>·</Text>
             <Text style={s.footerText}>
-              {settings.business_name.toUpperCase()}
+              {business.name.toUpperCase()}
             </Text>
           </View>
         </View>

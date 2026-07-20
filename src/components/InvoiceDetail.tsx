@@ -2,12 +2,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteInvoice, getInvoice, getSettings, setPaid } from "@/lib/db";
+import { deleteInvoice, getBusiness, getInvoice, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
-import type { Invoice, Settings } from "@/lib/types";
+import type { Business, Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import {
   IconCheck, IconCopy, IconDownload, IconEdit, IconReceipt, IconShare,
@@ -17,13 +17,18 @@ import {
 export default function InvoiceDetail({ id }: { id: string }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [business, setBusiness] = useState<Business | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getInvoice(id).then(setInvoice).catch((e) => setError(e.message));
-    getSettings().then(setSettings).catch((e) => setError(e.message));
+    getInvoice(id)
+      .then((inv) => {
+        setInvoice(inv);
+        return getBusiness(inv.business_id);
+      })
+      .then(setBusiness)
+      .catch((e) => setError(e.message));
   }, [id]);
 
   if (error) return (
@@ -34,7 +39,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     </div>
   );
 
-  if (!invoice || !settings) return (
+  if (!invoice || !business) return (
     <div className="page-container">
       <div className="card animate-pulse-soft" style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "var(--text-tertiary)" }}>Loading invoice…</p>
@@ -60,7 +65,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
   }
 
   async function generatePdfBlob(variant: "invoice" | "receipt" = "invoice"): Promise<{ blob: Blob; filename: string }> {
-    const inv = invoice!; const st = settings!;
+    const inv = invoice!; const st = business!;
     const payload = paynowPayload({
       mobile: st.paynow_number,
       amountCents: inv.total_cents,
@@ -71,7 +76,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     const { pdf } = await import("@react-pdf/renderer");
     const { default: InvoicePdf } = await import("@/components/InvoicePdf");
     const blob = await pdf(
-      <InvoicePdf invoice={inv} settings={st} qr={qr} logo={logo} variant={variant} />
+      <InvoicePdf invoice={inv} business={st} qr={qr} logo={logo} variant={variant} />
     ).toBlob();
     const word = variant === "receipt" ? "Receipt" : "Invoice";
     const filename = `${word} ${inv.invoice_number ?? "DRAFT"}.pdf`;
@@ -119,7 +124,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     const msg =
       `Hi ${firstName}! Here's your invoice ${inv.invoice_number ?? ""} for ` +
       `${inv.job_event || "the shoot"} — total ${formatSGD(inv.total_cents)}. ` +
-      `You can PayNow via the QR in the PDF (sending it right after this) or to ${settings!.paynow_number}. Thank you!`;
+      `You can PayNow via the QR in the PDF (sending it right after this) or to ${business!.paynow_number}. Thank you!`;
     const base = whatsapp.e164 ? `https://wa.me/${whatsapp.e164}` : "https://wa.me/";
     if (whatsapp.e164 && !whatsapp.isMobile) {
       if (!confirm(`${inv.customers?.phone} looks like a landline, not a mobile — WhatsApp may not open a chat for it. Try anyway?`)) return;
