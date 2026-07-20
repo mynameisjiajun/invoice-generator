@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useBusiness } from "@/lib/businessContext";
 import { IconAdd, IconCamera, IconChart, IconSettings, IconSignOut } from "@/components/icons";
 
 const links = [
@@ -14,6 +15,7 @@ const links = [
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { businesses, activeBusiness, setActiveBusinessId } = useBusiness();
   if (pathname.startsWith("/login")) return null;
 
   async function signOut() {
@@ -22,11 +24,28 @@ export default function NavBar() {
     router.refresh();
   }
 
+  const activeBusinesses = businesses.filter((b) => !b.archived_at);
+
   return (
     <nav className="nav">
       <span className="nav-brand">
         <IconCamera size={18} />
-        <span className="hidden sm:inline">JJ Visuals</span>
+        {activeBusinesses.length > 1 ? (
+          <select
+            className="nav-business-switcher"
+            aria-label="Active business"
+            value={activeBusiness?.id ?? ""}
+            onChange={(e) => {
+              if (e.target.value === "__add__") router.push("/settings");
+              else setActiveBusinessId(e.target.value);
+            }}
+          >
+            {activeBusinesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            <option value="__add__">+ Add business…</option>
+          </select>
+        ) : (
+          <span className="hidden sm:inline">{activeBusiness?.name ?? "…"}</span>
+        )}
       </span>
       {links.map((l) => {
         const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Space_Mono, Work_Sans } from "next/font/google";
 import NavBar from "@/components/NavBar";
+import { BusinessProvider } from "@/lib/businessContext";
 import "./globals.css";
 
 // Editorial pairing: a warm, high-contrast serif for headlines (the
@@ -58,8 +59,10 @@ export default function RootLayout({
       className={`${fraunces.variable} ${workSans.variable} ${spaceMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <NavBar />
-        {children}
+        <BusinessProvider>
+          <NavBar />
+          {children}
+        </BusinessProvider>
       </body>
     </html>
   );

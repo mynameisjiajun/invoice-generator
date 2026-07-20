@@ -538,6 +538,20 @@ textarea.input {
 }
 .nav-brand svg { color: var(--accent); }
 
+.nav-business-switcher {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.nav-business-switcher:focus-visible {
+  outline: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
 .nav-link {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
