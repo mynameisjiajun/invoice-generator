@@ -15,3 +15,4 @@ Task 6: complete (commits ba9e476..21fa91e, review clean). BusinessProvider cont
 Task 7: complete (commits 1f43b79..cc2b4b2, review clean). BusinessProvider wired, NavBar switcher. Copied .env.local into worktree locally (gitignored, not committed) to enable dev-server checks for remaining tasks.
 Task 8: complete (commits 36ea9bf..655b8f1, review clean). Settings business mgmt + scoping. --accent-bg confirmed absent, correct fallback used. Minor deferred: archive-last-business guard is UI-only, not enforced in db.ts/archiveBusiness.
 NOTE: whole npm run dev is broken (not just individual routes) until Tasks 11 & 13 land, since OnboardingBanner.tsx/InvoiceDetail.tsx still import removed getSettings/Settings. Tasks 9/10/12 will verify via tsc only; full manual QA deferred to Task 14.
+Task 9: complete (commits c264d79..ab54aff, review clean). Dashboard scoped to active business.
