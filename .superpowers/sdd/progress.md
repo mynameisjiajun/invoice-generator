@@ -12,3 +12,4 @@ Task 3: complete (commits 319b8a2..aba2e63, review clean). slugify pure function
 Task 4: complete (commits 61907b5..ff30a20, review clean). db.ts business-scoped, verbatim match to brief.
 Task 5: complete (commits 3868a40..826209f, review clean). IconChevronDown appended, unused yet (may not be needed per NavBar note).
 Task 6: complete (commits ba9e476..21fa91e, review clean). BusinessProvider context, verbatim match.
+Task 7: complete (commits 1f43b79..cc2b4b2, review clean). BusinessProvider wired, NavBar switcher. Copied .env.local into worktree locally (gitignored, not committed) to enable dev-server checks for remaining tasks.
