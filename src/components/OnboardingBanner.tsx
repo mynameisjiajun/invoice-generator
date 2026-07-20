@@ -1,29 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getSettings } from "@/lib/db";
+import { useBusiness } from "@/lib/businessContext";
 import { IconClose, IconSettings } from "@/components/icons";
 
 const DISMISS_KEY = "jjv.onboarding.dismissed";
-const DEFAULT_ADDRESS = "Blk 296A Compassvale Crescent #10-293, S541296";
 
 export default function OnboardingBanner() {
-  const [show, setShow] = useState(false);
+  const { activeBusiness } = useBusiness();
+  const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    if (localStorage.getItem(DISMISS_KEY)) return;
-    getSettings()
-      .then((s) => {
-        // Only nudge if the business details still look like the seeded
-        // defaults — i.e. the owner likely hasn't reviewed Settings yet.
-        if (s.address === DEFAULT_ADDRESS) setShow(true);
-      })
-      .catch(() => {});
+    setDismissed(!!localStorage.getItem(DISMISS_KEY));
   }, []);
+
+  // Only nudge if the active business's details are still blank — i.e. the
+  // owner hasn't reviewed Settings for it yet (true for every newly created
+  // business, and for the original one before it's ever been configured).
+  const show = !dismissed && !!activeBusiness && activeBusiness.address.trim() === "";
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, "1");
-    setShow(false);
+    setDismissed(true);
   }
 
   if (!show) return null;
