@@ -19,6 +19,7 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
   const [error, setError] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const material = settings.materials.find((m) => m.name === materialName) ?? null;
   const estimate: QuoteEstimate | null =
@@ -52,6 +53,10 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
 
   async function onMessageOnTelegram() {
     if (!file || !material || !estimate) return;
+    // Open window SYNCHRONOUSLY at the very start, within the user gesture.
+    // This ensures the popup is not blocked by browser popup filters.
+    const telegramWindow = window.open("", "_blank");
+    setSubmitting(true);
     try {
       const filePath = await uploadPrintQuoteFile(business.id, file);
       await submitPrintQuote({
@@ -68,6 +73,8 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
       setSubmitted(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save your quote — you can still message us directly");
+    } finally {
+      setSubmitting(false);
     }
     const summary =
       `Hi! I'd like a quote for a 3D print.\n` +
@@ -77,7 +84,17 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
       `Estimated price: ${formatSGD(estimate.priceCents)}` +
       (notes ? `\nNotes: ${notes}` : "");
     const handle = settings.telegram_handle.replace(/^@/, "");
-    window.open(`https://t.me/${handle}?text=${encodeURIComponent(summary)}`, "_blank");
+    const url = `https://t.me/${handle}?text=${encodeURIComponent(summary)}`;
+    if (telegramWindow) {
+      // Navigate the opened window to the final Telegram URL after the async work completes.
+      telegramWindow.location.href = url;
+    } else {
+      // Popup was blocked despite the synchronous open attempt (e.g. user has
+      // popups fully disabled) — fall back to same-tab navigation so the
+      // visitor can still reach the conversation.
+      // eslint-disable-next-line react-hooks/immutability
+      window.location.href = url;
+    }
   }
 
   return (
@@ -141,8 +158,8 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
               Saved! Continue the conversation on Telegram.
             </p>
           ) : (
-            <button onClick={onMessageOnTelegram} className="btn btn-primary icon-btn" disabled={!settings.telegram_handle}>
-              <IconSend size={15} /> Message on Telegram to Order
+            <button onClick={onMessageOnTelegram} className="btn btn-primary icon-btn" disabled={!settings.telegram_handle || submitting}>
+              <IconSend size={15} /> {submitting ? "Saving…" : "Message on Telegram to Order"}
             </button>
           )}
         </div>
