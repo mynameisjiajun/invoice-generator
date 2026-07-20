@@ -37,5 +37,8 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest|icons).*)"],
+  // /api is excluded: API routes return their own status codes (e.g. the
+  // keep-alive cron endpoint needs to run unauthenticated), not an HTML
+  // redirect to /login.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest|icons).*)"],
 };
