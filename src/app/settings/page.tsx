@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { getSettings, saveSettings, listPresets, createPreset, deletePreset } from "@/lib/db";
+import { createBusiness, archiveBusiness, updateBusiness, listPresets, createPreset, deletePreset } from "@/lib/db";
+import { useBusiness } from "@/lib/businessContext";
+import { slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
-import type { Preset, Settings } from "@/lib/types";
+import type { Business, Preset } from "@/lib/types";
 import { IconAdd, IconCheck, IconTrash } from "@/components/icons";
 
-const FIELDS: Array<{ key: keyof Settings; label: string }> = [
-  { key: "business_name", label: "Business name" },
+const FIELDS: Array<{ key: keyof Business; label: string }> = [
+  { key: "name", label: "Business name" },
   { key: "address", label: "Address" },
   { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
@@ -16,17 +18,21 @@ const FIELDS: Array<{ key: keyof Settings; label: string }> = [
 ];
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const { businesses, activeBusiness, setActiveBusinessId, reloadBusinesses } = useBusiness();
+  const [form, setForm] = useState<Business | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [saved, setSaved] = useState(false);
   const [np, setNp] = useState({ name: "", description: "", price: "", qty: "1" });
+  const [newBizName, setNewBizName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    getSettings().then(setSettings).catch((e) => setError(e instanceof Error ? e.message : "Failed to load settings"));
-    listPresets().then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
-  }, []);
+    setForm(activeBusiness);
+    if (activeBusiness) {
+      listPresets(activeBusiness.id).then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
+    }
+  }, [activeBusiness]);
 
   useEffect(() => {
     return () => {
@@ -34,7 +40,7 @@ export default function SettingsPage() {
     };
   }, []);
 
-  if (!settings) return (
+  if (!activeBusiness || !form) return (
     <div className="page-container">
       <p style={{ color: error ? "var(--warning)" : "var(--text-tertiary)" }}>
         {error || "Loading…"}
@@ -44,13 +50,38 @@ export default function SettingsPage() {
 
   async function onSave() {
     try {
-      await saveSettings(settings!);
+      await updateBusiness(form!.id, form!);
+      await reloadBusinesses();
       setSaved(true);
       setError(null);
       if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
       savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save settings");
+    }
+  }
+
+  async function onAddBusiness() {
+    if (!newBizName.trim()) return;
+    try {
+      const b = await createBusiness({ name: newBizName.trim(), slug: slugify(newBizName) });
+      setNewBizName("");
+      await reloadBusinesses();
+      setActiveBusinessId(b.id);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add business");
+    }
+  }
+
+  async function onArchiveBusiness(b: Business) {
+    if (!confirm(`Archive "${b.name}"? Its invoices stay accessible, but it'll drop out of the switcher.`)) return;
+    try {
+      await archiveBusiness(b.id);
+      await reloadBusinesses();
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to archive business");
     }
   }
 
@@ -70,7 +101,7 @@ export default function SettingsPage() {
         name: np.name, description: np.description,
         unit_price_cents: Math.round(price * 100),
         default_qty: qty,
-      });
+      }, activeBusiness!.id);
       setPresets([...presets, p]);
       setNp({ name: "", description: "", price: "", qty: "1" });
       setError(null);
@@ -93,7 +124,7 @@ export default function SettingsPage() {
   return (
     <main className="page-container animate-fade-in">
       <h1 className="page-title">Settings</h1>
-      <p className="page-subtitle">Manage your business profile and service presets</p>
+      <p className="page-subtitle">Manage your businesses, profile, and service presets</p>
 
       {error && (
         <div style={{
@@ -109,16 +140,50 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Businesses */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Businesses</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+          {businesses.filter((b) => !b.archived_at).map((b) => (
+            <div key={b.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "10px 12px", borderRadius: "var(--radius-md)",
+              background: "var(--bg-primary)",
+              border: b.id === activeBusiness.id ? "1px solid var(--accent)" : "1px solid var(--border-subtle)",
+            }}>
+              <span style={{ flex: 1, fontWeight: 600, fontSize: "0.9rem" }}>{b.name}</span>
+              {b.id !== activeBusiness.id && (
+                <button onClick={() => setActiveBusinessId(b.id)} className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.78rem" }}>
+                  Switch to
+                </button>
+              )}
+              {businesses.filter((x) => !x.archived_at).length > 1 && (
+                <button onClick={() => onArchiveBusiness(b)} className="btn-danger icon-btn" aria-label={`Archive ${b.name}`}>
+                  <IconTrash size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input className="input" placeholder="New business name (e.g. 3D Printing)"
+            value={newBizName} onChange={(e) => setNewBizName(e.target.value)} />
+          <button onClick={onAddBusiness} disabled={!newBizName.trim()} className="btn btn-secondary icon-btn">
+            <IconAdd size={15} /> Add
+          </button>
+        </div>
+      </div>
+
       {/* Business info */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="section-label">Business Information</div>
+        <div className="section-label">Business Information — {activeBusiness.name}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {FIELDS.map(({ key, label }) => (
             <div key={key}>
               <label className="input-label">{label}</label>
               <input className="input"
-                value={String(settings[key] ?? "")}
-                onChange={(e) => setSettings({ ...settings, [key]: e.target.value })} />
+                value={String(form[key] ?? "")}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
             </div>
           ))}
         </div>
@@ -130,7 +195,7 @@ export default function SettingsPage() {
 
       {/* Service presets */}
       <div className="card">
-        <div className="section-label">Service Presets</div>
+        <div className="section-label">Service Presets — {activeBusiness.name}</div>
 
         {presets.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
