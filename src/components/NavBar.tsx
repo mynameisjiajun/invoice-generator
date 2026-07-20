@@ -16,7 +16,7 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { businesses, activeBusiness, setActiveBusinessId } = useBusiness();
-  if (pathname.startsWith("/login")) return null;
+  if (pathname.startsWith("/login") || pathname.startsWith("/quote")) return null;
 
   async function signOut() {
     await createClient().auth.signOut();

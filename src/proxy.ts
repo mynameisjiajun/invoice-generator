@@ -37,8 +37,7 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // /api is excluded: API routes return their own status codes (e.g. the
-  // keep-alive cron endpoint needs to run unauthenticated), not an HTML
-  // redirect to /login.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest|icons).*)"],
+  // /api and /quote are excluded: API routes return their own status codes,
+  // and /quote/[slug] is the public, unauthenticated 3D-print quote page.
+  matcher: ["/((?!api|quote|_next/static|_next/image|favicon.ico|manifest|icons).*)"],
 };
