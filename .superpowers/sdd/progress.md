@@ -17,3 +17,5 @@ Task 8: complete (commits 36ea9bf..655b8f1, review clean). Settings business mgm
 NOTE: whole npm run dev is broken (not just individual routes) until Tasks 11 & 13 land, since OnboardingBanner.tsx/InvoiceDetail.tsx still import removed getSettings/Settings. Tasks 9/10/12 will verify via tsc only; full manual QA deferred to Task 14.
 Task 9: complete (commits c264d79..ab54aff, review clean). Dashboard scoped to active business.
 Task 10: complete (commits e1ee592..046b2ac, review clean). InvoiceForm business resolution, dependency-array anti-corruption logic traced and verified correct by reviewer (including mount-race case).
+Task 11: complete (commits 0f538a4..f81add9, review clean). InvoiceDetail/InvoicePdf resolve business from invoice's own business_id, verbatim field renames.
+Controller fix (commit 6966530, not a plan task): scripts/pdf-preview.tsx and src/lib/stats.test.ts had stale Settings refs / missing business_id (gap in plan's file inventory), fixed directly, tsc confirms only OnboardingBanner.tsx errors remain (Task 13's job).
