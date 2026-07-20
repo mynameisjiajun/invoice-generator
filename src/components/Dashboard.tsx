@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { deleteInvoice, listInvoices, setPaid } from "@/lib/db";
+import { useBusiness } from "@/lib/businessContext";
 import { formatSGD } from "@/lib/money";
 import { isOverdue, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
@@ -9,17 +10,20 @@ import OnboardingBanner from "@/components/OnboardingBanner";
 import { IconCamera, IconCheck, IconCopy, IconEdit, IconSearch, IconTrash, IconUndo } from "@/components/icons";
 
 export default function Dashboard() {
+  const { activeBusiness } = useBusiness();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    listInvoices()
+    if (!activeBusiness) return;
+    setInvoices(null);
+    listInvoices(activeBusiness.id)
       .then(setInvoices)
       .catch((e) => {
         setError(e instanceof Error ? e.message : "Something went wrong");
       });
-  }, []);
+  }, [activeBusiness]);
 
   if (error) {
     return (
