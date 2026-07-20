@@ -6,7 +6,7 @@ import { renderToFile, Font } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import InvoicePdf from "../src/components/InvoicePdf";
 import { paynowPayload } from "../src/lib/paynow";
-import type { Invoice, Settings } from "../src/lib/types";
+import type { Business, Invoice } from "../src/lib/types";
 
 // InvoicePdf.tsx registers Montserrat with browser paths (/fonts/...) since
 // it's bundled for the client; that registration already ran when the
@@ -26,9 +26,10 @@ Font.register({
   ],
 });
 
-const settings: Settings = {
-  id: 1,
-  business_name: "JJ Visuals",
+const business: Business = {
+  id: "preview-business",
+  name: "JJ Visuals",
+  slug: "photography",
   address: "Blk 296A Compassvale Crescent #10-293, S541296",
   phone: "+65 9656 1716",
   email: "chuajiajun2705@gmail.com",
@@ -38,10 +39,12 @@ const settings: Settings = {
   payment_terms: "paynow within 30 days of invoice",
   invoice_prefix: "A-",
   next_invoice_seq: 31,
+  archived_at: null,
 };
 
 const invoice: Invoice = {
   id: "preview",
+  business_id: business.id,
   invoice_number: "A-30",
   status: "unpaid",
   issue_date: "2026-07-04",
@@ -65,6 +68,7 @@ const invoice: Invoice = {
   paid_date: null,
   customers: {
     id: 8,
+    business_id: business.id,
     name: "Jordan Chia Zi Yi",
     phone: "+65 9698 6338",
     email: "jordaniswhoiam@live.com",
@@ -75,10 +79,10 @@ const invoice: Invoice = {
 async function main() {
   const out = process.argv[2] ?? "/tmp/invoice-preview.pdf";
   const payload = paynowPayload({
-    mobile: settings.paynow_number,
+    mobile: business.paynow_number,
     amountCents: invoice.total_cents,
     reference: invoice.invoice_number!,
-    merchantName: settings.payee_name.toUpperCase(),
+    merchantName: business.payee_name.toUpperCase(),
   });
   const qr = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 512 });
   let logo: string | null = null;
@@ -91,7 +95,7 @@ async function main() {
   const inv = variant === "receipt"
     ? { ...invoice, status: "paid" as const, paid_date: "2026-07-04" }
     : invoice;
-  await renderToFile(<InvoicePdf invoice={inv} settings={settings} qr={qr} logo={logo} variant={variant} />, out);
+  await renderToFile(<InvoicePdf invoice={inv} business={business} qr={qr} logo={logo} variant={variant} />, out);
   console.log("wrote", out, logo ? "(with logo)" : "(no logo yet)");
 }
 
