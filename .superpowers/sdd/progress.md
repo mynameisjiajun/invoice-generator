@@ -10,3 +10,4 @@ Task 1: complete (commits 46ef2ef..4dc2728, review clean). Live migration applie
 Task 2: complete (commits 4dc2728..bccd8da, review adjudicated). types.ts verbatim-matches brief. Reviewer flagged Important: progress.md bundled into the commit — adjudicated as Minor/non-issue: this ledger file was already tracked pre-existing in repo history (per-task updates), controller's edit got swept in by implementer's broad `git add`; no functional impact, not worth an amend.
 Task 3: complete (commits 319b8a2..aba2e63, review clean). slugify pure function, 4 tests passing.
 Task 4: complete (commits 61907b5..ff30a20, review clean). db.ts business-scoped, verbatim match to brief.
+Task 5: complete (commits 3868a40..826209f, review clean). IconChevronDown appended, unused yet (may not be needed per NavBar note).
