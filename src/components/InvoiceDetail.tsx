@@ -66,13 +66,16 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
   async function generatePdfBlob(variant: "invoice" | "receipt" = "invoice"): Promise<{ blob: Blob; filename: string }> {
     const inv = invoice!; const st = business!;
-    const payload = paynowPayload({
-      mobile: st.paynow_number,
-      amountCents: inv.total_cents,
-      reference: inv.invoice_number ?? "",
-      merchantName: st.payee_name.toUpperCase(),
-    });
-    const [qr, logo] = await Promise.all([qrDataUrl(payload), fetchLogo()]);
+    const hasPaynow = st.paynow_number.trim() !== "";
+    const qrPromise = hasPaynow
+      ? qrDataUrl(paynowPayload({
+          mobile: st.paynow_number,
+          amountCents: inv.total_cents,
+          reference: inv.invoice_number ?? "",
+          merchantName: st.payee_name.toUpperCase(),
+        }))
+      : Promise.resolve(null);
+    const [qr, logo] = await Promise.all([qrPromise, fetchLogo()]);
     const { pdf } = await import("@react-pdf/renderer");
     const { default: InvoicePdf } = await import("@/components/InvoicePdf");
     const blob = await pdf(
@@ -121,10 +124,13 @@ export default function InvoiceDetail({ id }: { id: string }) {
   function openWhatsApp() {
     const inv = invoice!;
     const firstName = (inv.customers?.name ?? "").trim().split(/\s+/)[0] || "there";
+    const paymentLine = business!.paynow_number.trim()
+      ? `You can PayNow via the QR in the PDF (sending it right after this) or to ${business!.paynow_number}. Thank you!`
+      : `Payment details are in the PDF (sending it right after this). Thank you!`;
     const msg =
       `Hi ${firstName}! Here's your invoice ${inv.invoice_number ?? ""} for ` +
       `${inv.job_event || "the shoot"} — total ${formatSGD(inv.total_cents)}. ` +
-      `You can PayNow via the QR in the PDF (sending it right after this) or to ${business!.paynow_number}. Thank you!`;
+      paymentLine;
     const base = whatsapp.e164 ? `https://wa.me/${whatsapp.e164}` : "https://wa.me/";
     if (whatsapp.e164 && !whatsapp.isMobile) {
       if (!confirm(`${inv.customers?.phone} looks like a landline, not a mobile — WhatsApp may not open a chat for it. Try anyway?`)) return;

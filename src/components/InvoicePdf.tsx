@@ -328,7 +328,7 @@ export default function InvoicePdf({
 }: {
   invoice: Invoice;
   business: Business;
-  qr: string;
+  qr: string | null;
   logo?: string | null;
   variant?: "invoice" | "receipt";
 }) {
@@ -503,26 +503,32 @@ export default function InvoicePdf({
         <View style={s.paymentSection}>
           <View style={s.paymentInfo}>
             <Text style={s.paymentLabel}>Payment Information</Text>
-            <Text style={s.paymentText}>
-              Scan the QR code to PayNow the exact amount,{"\n"}
-              or PayNow directly to{" "}
-              <Text style={s.paymentHighlight}>{business.paynow_number}</Text>
-            </Text>
+            {business.paynow_number && (
+              <Text style={s.paymentText}>
+                Scan the QR code to PayNow the exact amount,{"\n"}
+                or PayNow directly to{" "}
+                <Text style={s.paymentHighlight}>{business.paynow_number}</Text>
+              </Text>
+            )}
             <Text style={[s.paymentText, { marginTop: 4 }]}>
               Reference:{" "}
               <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
             </Text>
-            <Text style={[s.paymentText, { marginTop: 8 }]}>
-              Cheques crossed, payable to{" "}
-              <Text style={s.paymentHighlight}>{business.payee_name}</Text>
-            </Text>
-            <Text style={s.paymentText}>{business.bank_details}</Text>
+            {business.payee_name && (
+              <Text style={[s.paymentText, { marginTop: 8 }]}>
+                Cheques crossed, payable to{" "}
+                <Text style={s.paymentHighlight}>{business.payee_name}</Text>
+              </Text>
+            )}
+            {business.bank_details && <Text style={s.paymentText}>{business.bank_details}</Text>}
           </View>
-          <View style={s.qrContainer}>
-            <Image style={s.qr} src={qr} />
-            <Text style={s.qrCaption}>PAYNOW</Text>
-            <Text style={s.qrAmount}>{formatSGD(invoice.total_cents)}</Text>
-          </View>
+          {qr && (
+            <View style={s.qrContainer}>
+              <Image style={s.qr} src={qr} />
+              <Text style={s.qrCaption}>PAYNOW</Text>
+              <Text style={s.qrAmount}>{formatSGD(invoice.total_cents)}</Text>
+            </View>
+          )}
         </View>
         )}
 
