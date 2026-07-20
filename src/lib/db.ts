@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { subtotalCents, totalCents } from "@/lib/money";
-import type { Business, Customer, Invoice, Preset } from "@/lib/types";
+import type { Business, Customer, Invoice, Preset, PrintPricingSettings, PrintQuote, PrintQuoteStatus } from "@/lib/types";
 
 const db = () => createClient();
 
@@ -93,4 +93,43 @@ export async function setPaid(id: string, paid: boolean): Promise<void> {
  *  sequence rewinds so that number is reused. Returns true when rewound. */
 export async function deleteInvoice(id: string): Promise<boolean> {
   return ok(await db().rpc("delete_invoice_rewind", { inv_id: id }));
+}
+
+export async function getPricingSettings(businessId: string): Promise<PrintPricingSettings | null> {
+  const res = await db().from("print_pricing_settings").select("*").eq("business_id", businessId).maybeSingle();
+  if (res.error) throw new Error(res.error.message);
+  return res.data;
+}
+
+export async function savePricingSettings(settings: PrintPricingSettings): Promise<PrintPricingSettings> {
+  return ok(await db().from("print_pricing_settings")
+    .upsert({ ...settings, updated_at: new Date().toISOString() })
+    .select().single());
+}
+
+export async function listPrintQuotes(businessId: string): Promise<PrintQuote[]> {
+  return ok(await db().from("print_quotes").select("*").eq("business_id", businessId).order("created_at", { ascending: false }));
+}
+
+export async function updatePrintQuoteStatus(id: string, status: PrintQuoteStatus): Promise<void> {
+  ok(await db().from("print_quotes").update({ status }).eq("id", id).select().single());
+}
+
+export type SubmitQuoteInput = Omit<PrintQuote, "id" | "created_at" | "status">;
+
+export async function submitPrintQuote(input: SubmitQuoteInput): Promise<PrintQuote> {
+  return ok(await db().from("print_quotes").insert(input).select().single());
+}
+
+export async function uploadPrintQuoteFile(businessId: string, file: File): Promise<string> {
+  const path = `${businessId}/${crypto.randomUUID()}-${file.name}`;
+  const res = await db().storage.from("print-quote-files").upload(path, file);
+  if (res.error) throw new Error(res.error.message);
+  return path;
+}
+
+export async function getPrintQuoteFileUrl(path: string): Promise<string> {
+  const res = await db().storage.from("print-quote-files").createSignedUrl(path, 3600);
+  if (res.error) throw new Error(res.error.message);
+  return res.data.signedUrl;
 }
