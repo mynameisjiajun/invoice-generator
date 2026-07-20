@@ -1,87 +1,95 @@
 @import "tailwindcss";
 
+/* ── JJ Visuals — editorial / darkroom design system ──
+   Warm paper tones, ink and gold, a rust "safelight" accent instead of
+   SaaS purple. Radii are tighter than a typical app — closer to a printed
+   proof sheet than a rounded bubble UI. */
 :root {
-  --bg-primary: #F8F9FC;
-  --bg-surface: #FFFFFF;
-  --bg-surface-hover: #F1F3F9;
-  --bg-accent: #1A1A2E;
-  --bg-accent-hover: #252545;
-  --bg-accent-subtle: #EEEDF5;
+  --bg-primary: #F5F0E4;
+  --bg-surface: #FDFBF5;
+  --bg-surface-hover: #EEE6D3;
+  --bg-accent: #251F19;
+  --bg-accent-hover: #3A312A;
+  --bg-accent-subtle: #EAE0C9;
 
-  --text-primary: #1A1A2E;
-  --text-secondary: #5A5A7A;
-  --text-tertiary: #9494B8;
-  --text-on-accent: #FFFFFF;
+  --text-primary: #221C15;
+  --text-secondary: #6E6153;
+  --text-tertiary: #A79A85;
+  --text-on-accent: #F5F0E4;
 
-  --border-default: #E4E4EF;
-  --border-subtle: #EDEDF5;
+  --border-default: #DDD1B7;
+  --border-subtle: #E9E0CB;
 
-  --accent: #6C5CE7;
-  --accent-hover: #5A4BD1;
-  --success: #00B894;
-  --success-bg: #E8FBF5;
-  --warning: #E17055;
-  --warning-bg: #FEF0ED;
-  --info: #0984E3;
-  --info-bg: #E8F4FD;
+  /* Darkroom safelight red — the app's one loud color, used sparingly. */
+  --accent: #B8452E;
+  --accent-hover: #9B3A26;
+  --success: #4E7A5A;
+  --success-bg: #E5EDE3;
+  --warning: #C2732C;
+  --warning-bg: #F5E7D2;
+  --info: #3E6E8C;
+  --info-bg: #E1EAEF;
 
   /* Warm "light-meter gold" — reserved for money figures only, so amounts
      always carry the same visual weight wherever they appear. */
-  --money: #B8862E;
-  --money-bg: #FBF3E4;
+  --money: #A67A1E;
+  --money-bg: #F1E5C4;
 
-  --shadow-sm: 0 1px 2px rgba(26, 26, 46, 0.04);
-  --shadow-md: 0 4px 12px rgba(26, 26, 46, 0.06);
-  --shadow-lg: 0 8px 24px rgba(26, 26, 46, 0.08);
-  --shadow-xl: 0 16px 48px rgba(26, 26, 46, 0.12);
+  --shadow-sm: 0 1px 2px rgba(34, 28, 21, 0.05);
+  --shadow-md: 0 4px 14px rgba(34, 28, 21, 0.08);
+  --shadow-lg: 0 10px 28px rgba(34, 28, 21, 0.10);
+  --shadow-xl: 0 20px 52px rgba(34, 28, 21, 0.16);
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
-  --nav-bg: rgba(255, 255, 255, 0.85);
+  --nav-bg: rgba(253, 251, 245, 0.82);
+  --grain-opacity: 0.05;
 
   color-scheme: light;
 }
 
-/* ── Dark mode (follows system setting) ── */
+/* ── Dark mode: the darkroom itself ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #0F1016;
-    --bg-surface: #171922;
-    --bg-surface-hover: #1F2230;
-    --bg-accent: #EDEDF5;
+    --bg-primary: #14110C;
+    --bg-surface: #1D1812;
+    --bg-surface-hover: #272019;
+    --bg-accent: #F1E9D6;
     --bg-accent-hover: #FFFFFF;
-    --bg-accent-subtle: #262940;
+    --bg-accent-subtle: #2B2419;
 
-    --text-primary: #EDEDF5;
-    --text-secondary: #A6A6C3;
-    --text-tertiary: #6E6E8C;
-    --text-on-accent: #14151E;
+    --text-primary: #F1E9D6;
+    --text-secondary: #B3A48D;
+    --text-tertiary: #776B58;
 
-    --border-default: rgba(255, 255, 255, 0.12);
-    --border-subtle: rgba(255, 255, 255, 0.07);
+    --text-on-accent: #1A1510;
 
-    --accent: #8A7BFF;
-    --accent-hover: #9C8FFF;
-    --success: #2BD9A9;
-    --success-bg: rgba(0, 184, 148, 0.14);
-    --warning: #FF8A70;
-    --warning-bg: rgba(225, 112, 85, 0.14);
-    --info: #58A9F5;
-    --info-bg: rgba(9, 132, 227, 0.14);
+    --border-default: rgba(241, 233, 214, 0.14);
+    --border-subtle: rgba(241, 233, 214, 0.08);
 
-    --money: #E0AD52;
-    --money-bg: rgba(184, 134, 46, 0.16);
+    --accent: #E17A5C;
+    --accent-hover: #EC9078;
+    --success: #7CAB8B;
+    --success-bg: rgba(78, 122, 90, 0.18);
+    --warning: #E29A5C;
+    --warning-bg: rgba(194, 115, 44, 0.18);
+    --info: #7CAECD;
+    --info-bg: rgba(62, 110, 140, 0.18);
 
-    --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.04);
-    --shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.06);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+    --money: #DBB05A;
+    --money-bg: rgba(166, 122, 30, 0.2);
 
-    --nav-bg: rgba(15, 16, 22, 0.85);
+    --shadow-sm: 0 0 0 1px rgba(241, 233, 214, 0.05);
+    --shadow-md: 0 0 0 1px rgba(241, 233, 214, 0.07);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.55);
+    --shadow-xl: 0 20px 52px rgba(0, 0, 0, 0.65);
+
+    --nav-bg: rgba(20, 17, 12, 0.82);
+    --grain-opacity: 0.08;
 
     color-scheme: dark;
   }
@@ -90,20 +98,56 @@
 @theme inline {
   --color-background: var(--bg-primary);
   --color-foreground: var(--text-primary);
-  --font-sans: var(--font-inter), var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+  --font-mono: var(--font-mono), monospace;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  height: 100%;
+  overflow-x: hidden;
+  /* Kills the sideways rubber-band scroll that makes a PWA feel like a
+     webpage instead of an installed app. */
+  overscroll-behavior: none;
+}
+
 body {
+  min-height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  position: relative;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: var(--font-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  touch-action: pan-y;
+}
+
+/* Buttons/links get an instant tap response instead of the ~300ms
+   double-tap-to-zoom delay browsers reserve by default. */
+a, button {
+  touch-action: manipulation;
+}
+
+/* ── Film grain ── */
+/* A fixed, non-interactive noise layer over the whole app — the one thing
+   that makes flat color feel like paper/emulsion instead of a screenshot
+   of a screen. Cheap (one inline SVG turbulence filter), no JS, and it
+   never affects layout or scroll because it's fixed + pointer-events:none. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* ── Scrollbar ── */
@@ -146,9 +190,10 @@ body {
 }
 
 .page-title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 2.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
@@ -157,6 +202,8 @@ body {
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin-bottom: 24px;
+  font-style: italic;
+  font-family: var(--font-display), Georgia, serif;
 }
 
 /* ── Cards ── */
@@ -184,14 +231,30 @@ body {
 }
 
 /* ── Section ── */
+/* Styled like a contact-sheet caption / film canister label: monospace,
+   wide tracking, a small dot marker — a recurring "technical metadata"
+   voice that plays against the serif headlines. */
 .section-label {
+  font-family: var(--font-mono), monospace;
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--text-tertiary);
   margin-bottom: 12px;
-  padding-left: 2px;
+  padding-left: 12px;
+  position: relative;
+}
+.section-label::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 /* ── Buttons ── */
@@ -439,6 +502,9 @@ textarea.input {
 }
 
 /* ── Nav ── */
+/* Bottom edge reads like a filmstrip's sprocket holes — small perforations
+   instead of a plain rule, the one place the photography motif shows up
+   on every screen without competing with content. */
 .nav {
   position: sticky;
   top: 0;
@@ -447,7 +513,11 @@ textarea.input {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
-  padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+  background-image: radial-gradient(circle, var(--border-default) 1px, transparent 1.4px);
+  background-size: 14px 100%;
+  background-position: 0 bottom;
+  background-repeat: repeat-x;
+  padding: calc(8px + env(safe-area-inset-top)) 12px calc(8px + 3px);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -460,8 +530,10 @@ textarea.input {
   padding: 6px 10px 6px 6px;
   margin-right: 4px;
   color: var(--text-primary);
-  font-weight: 800;
-  font-size: 0.85rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-style: italic;
+  font-size: 0.95rem;
   letter-spacing: -0.01em;
 }
 .nav-brand svg { color: var(--accent); }

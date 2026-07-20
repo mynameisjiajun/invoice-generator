@@ -92,6 +92,7 @@ subtotal, discount line (when present), total due, payment instructions
   saving to the database requires a connection.
 - Unique constraint prevents invoice-number collisions.
 - Percentage discounts rounded to cents; totals always derived, never typed.
+
 - QR payload validated (amount > 0, correct checksum) before rendering.
 
 ## Out of scope (for now)

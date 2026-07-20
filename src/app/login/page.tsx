@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { IconCamera } from "@/components/icons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,36 +29,50 @@ export default function LoginPage() {
       alignItems: "center",
       justifyContent: "center",
       padding: 24,
-      background: "linear-gradient(135deg, #F8F9FC 0%, #EEEDF5 50%, #E8F4FD 100%)",
+      position: "relative",
+      overflow: "hidden",
+      background: "var(--bg-primary)",
     }}>
-      <div className="animate-slide-up" style={{ width: "100%", maxWidth: 400 }}>
+      {/* Warm light-leak wash, like light bleeding onto film stock */}
+      <div aria-hidden style={{
+        position: "absolute",
+        inset: "-20%",
+        background: "radial-gradient(circle at 15% 10%, rgba(184, 69, 46, 0.20), transparent 45%), radial-gradient(circle at 85% 90%, rgba(166, 122, 30, 0.22), transparent 50%)",
+        pointerEvents: "none",
+      }} />
+
+      <div className="animate-slide-up" style={{ width: "100%", maxWidth: 400, position: "relative" }}>
         <div style={{
           textAlign: "center",
           marginBottom: 32,
         }}>
           <div style={{
-            width: 64,
-            height: 64,
-            borderRadius: 16,
+            width: 60,
+            height: 60,
+            borderRadius: "var(--radius-lg)",
             background: "var(--bg-accent)",
+            color: "var(--text-on-accent)",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 16,
+            marginBottom: 18,
             boxShadow: "var(--shadow-lg)",
+            border: "1px solid var(--border-default)",
           }}>
-            <span style={{ color: "var(--text-on-accent)", fontWeight: 800, fontSize: "1.25rem", letterSpacing: 2 }}>JJ</span>
+            <IconCamera size={26} />
           </div>
           <h1 style={{
-            fontSize: "1.5rem",
-            fontWeight: 800,
-            letterSpacing: "-0.03em",
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontStyle: "italic",
+            fontSize: "1.9rem",
+            fontWeight: 600,
+            letterSpacing: "-0.01em",
             color: "var(--text-primary)",
-            marginBottom: 4,
+            marginBottom: 6,
           }}>
             JJ Visuals
           </h1>
-          <p style={{ color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+          <p className="section-label" style={{ display: "inline-flex", marginBottom: 0 }}>
             Sign in to manage your invoices
           </p>
         </div>
