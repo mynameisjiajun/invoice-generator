@@ -8,10 +8,13 @@ import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import type { Customer, Preset } from "@/lib/types";
 import { IconClose } from "@/components/icons";
+import { useBusiness } from "@/lib/businessContext";
 
 export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: string; draftId?: string }) {
   const router = useRouter();
+  const { activeBusiness } = useBusiness();
   const [form, setForm] = useState<FormState | null>(null);
+  const [formBusinessId, setFormBusinessId] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [busy, setBusy] = useState<"" | "draft" | "final">("");
@@ -19,12 +22,19 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   const [loadedStatus, setLoadedStatus] = useState<"draft" | "unpaid" | "paid">("draft");
   const [loadedNumber, setLoadedNumber] = useState<string | null>(null);
 
+  // Resolves which business this form belongs to and loads its initial
+  // content. For a brand-new invoice, this intentionally does NOT list
+  // `activeBusiness` in its dependency array — it captures whichever
+  // business is active at the moment this effect first runs (component
+  // mount, or draftId/duplicateId changing to load a *different* existing
+  // invoice) and then ignores later nav switches, so an in-progress draft's
+  // business can never change out from under the owner mid-edit. See the
+  // Task 10 header note above for the reasoning.
   useEffect(() => {
-    listCustomers().then(setCustomers).catch((e) => setError(e instanceof Error ? e.message : "Failed to load customers"));
-    listPresets().then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
     (async () => {
       if (draftId) {
         const inv = await getInvoice(draftId);
+        setFormBusinessId(inv.business_id);
         setLoadedStatus(inv.status);
         setLoadedNumber(inv.invoice_number);
         setForm({
@@ -35,6 +45,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
+        setFormBusinessId(inv.business_id);
         setForm({
           ...emptyForm(), customerId: inv.customer_id, jobEvent: inv.job_event,
           jobDate: inv.job_date, jobLocation: inv.job_location,
@@ -42,10 +53,29 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           discountValue: inv.discount_value,
         });
       } else {
+        if (!activeBusiness) return;
+        setFormBusinessId(activeBusiness.id);
         setForm(loadForm() ?? emptyForm());
       }
     })().catch((e) => setError(e instanceof Error ? e.message : "Failed to load invoice"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftId, duplicateId]);
+
+  // If activeBusiness wasn't ready yet on first mount (still loading from
+  // BusinessProvider), pick it up once it arrives — but only for a
+  // brand-new invoice that hasn't resolved a business yet at all.
+  useEffect(() => {
+    if (draftId || duplicateId) return;
+    if (formBusinessId || !activeBusiness) return;
+    setFormBusinessId(activeBusiness.id);
+    setForm((prev) => prev ?? loadForm() ?? emptyForm());
+  }, [draftId, duplicateId, formBusinessId, activeBusiness]);
+
+  useEffect(() => {
+    if (!formBusinessId) return;
+    listCustomers(formBusinessId).then(setCustomers).catch((e) => setError(e instanceof Error ? e.message : "Failed to load customers"));
+    listPresets(formBusinessId).then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
+  }, [formBusinessId]);
 
   // Autosave to localStorage — but never for finalized invoices being edited,
   // so a finalized edit can't resurface later as a stray "new invoice" form.
@@ -73,9 +103,10 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   const set = (patch: Partial<FormState>) => setForm({ ...f, ...patch });
 
   async function persistDraft(): Promise<string> {
+    if (!formBusinessId) throw new Error("No business selected");
     let customerId = f.customerId;
     if (f.newCustomer && f.newCustomer.name.trim()) {
-      const c = await createCustomer(f.newCustomer);
+      const c = await createCustomer(f.newCustomer, formBusinessId);
       customerId = c.id;
       setCustomers([...customers, c]);
       set({ customerId: c.id, newCustomer: null });
@@ -85,7 +116,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       job_event: f.jobEvent, job_date: f.jobDate, job_location: f.jobLocation,
       line_items: f.lineItems.filter((li) => li.description.trim() !== ""),
       discount_type: f.discountType, discount_value: f.discountValue,
-    });
+    }, formBusinessId);
     if (!f.invoiceId) set({ invoiceId: inv.id });
     return inv.id;
   }
