@@ -19,3 +19,4 @@ Task 9: complete (commits c264d79..ab54aff, review clean). Dashboard scoped to a
 Task 10: complete (commits e1ee592..046b2ac, review clean). InvoiceForm business resolution, dependency-array anti-corruption logic traced and verified correct by reviewer (including mount-race case).
 Task 11: complete (commits 0f538a4..f81add9, review clean). InvoiceDetail/InvoicePdf resolve business from invoice's own business_id, verbatim field renames.
 Controller fix (commit 6966530, not a plan task): scripts/pdf-preview.tsx and src/lib/stats.test.ts had stale Settings refs / missing business_id (gap in plan's file inventory), fixed directly, tsc confirms only OnboardingBanner.tsx errors remain (Task 13's job).
+Task 12: complete (commits 7c5a636..0ca4926, review clean). Stats active/all toggle.
