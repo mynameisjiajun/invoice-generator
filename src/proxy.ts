@@ -39,5 +39,6 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   // /api and /quote are excluded: API routes return their own status codes,
   // and /quote/[slug] is the public, unauthenticated 3D-print quote page.
-  matcher: ["/((?!api|quote|_next/static|_next/image|favicon.ico|manifest|icons).*)"],
+  // quote(?:$|/) matches only /quote or /quote/..., not /quotes or other prefixes.
+  matcher: ["/((?!api|quote(?:$|/)|_next/static|_next/image|favicon.ico|manifest|icons).*)"],
 };
