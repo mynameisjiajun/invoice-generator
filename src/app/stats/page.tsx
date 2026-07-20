@@ -5,14 +5,21 @@ import { formatSGD } from "@/lib/money";
 import { clientStats, monthlyStats, yearlyStats } from "@/lib/stats";
 import type { Invoice } from "@/lib/types";
 import { IconFileExport } from "@/components/icons";
+import { useBusiness } from "@/lib/businessContext";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function StatsPage() {
+  const { activeBusiness } = useBusiness();
+  const [scope, setScope] = useState<"active" | "all">("active");
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
 
-  useEffect(() => { listInvoices().then(setInvoices); }, []);
+  useEffect(() => {
+    if (scope === "active" && !activeBusiness) return;
+    setInvoices(null);
+    listInvoices(scope === "active" ? activeBusiness!.id : undefined).then(setInvoices);
+  }, [scope, activeBusiness]);
 
   if (!invoices) return (
     <div className="page-container">
@@ -65,6 +72,19 @@ export default function StatsPage() {
         </div>
         <button onClick={exportCsv} className="btn btn-secondary icon-btn" style={{ padding: "8px 14px", fontSize: "0.8rem" }}>
           <IconFileExport size={15} /> Export CSV
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button onClick={() => setScope("active")}
+          className={`btn ${scope === "active" ? "btn-primary" : "btn-secondary"}`}
+          style={{ padding: "6px 14px", fontSize: "0.8rem" }}>
+          {activeBusiness?.name ?? "Active business"}
+        </button>
+        <button onClick={() => setScope("all")}
+          className={`btn ${scope === "all" ? "btn-primary" : "btn-secondary"}`}
+          style={{ padding: "6px 14px", fontSize: "0.8rem" }}>
+          All businesses
         </button>
       </div>
 
