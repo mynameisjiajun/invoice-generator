@@ -20,3 +20,4 @@ Task 10: complete (commits e1ee592..046b2ac, review clean). InvoiceForm business
 Task 11: complete (commits 0f538a4..f81add9, review clean). InvoiceDetail/InvoicePdf resolve business from invoice's own business_id, verbatim field renames.
 Controller fix (commit 6966530, not a plan task): scripts/pdf-preview.tsx and src/lib/stats.test.ts had stale Settings refs / missing business_id (gap in plan's file inventory), fixed directly, tsc confirms only OnboardingBanner.tsx errors remain (Task 13's job).
 Task 12: complete (commits 7c5a636..0ca4926, review clean). Stats active/all toggle.
+Task 13: complete (commits e4d3afb..4e01fd0, review clean). OnboardingBanner fixed, last getSettings ref gone. Full project tsc + tests confirmed clean by controller (0 errors, 32/32 tests). Reviewer noted implementer's "manual QA" was logical inference not live browser check -- Task 14 must explicitly verify banner show/don't-show live.
