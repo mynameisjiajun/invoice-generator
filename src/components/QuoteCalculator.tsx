@@ -51,31 +51,9 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
     }
   }
 
-  async function onMessageOnTelegram() {
+  function onMessageOnTelegram() {
     if (!file || !material || !estimate) return;
-    // Open window SYNCHRONOUSLY at the very start, within the user gesture.
-    // This ensures the popup is not blocked by browser popup filters.
-    const telegramWindow = window.open("", "_blank");
-    setSubmitting(true);
-    try {
-      const filePath = await uploadPrintQuoteFile(business.id, file);
-      await submitPrintQuote({
-        business_id: business.id,
-        material: material.name,
-        volume_cm3: estimate.volumeCm3,
-        weight_g: estimate.weightG,
-        estimated_hours: estimate.hours,
-        price_cents: estimate.priceCents,
-        file_path: filePath,
-        multi_colour: multiColour,
-        notes,
-      });
-      setSubmitted(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save your quote — you can still message us directly");
-    } finally {
-      setSubmitting(false);
-    }
+
     const summary =
       `Hi! I'd like a quote for a 3D print.\n` +
       `File: ${file.name}\n` +
@@ -85,16 +63,41 @@ export default function QuoteCalculator({ business, settings }: { business: Busi
       (notes ? `\nNotes: ${notes}` : "");
     const handle = settings.telegram_handle.replace(/^@/, "");
     const url = `https://t.me/${handle}?text=${encodeURIComponent(summary)}`;
-    if (telegramWindow) {
-      // Navigate the opened window to the final Telegram URL after the async work completes.
-      telegramWindow.location.href = url;
-    } else {
-      // Popup was blocked despite the synchronous open attempt (e.g. user has
-      // popups fully disabled) — fall back to same-tab navigation so the
-      // visitor can still reach the conversation.
+
+    // Open/redirect immediately, in the same tick as the click — no await
+    // before this, so it's never at risk of a popup blocker.
+    const telegramWindow = window.open(url, "_blank");
+    if (!telegramWindow) {
+      // Popup was blocked despite the synchronous open attempt — fall back to
+      // same-tab navigation so the visitor can still reach the conversation.
       // eslint-disable-next-line react-hooks/immutability
       window.location.href = url;
     }
+
+    // Save the quote in the background; this must never block or delay the
+    // Telegram handoff above, which is the actual point of the page.
+    setSubmitting(true);
+    (async () => {
+      try {
+        const filePath = await uploadPrintQuoteFile(business.id, file);
+        await submitPrintQuote({
+          business_id: business.id,
+          material: material.name,
+          volume_cm3: estimate.volumeCm3,
+          weight_g: estimate.weightG,
+          estimated_hours: estimate.hours,
+          price_cents: estimate.priceCents,
+          file_path: filePath,
+          multi_colour: multiColour,
+          notes,
+        });
+        setSubmitted(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Couldn't save your quote — you can still message us directly");
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   }
 
   return (
