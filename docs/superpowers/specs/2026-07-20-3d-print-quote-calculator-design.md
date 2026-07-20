@@ -9,16 +9,18 @@ The app currently has no public-facing surface at all — [proxy.ts](../../../sr
 ## Goals
 
 - A public URL, `/quote/[slug]`, not gated by login, where a visitor can:
-  - upload an `.stl` file and immediately see an estimated price, computed client-side from the file's geometry
-  - optionally submit that estimate as a quote request with contact info
-- An authenticated settings section where the owner configures, per business: materials (name, density, cost/gram, print rate), cost/hour, markup %, minimum price.
-- An authenticated `/quotes` page listing submitted quote requests per business, with the uploaded file downloadable and a status field.
+  - upload an `.stl` file and immediately see an estimated price, computed client-side from the file's geometry, clearly labeled as an **estimate** (final price is only confirmed after the file is actually sliced — this app never slices)
+  - pick a material and optionally flag the print as multi-colour (AMS), which applies a time surcharge and extra waste allowance
+  - get a one-tap "Message me on Telegram" link, pre-filled with the quote summary, to actually place the order — matching how the owner already runs this (contact happens off-platform, on Telegram)
+- Every generated estimate is logged automatically (no contact form required from the visitor) so the owner can see quote activity on an authenticated `/quotes` page, with the uploaded file downloadable.
+- An authenticated settings section where the owner configures, per business: materials (name, cost/gram, density), a flat print-speed and cost/hour, a waste %, multi-colour surcharge/waste %, and their Telegram handle.
 - Zero impact on existing invoice/customer/business functionality or their RLS boundaries.
 
 ## Non-Goals
 
-- Slicer-accurate pricing. This is a geometry-based heuristic (volume/weight/time estimate), explicitly labeled "estimated" in the UI — not a substitute for actually slicing the file.
-- Payment collection on the quote page. Quotes are leads; converting one into an actual invoice/payment is a manual follow-up step outside this project.
+- Slicer-accurate pricing. This is a geometry-based heuristic (volume/weight/time estimate), explicitly labeled "estimated — confirmed by [owner] after slicing" in the UI. Not a substitute for actually slicing the file; the app makes no claim of being able to.
+- Payment collection or in-app checkout — ordering happens via the Telegram handoff, unchanged from current practice.
+- An in-app contact form (name/email/phone fields). The owner already funnels customers to Telegram directly; replicating a separate lead form would just add friction and a second contact channel to manage.
 - Multi-file uploads, OBJ/3MF support, or in-browser 3D preview — STL only, single file per quote.
 - Rate limiting / CAPTCHA / bot defense beyond basic file-type and size validation — flagged as a follow-up in the security review, not built here.
 
@@ -31,10 +33,14 @@ Migration `004_print_quotes.sql`:
 | column | type | notes |
 |---|---|---|
 | `business_id` | uuid, pk, FK → businesses(id) | one settings row per business |
-| `materials` | jsonb | array of `{name, density_g_cm3, cost_per_gram_cents, print_rate_cm3_per_hour}` |
-| `cost_per_hour_cents` | int | |
-| `markup_percent` | numeric | e.g. `30` for 30% |
-| `minimum_price_cents` | int | floor applied after markup |
+| `materials` | jsonb | array of `{name, density_g_cm3, cost_per_gram_cents}` — seeded from the owner's current price list (PLA Basic $0.03/g, PETG $0.03/g, PLA+ $0.04/g, PLA Matte $0.04/g, PLA Galaxy $0.05/g, TPU $0.06/g), fully editable |
+| `print_speed_cm3_per_hour` | numeric | one flat speed used to turn volume into an hours estimate — the P1S doesn't meaningfully vary speed by material for this purpose |
+| `cost_per_hour_cents` | int | flat electricity/machine-time rate (owner's current rate: $2.00/hr), applied regardless of material |
+| `waste_percent` | numeric | extra weight added on top of raw geometry weight to account for skirts/supports/purge — "prices inclusive of waste" per the owner's existing policy |
+| `multi_colour_time_surcharge_percent` | numeric | added to the time cost when the visitor flags the print as multi-colour/AMS (owner's current rate: 20%) |
+| `multi_colour_waste_percent` | numeric | additional weight surcharge for multi-colour prints, on top of `waste_percent`, to approximate AMS flush-tower waste |
+| `minimum_price_cents` | int, nullable | optional floor; left null/0 disables it — the owner's example pricing doesn't currently apply one |
+| `telegram_handle` | text | e.g. `mynameisjiajun`, used to build the `t.me` contact link |
 | `updated_at` | timestamptz | |
 
 RLS: owner (matching email, same policy shape as `businesses`) has full access. **`anon` role gets SELECT only** — the public quote page needs to read rates to compute a price; this table holds no secrets, only pricing math.
@@ -51,10 +57,8 @@ RLS: owner (matching email, same policy shape as `businesses`) has full access. 
 | `estimated_hours` | numeric | |
 | `price_cents` | int | |
 | `file_path` | text | path in the `print-quote-files` storage bucket |
-| `visitor_name` | text | |
-| `visitor_email` | text | |
-| `visitor_phone` | text, nullable | |
-| `notes` | text, nullable | |
+| `multi_colour` | boolean | whether the visitor flagged this as an AMS/multi-colour print |
+| `notes` | text, nullable | optional free-text the visitor can add (e.g. preferred colour) before generating the Telegram link |
 | `status` | text | `new` / `contacted` / `archived`, default `new` |
 | `created_at` | timestamptz | |
 
@@ -66,26 +70,31 @@ RLS: **`anon` gets INSERT only** (no select/update/delete — a visitor can subm
 
 1. Parse the uploaded `.stl` (binary or ASCII) into a triangle list.
 2. Compute mesh volume via the signed-tetrahedron/divergence-theorem sum over all triangles, and a bounding box (shown for visitor reassurance, not used in pricing).
-3. Given a selected material and the business's `print_pricing_settings`:
-   - `weight_g = volume_cm3 × material.density_g_cm3`
-   - `hours = volume_cm3 / material.print_rate_cm3_per_hour`
-   - `subtotal_cents = weight_g × material.cost_per_gram_cents + hours × cost_per_hour_cents`
-   - `price_cents = max(subtotal_cents × (1 + markup_percent / 100), minimum_price_cents)`
+3. Given a selected material, the multi-colour toggle, and the business's `print_pricing_settings`:
+   - `raw_weight_g = volume_cm3 × material.density_g_cm3`
+   - `waste_pct = waste_percent + (multi_colour ? multi_colour_waste_percent : 0)`
+   - `billed_weight_g = raw_weight_g × (1 + waste_pct / 100)`
+   - `hours = volume_cm3 / print_speed_cm3_per_hour`
+   - `time_cost_cents = hours × cost_per_hour_cents × (multi_colour ? 1 + multi_colour_time_surcharge_percent / 100 : 1)`
+   - `material_cost_cents = billed_weight_g × material.cost_per_gram_cents`
+   - `price_cents = max(material_cost_cents + time_cost_cents, minimum_price_cents ?? 0)`
 4. All of this runs in the browser before any network write — a visitor can get a price without uploading anything anywhere.
+
+This reproduces the owner's worked example almost exactly (a 40g/2hr PLA Basic part: $1.20 material + $4.00 time = $5.20, modulo the waste % now folded into `billed_weight_g` rather than being manually pre-added by the owner as before).
 
 ## Public Page Flow (`/quote/[slug]`)
 
 1. Server component loads the business by slug (name only, 404 if archived/missing) and its `print_pricing_settings` (anon read).
-2. Client uploads STL → parsed locally → material picker → instant price + breakdown (material cost, time cost, weight, estimated hours) shown, labeled "estimated."
-3. Optional "Request this quote" form (name, email, phone optional, notes). On submit: upload the file to `print-quote-files`, then insert the `print_quotes` row with the computed numbers and the file path.
-4. Confirmation shown; no further account/login involved.
+2. Client uploads STL → parsed locally → picks material + multi-colour toggle + optional notes → instant price + breakdown (material cost, time cost, weight, estimated hours) shown, prominently labeled **"Estimated price — final price confirmed after slicing"**.
+3. A "Message [owner] on Telegram" button, built from `telegram_handle`, opens `https://t.me/<handle>?text=<url-encoded quote summary>` (model filename, material, weight, hours, price, notes) so the visitor lands in a chat with the quote pre-filled instead of typing it themselves.
+4. Clicking that button (or an explicit "save this estimate" action if the visitor doesn't have Telegram) uploads the file to `print-quote-files` and inserts the `print_quotes` row with the computed numbers, `multi_colour`, and file path — no name/email/phone required, since the actual conversation happens on Telegram.
 
 Basic hardening at this stage: reject non-`.stl` extensions and files over 25MB client-side before parsing, and enforce the same cap server-side via the storage bucket's file-size limit.
 
 ## Admin Flow
 
-- `/settings`: new "3D Print Pricing" section for the active business — editable materials table (add/remove/edit rows: name, density, cost/gram, print rate), cost/hour, markup %, minimum price. Follows the existing settings form patterns (same save/validation style as business details).
-- New authenticated page `/quotes`: table of `print_quotes` for the active business — material, computed price, contact info, a signed-URL download link for the file, and a status dropdown (`new`/`contacted`/`archived`). Scoped by `activeBusiness` from [businessContext.tsx](../../../src/lib/businessContext.tsx), same as invoices/customers already are.
+- `/settings`: new "3D Print Pricing" section for the active business — editable materials table (add/remove/edit rows: name, density, cost/gram), print speed, cost/hour, waste %, multi-colour surcharge/waste %, minimum price, and Telegram handle. Seeded with the owner's current rates on first migration. Follows the existing settings form patterns (same save/validation style as business details).
+- New authenticated page `/quotes`: table of `print_quotes` for the active business — material, multi-colour flag, computed price/weight/hours, notes, a signed-URL download link for the file, and a status dropdown (`new`/`contacted`/`archived`) so the owner can track which quotes turned into an actual Telegram conversation. Scoped by `activeBusiness` from [businessContext.tsx](../../../src/lib/businessContext.tsx), same as invoices/customers already are.
 
 ## Routing Change
 
