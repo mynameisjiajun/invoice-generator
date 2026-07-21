@@ -105,15 +105,21 @@ export default function PrintPricingSettingsCard({ businessId, slug }: { busines
             <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>Public quote page:</span>
             <a href={`/quote/${slug}`} target="_blank" rel="noopener noreferrer"
               style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-              {typeof window !== "undefined" ? window.location.origin : ""}/quote/{slug}
+              /quote/{slug}
             </a>
             <button
               onClick={() => {
+                if (!navigator.clipboard) {
+                  setError("Couldn't copy — copy the link above manually");
+                  return;
+                }
                 const url = `${window.location.origin}/quote/${slug}`;
-                navigator.clipboard.writeText(url).then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                });
+                navigator.clipboard.writeText(url)
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  })
+                  .catch(() => setError("Couldn't copy — copy the link above manually"));
               }}
               className="btn btn-ghost icon-btn" style={{ padding: "4px 10px", fontSize: "0.78rem" }}
             >
