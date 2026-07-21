@@ -422,7 +422,7 @@ export default function InvoicePdf({
               <Text style={s.infoDetail}>{invoice.customers.email}</Text>
             ) : null}
             {invoice.customers?.uen ? (
-              <Text style={s.infoDetail}>UEN {invoice.customers.uen}</Text>
+              <Text style={s.infoDetail}>UEN : {invoice.customers.uen}</Text>
             ) : null}
             {invoice.customers?.address
               ? formatSgAddress(invoice.customers.address).map((line, i) => (

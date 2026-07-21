@@ -254,7 +254,7 @@ export default function CustomersPage() {
                     <div style={{ color: "var(--text-secondary)", fontSize: "0.82rem", marginTop: 1 }}>{c.company}</div>
                   )}
                   <div style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 2 }}>
-                    {[formatSgPhone(c.phone), c.email, c.uen && `UEN ${c.uen}`, c.address].filter(Boolean).join(" · ") || "No contact details"}
+                    {[formatSgPhone(c.phone), c.email, c.uen && `UEN : ${c.uen}`, c.address].filter(Boolean).join(" · ") || "No contact details"}
                   </div>
                 </div>
                 <button onClick={() => startEdit(c)} className="btn btn-secondary icon-btn" style={{ flexShrink: 0 }}>
