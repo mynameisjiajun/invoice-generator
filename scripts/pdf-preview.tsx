@@ -40,6 +40,8 @@ const business: Business = {
   invoice_prefix: "A-",
   next_invoice_seq: 31,
   archived_at: null,
+  email_template: "",
+  whatsapp_template: "",
 };
 
 const invoice: Invoice = {
@@ -66,6 +68,7 @@ const invoice: Invoice = {
   subtotal_cents: 65000,
   total_cents: 58500,
   paid_date: null,
+  sent_at: null,
   customers: {
     id: 8,
     business_id: business.id,

@@ -28,6 +28,7 @@ export type Invoice = {
   subtotal_cents: number;
   total_cents: number;
   paid_date: string | null;
+  sent_at: string | null;
   customers?: Customer | null;   // joined
 };
 
@@ -37,6 +38,7 @@ export type Business = {
   bank_details: string; payment_terms: string;
   invoice_prefix: string; next_invoice_seq: number;
   archived_at: string | null;
+  email_template: string; whatsapp_template: string;
 };
 
 export function isOverdue(inv: Invoice, today = new Date()): boolean {

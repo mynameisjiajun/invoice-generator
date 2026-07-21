@@ -9,7 +9,7 @@ function inv(over: Partial<Invoice>): Invoice {
     id: "x", business_id: BIZ, invoice_number: "A-1", status: "unpaid", issue_date: "2026-06-23",
     customer_id: 1, job_event: "", job_date: "", job_location: "",
     line_items: [], discount_type: "none", discount_value: 0,
-    subtotal_cents: 0, total_cents: 50000, paid_date: null,
+    subtotal_cents: 0, total_cents: 50000, paid_date: null, sent_at: null,
     customers: { id: 1, business_id: BIZ, name: "Jordan", company: "", phone: "", email: "", uen: "", address: "" },
     ...over,
   };
