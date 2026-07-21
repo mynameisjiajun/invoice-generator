@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { getPricingSettings, savePricingSettings } from "@/lib/db";
 import type { PrintMaterial, PrintPricingSettings } from "@/lib/types";
-import { IconAdd, IconCheck, IconTrash } from "@/components/icons";
+import { IconAdd, IconCheck, IconCopy, IconTrash } from "@/components/icons";
 
 const DEFAULT_MATERIALS: PrintMaterial[] = [
   { name: "PLA Basic", density_g_cm3: 1.24, cost_per_gram_cents: 3 },
@@ -27,15 +27,21 @@ function emptySettings(businessId: string): PrintPricingSettings {
   };
 }
 
-export default function PrintPricingSettingsCard({ businessId }: { businessId: string }) {
+export default function PrintPricingSettingsCard({ businessId, slug }: { businessId: string; slug: string }) {
   const [form, setForm] = useState<PrintPricingSettings | null>(null);
+  const [published, setPublished] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(null);
+    setPublished(false);
     getPricingSettings(businessId)
-      .then((row) => setForm(row ?? emptySettings(businessId)))
+      .then((row) => {
+        setForm(row ?? emptySettings(businessId));
+        setPublished(row !== null);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load pricing settings"));
   }, [businessId]);
 
@@ -69,9 +75,14 @@ export default function PrintPricingSettingsCard({ businessId }: { businessId: s
       setError("Add at least one material, and give every material a name");
       return;
     }
+    if (!form!.telegram_handle.trim()) {
+      setError("Telegram handle is required — it's how visitors reach you to place an order.");
+      return;
+    }
     try {
       const result = await savePricingSettings(form!);
       setForm(result);
+      setPublished(true);
       setSaved(true);
       setError(null);
       setTimeout(() => setSaved(false), 2000);
@@ -83,6 +94,38 @@ export default function PrintPricingSettingsCard({ businessId }: { businessId: s
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="section-label">3D Print Pricing</div>
+
+      <div style={{
+        background: "var(--bg-primary)", border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 14,
+        display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+      }}>
+        {published ? (
+          <>
+            <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>Public quote page:</span>
+            <a href={`/quote/${slug}`} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+              {typeof window !== "undefined" ? window.location.origin : ""}/quote/{slug}
+            </a>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/quote/${slug}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                });
+              }}
+              className="btn btn-ghost icon-btn" style={{ padding: "4px 10px", fontSize: "0.78rem" }}
+            >
+              {copied ? <IconCheck size={13} /> : <IconCopy size={13} />} {copied ? "Copied" : "Copy link"}
+            </button>
+          </>
+        ) : (
+          <span style={{ fontSize: "0.82rem", color: "var(--text-tertiary)" }}>
+            Not published yet — save your pricing below to activate this page.
+          </span>
+        )}
+      </div>
 
       {error && (
         <div style={{

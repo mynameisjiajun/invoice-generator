@@ -199,7 +199,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <PrintPricingSettingsCard businessId={activeBusiness.id} />
+      <PrintPricingSettingsCard businessId={activeBusiness.id} slug={activeBusiness.slug} />
 
       {/* Service presets */}
       <div className="card">

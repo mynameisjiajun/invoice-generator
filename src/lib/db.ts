@@ -122,7 +122,7 @@ export async function submitPrintQuote(input: SubmitQuoteInput): Promise<PrintQu
 }
 
 export async function uploadPrintQuoteFile(businessId: string, file: File): Promise<string> {
-  const path = `${businessId}/${crypto.randomUUID()}-${file.name}`;
+  const path = `${businessId}/${crypto.randomUUID()}.stl`;
   const res = await db().storage.from("print-quote-files").upload(path, file);
   if (res.error) throw new Error(res.error.message);
   return path;
