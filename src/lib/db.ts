@@ -32,7 +32,7 @@ export async function listCustomers(businessId: string): Promise<Customer[]> {
  *  importing existing clients); omit it to auto-assign the next number.
  *  A taken number surfaces a friendly error. */
 export async function createCustomer(
-  c: Omit<Customer, "id" | "business_id"> & { id?: number },
+  c: Omit<Customer, "id" | "business_id" | "company" | "uen"> & { id?: number; company?: string; uen?: string },
   businessId: string,
 ): Promise<Customer> {
   const { id, ...rest } = c;

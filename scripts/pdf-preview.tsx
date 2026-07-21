@@ -70,8 +70,10 @@ const invoice: Invoice = {
     id: 8,
     business_id: business.id,
     name: "Jordan Chia Zi Yi",
+    company: "Jordan Media Pte Ltd",
     phone: "+65 9698 6338",
     email: "jordaniswhoiam@live.com",
+    uen: "202512345A",
     address: "9 Bedok South Ave 2 #20-530",
   },
 };

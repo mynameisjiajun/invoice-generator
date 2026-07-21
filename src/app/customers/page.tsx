@@ -2,12 +2,83 @@
 import { useEffect, useState } from "react";
 import { useBusiness } from "@/lib/businessContext";
 import { createCustomer, listCustomers, updateCustomer, updateCustomerNumber } from "@/lib/db";
+import { formatSgPhone } from "@/lib/phone";
 import type { Customer } from "@/lib/types";
 import { IconAdd, IconCheck, IconEdit } from "@/components/icons";
 
-type Draft = { name: string; phone: string; email: string; address: string; number: string };
+type Draft = {
+  number: string; name: string; company: string; phone: string; email: string; uen: string; address: string;
+};
 
-const emptyDraft = (): Draft => ({ name: "", phone: "", email: "", address: "", number: "" });
+const emptyDraft = (): Draft => ({ number: "", name: "", company: "", phone: "", email: "", uen: "", address: "" });
+
+const draftFrom = (c: Customer): Draft => ({
+  number: String(c.id), name: c.name, company: c.company, phone: c.phone,
+  email: c.email, uen: c.uen, address: c.address,
+});
+
+/** Contact fields shared by the add and edit forms, in the order:
+ *  client no. + name, company, phone, email, UEN, address. */
+function ClientFields({ draft, set, numberPlaceholder }: {
+  draft: Draft; set: (patch: Partial<Draft>) => void; numberPlaceholder?: string;
+}) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ width: 110 }}>
+          <label className="input-label">Client no.</label>
+          <input className="input" inputMode="numeric" placeholder={numberPlaceholder}
+            value={draft.number}
+            onChange={(e) => set({ number: e.target.value.replace(/[^0-9]/g, "") })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label className="input-label">Name</label>
+          <input className="input" value={draft.name} onChange={(e) => set({ name: e.target.value })} />
+        </div>
+      </div>
+      <div>
+        <label className="input-label">Company name (optional)</label>
+        <input className="input" value={draft.company} onChange={(e) => set({ company: e.target.value })} />
+      </div>
+      <div>
+        <label className="input-label">Phone</label>
+        <input className="input" type="tel" placeholder="+65 9123 4567"
+          value={draft.phone} onChange={(e) => set({ phone: e.target.value })} />
+      </div>
+      <div>
+        <label className="input-label">Email</label>
+        <input className="input" type="email" value={draft.email} onChange={(e) => set({ email: e.target.value })} />
+      </div>
+      <div>
+        <label className="input-label">UEN (optional)</label>
+        <input className="input" value={draft.uen} onChange={(e) => set({ uen: e.target.value })} />
+      </div>
+      <div>
+        <label className="input-label">Address (optional)</label>
+        <input className="input" value={draft.address} onChange={(e) => set({ address: e.target.value })} />
+      </div>
+    </>
+  );
+}
+
+/** Name, phone, and email are required; returns an error message or null. */
+function validateDraft(draft: Draft): string | null {
+  if (!draft.name.trim()) return "Name is required";
+  if (!draft.phone.trim()) return "Phone is required";
+  if (!draft.email.trim()) return "Email is required";
+  return null;
+}
+
+function draftToPatch(draft: Draft) {
+  return {
+    name: draft.name.trim(),
+    company: draft.company.trim(),
+    phone: formatSgPhone(draft.phone),
+    email: draft.email.trim(),
+    uen: draft.uen.trim(),
+    address: draft.address.trim(),
+  };
+}
 
 export default function CustomersPage() {
   const { activeBusiness } = useBusiness();
@@ -36,13 +107,14 @@ export default function CustomersPage() {
   function startEdit(c: Customer) {
     setError(null);
     setEditingId(c.id);
-    setDraft({ name: c.name, phone: c.phone, email: c.email, address: c.address, number: String(c.id) });
+    setDraft(draftFrom(c));
   }
 
   async function onSave(c: Customer) {
     if (!draft) return;
-    if (!draft.name.trim()) {
-      setError("Name can't be empty");
+    const invalid = validateDraft(draft);
+    if (invalid) {
+      setError(invalid);
       return;
     }
     const newNumber = parseInt(draft.number, 10);
@@ -58,12 +130,7 @@ export default function CustomersPage() {
       if (newNumber !== c.id) {
         await updateCustomerNumber(c.id, newNumber);
       }
-      await updateCustomer(newNumber, {
-        name: draft.name.trim(),
-        phone: draft.phone.trim(),
-        email: draft.email.trim(),
-        address: draft.address.trim(),
-      });
+      await updateCustomer(newNumber, draftToPatch(draft));
       setEditingId(null);
       setDraft(null);
       reload();
@@ -74,8 +141,9 @@ export default function CustomersPage() {
   }
 
   async function onAddClient() {
-    if (!newDraft.name.trim()) {
-      setError("Name can't be empty");
+    const invalid = validateDraft(newDraft);
+    if (invalid) {
+      setError(invalid);
       return;
     }
     let id: number | undefined;
@@ -90,13 +158,7 @@ export default function CustomersPage() {
     setBusy(true);
     setError(null);
     try {
-      await createCustomer({
-        id,
-        name: newDraft.name.trim(),
-        phone: newDraft.phone.trim(),
-        email: newDraft.email.trim(),
-        address: newDraft.address.trim(),
-      }, activeBusiness!.id);
+      await createCustomer({ id, ...draftToPatch(newDraft) }, activeBusiness!.id);
       setNewDraft(emptyDraft());
       setAdding(false);
       reload();
@@ -135,34 +197,8 @@ export default function CustomersPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="section-label">Add client</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ width: 120 }}>
-                <label className="input-label">Client no.</label>
-                <input className="input" inputMode="numeric" placeholder="auto"
-                  value={newDraft.number}
-                  onChange={(e) => setNewDraft({ ...newDraft, number: e.target.value.replace(/[^0-9]/g, "") })} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="input-label">Name</label>
-                <input className="input" value={newDraft.name}
-                  onChange={(e) => setNewDraft({ ...newDraft, name: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <label className="input-label">Phone</label>
-              <input className="input" type="tel" value={newDraft.phone}
-                onChange={(e) => setNewDraft({ ...newDraft, phone: e.target.value })} />
-            </div>
-            <div>
-              <label className="input-label">Email</label>
-              <input className="input" type="email" value={newDraft.email}
-                onChange={(e) => setNewDraft({ ...newDraft, email: e.target.value })} />
-            </div>
-            <div>
-              <label className="input-label">Address</label>
-              <input className="input" value={newDraft.address}
-                onChange={(e) => setNewDraft({ ...newDraft, address: e.target.value })} />
-            </div>
+            <ClientFields draft={newDraft} numberPlaceholder="auto"
+              set={(patch) => setNewDraft({ ...newDraft, ...patch })} />
             <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem" }}>
               Leave the client number blank to auto-assign the next one, or set it
               to import an existing client (e.g. an older client numbered 1–8).
@@ -192,33 +228,7 @@ export default function CustomersPage() {
           <div key={c.id} className="card">
             {editingId === c.id && draft ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <div style={{ width: 110 }}>
-                    <label className="input-label">Client no.</label>
-                    <input className="input" inputMode="numeric" value={draft.number}
-                      onChange={(e) => setDraft({ ...draft, number: e.target.value.replace(/[^0-9]/g, "") })} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label className="input-label">Name</label>
-                    <input className="input" value={draft.name}
-                      onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <label className="input-label">Phone</label>
-                  <input className="input" type="tel" value={draft.phone}
-                    onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
-                </div>
-                <div>
-                  <label className="input-label">Email</label>
-                  <input className="input" type="email" value={draft.email}
-                    onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
-                </div>
-                <div>
-                  <label className="input-label">Address</label>
-                  <input className="input" value={draft.address}
-                    onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-                </div>
+                <ClientFields draft={draft} set={(patch) => setDraft({ ...draft, ...patch })} />
                 <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                   <button onClick={() => { setEditingId(null); setDraft(null); setError(null); }}
                     disabled={busy} className="btn btn-secondary" style={{ flex: 1 }}>
@@ -240,8 +250,11 @@ export default function CustomersPage() {
                   <div style={{ fontWeight: 600 }}>
                     {c.name} <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>#{c.id}</span>
                   </div>
+                  {c.company && (
+                    <div style={{ color: "var(--text-secondary)", fontSize: "0.82rem", marginTop: 1 }}>{c.company}</div>
+                  )}
                   <div style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 2 }}>
-                    {[c.phone, c.email, c.address].filter(Boolean).join(" · ") || "No contact details"}
+                    {[c.phone, c.email, c.uen && `UEN ${c.uen}`, c.address].filter(Boolean).join(" · ") || "No contact details"}
                   </div>
                 </div>
                 <button onClick={() => startEdit(c)} className="btn btn-secondary icon-btn" style={{ flexShrink: 0 }}>

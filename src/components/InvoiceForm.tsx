@@ -5,6 +5,7 @@ import {
   createCustomer, finalizeInvoice, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
 } from "@/lib/db";
 import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib/formStorage";
+import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import type { Customer, Preset } from "@/lib/types";
 import { IconClose } from "@/components/icons";
@@ -106,7 +107,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     if (!formBusinessId) throw new Error("No business selected");
     let customerId = f.customerId;
     if (f.newCustomer && f.newCustomer.name.trim()) {
-      const c = await createCustomer(f.newCustomer, formBusinessId);
+      const c = await createCustomer({ ...f.newCustomer, phone: formatSgPhone(f.newCustomer.phone) }, formBusinessId);
       customerId = c.id;
       setCustomers([...customers, c]);
       set({ customerId: c.id, newCustomer: null });

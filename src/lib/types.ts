@@ -1,7 +1,8 @@
 import type { DiscountType, LineItem } from "./money";
 
 export type Customer = {
-  id: number; business_id: string; name: string; phone: string; email: string; address: string;
+  id: number; business_id: string; name: string; company: string; phone: string;
+  email: string; uen: string; address: string;
 };
 
 export type Preset = {
@@ -57,6 +58,7 @@ export type PrintPricingSettings = {
   print_speed_cm3_per_hour: number;
   cost_per_hour_cents: number;
   waste_percent: number;
+  infill_percent: number;
   multi_colour_time_surcharge_percent: number;
   multi_colour_waste_percent: number;
   minimum_price_cents: number | null;

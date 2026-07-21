@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { normalizeSgMobile } from "./phone";
+import { normalizeSgMobile, formatSgPhone } from "./phone";
 
 describe("normalizeSgMobile", () => {
   test("8-digit mobile without country code", () => {
@@ -30,5 +30,21 @@ describe("normalizeSgMobile", () => {
   test("garbage or wrong-length input", () => {
     expect(normalizeSgMobile("abc")).toEqual({ e164: null, isMobile: false });
     expect(normalizeSgMobile("123")).toEqual({ e164: null, isMobile: false });
+  });
+});
+
+describe("formatSgPhone", () => {
+  test("formats an 8-digit SG number as +65 XXXX XXXX", () => {
+    expect(formatSgPhone("96561716")).toBe("+65 9656 1716");
+    expect(formatSgPhone("9656 1716")).toBe("+65 9656 1716");
+    expect(formatSgPhone("+6596561716")).toBe("+65 9656 1716");
+    expect(formatSgPhone("65 9656 1716")).toBe("+65 9656 1716");
+  });
+
+  test("leaves non-SG / partial input untouched (trimmed)", () => {
+    expect(formatSgPhone("  12345  ")).toBe("12345");
+    expect(formatSgPhone("+1 415 555 0100")).toBe("+1 415 555 0100");
+    expect(formatSgPhone("")).toBe("");
+    expect(formatSgPhone(null)).toBe("");
   });
 });

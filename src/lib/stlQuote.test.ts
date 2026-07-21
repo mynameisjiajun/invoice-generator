@@ -108,6 +108,18 @@ describe("estimateQuote", () => {
     expect(result.priceCents).toBe(612);
   });
 
+  test("infill_percent reduces billed weight (walls + infill of the rest)", () => {
+    // fillFactor(15) = 0.25 + 0.75*0.15 = 0.3625 → weight 10*4*0.3625 = 14.5g
+    const result = estimateQuote(10, plaBasic, false, { ...baseSettings, infill_percent: 15 });
+    expect(result.weightG).toBeCloseTo(14.5);
+    expect(result.materialCostCents).toBeCloseTo(43.5);
+  });
+
+  test("infill_percent of 100 is solid (fillFactor 1)", () => {
+    const result = estimateQuote(10, plaBasic, false, { ...baseSettings, infill_percent: 100 });
+    expect(result.weightG).toBeCloseTo(40);
+  });
+
   test("minimum_price_cents floors a cheap quote", () => {
     const tinyPart: Material = { name: "PLA Basic", density_g_cm3: 1, cost_per_gram_cents: 3 };
     const result = estimateQuote(0.1, tinyPart, false, { ...baseSettings, minimum_price_cents: 1000 });

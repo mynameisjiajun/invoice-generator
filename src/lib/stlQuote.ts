@@ -94,10 +94,22 @@ export type PricingSettings = {
   print_speed_cm3_per_hour: number;
   cost_per_hour_cents: number;
   waste_percent: number;
+  /** Average infill %. Omitted → treated as 100 (solid). */
+  infill_percent?: number;
   multi_colour_time_surcharge_percent: number;
   multi_colour_waste_percent: number;
   minimum_price_cents: number | null;
 };
+
+/** Fraction of a model's solid volume that is actually plastic. A print is
+ *  never solid: a shell (walls + top/bottom) always exists regardless of
+ *  infill, plus the chosen infill of the hollow interior. Approximate the
+ *  shell as ~25% of the solid volume and add the infill of the rest. */
+export function fillFactor(infillPercent: number): number {
+  const WALL_BASE = 0.25;
+  const infill = Math.min(100, Math.max(0, infillPercent)) / 100;
+  return WALL_BASE + (1 - WALL_BASE) * infill;
+}
 
 export type QuoteEstimate = {
   volumeCm3: number;
@@ -114,7 +126,7 @@ export function estimateQuote(
   multiColour: boolean,
   settings: PricingSettings
 ): QuoteEstimate {
-  const rawWeightG = volumeCm3 * material.density_g_cm3;
+  const rawWeightG = volumeCm3 * material.density_g_cm3 * fillFactor(settings.infill_percent ?? 100);
   const wastePercent = settings.waste_percent + (multiColour ? settings.multi_colour_waste_percent : 0);
   const weightG = rawWeightG * (1 + wastePercent / 100);
   const hours = volumeCm3 / settings.print_speed_cm3_per_hour;

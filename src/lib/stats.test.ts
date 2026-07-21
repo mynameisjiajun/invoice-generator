@@ -10,7 +10,7 @@ function inv(over: Partial<Invoice>): Invoice {
     customer_id: 1, job_event: "", job_date: "", job_location: "",
     line_items: [], discount_type: "none", discount_value: 0,
     subtotal_cents: 0, total_cents: 50000, paid_date: null,
-    customers: { id: 1, business_id: BIZ, name: "Jordan", phone: "", email: "", address: "" },
+    customers: { id: 1, business_id: BIZ, name: "Jordan", company: "", phone: "", email: "", uen: "", address: "" },
     ...over,
   };
 }
@@ -19,7 +19,7 @@ const data = [
   inv({ status: "paid", total_cents: 50000 }),                       // 2026-06, paid
   inv({ status: "unpaid", total_cents: 30000, issue_date: "2026-01-10" }),
   inv({ status: "paid", total_cents: 20000, issue_date: "2025-12-01",
-        customers: { id: 2, business_id: BIZ, name: "Acme", phone: "", email: "", address: "" } }),
+        customers: { id: 2, business_id: BIZ, name: "Acme", company: "", phone: "", email: "", uen: "", address: "" } }),
   inv({ status: "draft", total_cents: 99900 }),                      // excluded everywhere
 ];
 

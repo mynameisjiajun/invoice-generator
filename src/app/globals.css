@@ -990,3 +990,11 @@ textarea.input {
 
 /* ── Press feedback on cards (tap, not hover) ── */
 .card:active { transform: scale(0.994); }
+
+/* Column headers for the pricing materials table */
+.pricing-col-head {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-left: 2px;
+}

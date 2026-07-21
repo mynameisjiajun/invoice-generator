@@ -20,6 +20,7 @@ function emptySettings(businessId: string): PrintPricingSettings {
     print_speed_cm3_per_hour: 0,
     cost_per_hour_cents: 200,
     waste_percent: 0,
+    infill_percent: 15,
     multi_colour_time_surcharge_percent: 20,
     multi_colour_waste_percent: 0,
     minimum_price_cents: null,
@@ -140,14 +141,21 @@ export default function PrintPricingSettingsCard({ businessId, slug }: { busines
         }}>{error}</div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+      <label className="input-label" style={{ marginBottom: 8 }}>Materials &amp; rates</label>
+      <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+        <span className="pricing-col-head" style={{ flex: 2 }}>Material</span>
+        <span className="pricing-col-head" style={{ flex: 1 }}>Density (g/cm³)</span>
+        <span className="pricing-col-head" style={{ flex: 1 }}>Price ($/g)</span>
+        <span style={{ width: 30, flexShrink: 0 }} />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 8 }}>
         {form.materials.map((m, i) => (
           <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input className="input" placeholder="Material name" style={{ flex: 2 }}
+            <input className="input" placeholder="e.g. PLA Basic" style={{ flex: 2 }}
               value={m.name} onChange={(e) => updateMaterial(i, { name: e.target.value })} />
-            <input className="input" placeholder="Density g/cm³" inputMode="decimal" style={{ flex: 1 }}
+            <input className="input" inputMode="decimal" style={{ flex: 1 }}
               value={m.density_g_cm3} onChange={(e) => updateMaterial(i, { density_g_cm3: parseFloat(e.target.value) || 0 })} />
-            <input className="input" placeholder="$/g" inputMode="decimal" style={{ flex: 1 }}
+            <input className="input" inputMode="decimal" style={{ flex: 1 }}
               value={(m.cost_per_gram_cents / 100).toFixed(2)}
               onChange={(e) => updateMaterial(i, { cost_per_gram_cents: Math.round((parseFloat(e.target.value) || 0) * 100) })} />
             <button onClick={() => removeMaterial(i)} className="btn-danger icon-btn" aria-label={`Remove ${m.name || "material"}`}>
@@ -155,6 +163,12 @@ export default function PrintPricingSettingsCard({ businessId, slug }: { busines
             </button>
           </div>
         ))}
+      </div>
+      <p style={{ color: "var(--text-tertiary)", fontSize: "0.76rem", marginBottom: 12 }}>
+        <strong>Density</strong> (g/cm³) converts a model&apos;s size to weight — it&apos;s pre-filled per
+        material and rarely needs changing. <strong>Price ($/g)</strong> is what you charge per gram of that filament.
+      </p>
+      <div style={{ marginBottom: 16 }}>
         <button onClick={addMaterial} className="btn btn-secondary icon-btn" style={{ alignSelf: "flex-start" }}>
           <IconAdd size={15} /> Add Material
         </button>
@@ -170,6 +184,11 @@ export default function PrintPricingSettingsCard({ businessId, slug }: { busines
           <label className="input-label">Cost per hour ($)</label>
           <input className="input" inputMode="decimal" value={(form.cost_per_hour_cents / 100).toFixed(2)}
             onChange={(e) => setForm({ ...form, cost_per_hour_cents: Math.round((parseFloat(e.target.value) || 0) * 100) })} />
+        </div>
+        <div>
+          <label className="input-label">Average infill %</label>
+          <input className="input" inputMode="decimal" value={form.infill_percent}
+            onChange={(e) => setForm({ ...form, infill_percent: parseFloat(e.target.value) || 0 })} />
         </div>
         <div>
           <label className="input-label">Waste % (all prints)</label>

@@ -409,6 +409,9 @@ export default function InvoicePdf({
           <View style={s.infoCard}>
             <Text style={s.label}>Bill To</Text>
             <Text style={s.infoName}>{invoice.customers?.name}</Text>
+            {invoice.customers?.company ? (
+              <Text style={[s.infoDetail, { fontWeight: 700, color: C.dark }]}>{invoice.customers.company}</Text>
+            ) : null}
             {invoice.customers?.address ? (
               <Text style={s.infoDetail}>{invoice.customers.address}</Text>
             ) : null}
@@ -418,7 +421,10 @@ export default function InvoicePdf({
             {invoice.customers?.email ? (
               <Text style={s.infoDetail}>{invoice.customers.email}</Text>
             ) : null}
-            {!invoice.customers?.address && !invoice.customers?.phone && !invoice.customers?.email && (
+            {invoice.customers?.uen ? (
+              <Text style={s.infoDetail}>UEN {invoice.customers.uen}</Text>
+            ) : null}
+            {!invoice.customers?.company && !invoice.customers?.address && !invoice.customers?.phone && !invoice.customers?.email && (
               <Text style={[s.infoDetail, { fontStyle: "italic" }]}>No contact details on file</Text>
             )}
           </View>
