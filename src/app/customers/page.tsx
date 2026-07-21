@@ -1,17 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useBusiness } from "@/lib/businessContext";
-import { listCustomers, updateCustomer, updateCustomerNumber } from "@/lib/db";
+import { createCustomer, listCustomers, updateCustomer, updateCustomerNumber } from "@/lib/db";
 import type { Customer } from "@/lib/types";
-import { IconCheck, IconEdit } from "@/components/icons";
+import { IconAdd, IconCheck, IconEdit } from "@/components/icons";
 
 type Draft = { name: string; phone: string; email: string; address: string; number: string };
+
+const emptyDraft = (): Draft => ({ name: "", phone: "", email: "", address: "", number: "" });
 
 export default function CustomersPage() {
   const { activeBusiness } = useBusiness();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [newDraft, setNewDraft] = useState<Draft>(emptyDraft());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,14 +73,55 @@ export default function CustomersPage() {
     setBusy(false);
   }
 
+  async function onAddClient() {
+    if (!newDraft.name.trim()) {
+      setError("Name can't be empty");
+      return;
+    }
+    let id: number | undefined;
+    if (newDraft.number.trim()) {
+      const n = parseInt(newDraft.number, 10);
+      if (!Number.isInteger(n) || n <= 0) {
+        setError("Client number must be a positive whole number (or leave it blank to auto-assign)");
+        return;
+      }
+      id = n;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await createCustomer({
+        id,
+        name: newDraft.name.trim(),
+        phone: newDraft.phone.trim(),
+        email: newDraft.email.trim(),
+        address: newDraft.address.trim(),
+      }, activeBusiness!.id);
+      setNewDraft(emptyDraft());
+      setAdding(false);
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add client");
+    }
+    setBusy(false);
+  }
+
   if (!activeBusiness) {
-    return <div className="page-container"><p style={{ color: "var(--text-tertiary)" }}>Loading…</p></div>;
+    return (
+      <div className="page-container">
+        <div className="skeleton" style={{ height: 36, width: "40%", marginBottom: 10 }} />
+        <div className="skeleton" style={{ height: 18, width: "70%", marginBottom: 24 }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 74 }} />)}
+        </div>
+      </div>
+    );
   }
 
   return (
     <main className="page-container animate-fade-in">
       <h1 className="page-title">Clients</h1>
-      <p className="page-subtitle">Edit contact details and client numbers for {activeBusiness.name}</p>
+      <p className="page-subtitle">Add or edit clients and their client numbers for {activeBusiness.name}</p>
 
       {error && (
         <div style={{
@@ -85,7 +130,62 @@ export default function CustomersPage() {
         }}>{error}</div>
       )}
 
-      {customers.length === 0 && <p style={{ color: "var(--text-tertiary)" }}>No clients yet. Add one when you create an invoice.</p>}
+      {/* Add client */}
+      {adding ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="section-label">Add client</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ width: 120 }}>
+                <label className="input-label">Client no.</label>
+                <input className="input" inputMode="numeric" placeholder="auto"
+                  value={newDraft.number}
+                  onChange={(e) => setNewDraft({ ...newDraft, number: e.target.value.replace(/[^0-9]/g, "") })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="input-label">Name</label>
+                <input className="input" value={newDraft.name}
+                  onChange={(e) => setNewDraft({ ...newDraft, name: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="input-label">Phone</label>
+              <input className="input" type="tel" value={newDraft.phone}
+                onChange={(e) => setNewDraft({ ...newDraft, phone: e.target.value })} />
+            </div>
+            <div>
+              <label className="input-label">Email</label>
+              <input className="input" type="email" value={newDraft.email}
+                onChange={(e) => setNewDraft({ ...newDraft, email: e.target.value })} />
+            </div>
+            <div>
+              <label className="input-label">Address</label>
+              <input className="input" value={newDraft.address}
+                onChange={(e) => setNewDraft({ ...newDraft, address: e.target.value })} />
+            </div>
+            <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem" }}>
+              Leave the client number blank to auto-assign the next one, or set it
+              to import an existing client (e.g. an older client numbered 1–8).
+            </p>
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button onClick={() => { setAdding(false); setNewDraft(emptyDraft()); setError(null); }}
+                disabled={busy} className="btn btn-secondary" style={{ flex: 1 }}>
+                Cancel
+              </button>
+              <button onClick={onAddClient} disabled={busy} className="btn btn-primary icon-btn" style={{ flex: 1 }}>
+                <IconCheck size={15} /> {busy ? "Adding…" : "Add client"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => { setAdding(true); setError(null); }}
+          className="btn btn-secondary icon-btn" style={{ marginBottom: 16 }}>
+          <IconAdd size={15} /> Add client
+        </button>
+      )}
+
+      {customers.length === 0 && !adding && <p style={{ color: "var(--text-tertiary)" }}>No clients yet. Tap “Add client” to create one.</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {customers.map((c) => (

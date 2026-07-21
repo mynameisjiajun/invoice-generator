@@ -9,6 +9,7 @@ import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
 import type { Business, Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
+import ConfirmSheet from "@/components/ConfirmSheet";
 import {
   IconCheck, IconCopy, IconDownload, IconEdit, IconMail, IconReceipt, IconShare,
   IconTrash, IconUndo, IconWarning, IconWhatsApp,
@@ -20,6 +21,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
   const [business, setBusiness] = useState<Business | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     getInvoice(id)
@@ -176,10 +178,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
   async function onDelete() {
     const inv = invoice!;
-    const msg = inv.status === "draft"
-      ? "Delete this draft?"
-      : `Delete invoice ${inv.invoice_number}?\n\nThis can't be undone. If it's your most recent invoice, its number will be reused for the next one.`;
-    if (!confirm(msg)) return;
+    setConfirmingDelete(false);
     try {
       await deleteInvoice(inv.id);
       router.push("/");
@@ -281,10 +280,22 @@ export default function InvoiceDetail({ id }: { id: string }) {
         </Link>
       </div>
 
-      <button onClick={onDelete} className="btn-danger icon-btn"
+      <button onClick={() => setConfirmingDelete(true)} className="btn-danger icon-btn"
         style={{ display: "flex", width: "100%", padding: "10px", borderRadius: "var(--radius-sm)" }}>
         <IconTrash /> Delete invoice
       </button>
+
+      <ConfirmSheet
+        open={confirmingDelete}
+        danger
+        title={invoice.status === "draft" ? "Delete this draft?" : `Delete invoice ${invoice.invoice_number}?`}
+        message={invoice.status === "draft"
+          ? "This draft will be permanently removed."
+          : "This can't be undone. If it's your most recent invoice, its number will be reused for the next one."}
+        confirmLabel="Delete"
+        onConfirm={onDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </main>
   );
 }

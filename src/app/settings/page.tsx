@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBusiness, archiveBusiness, updateBusiness, listPresets, createPreset, deletePreset } from "@/lib/db";
+import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/lib/businessContext";
 import { slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
 import type { Business, Preset } from "@/lib/types";
-import { IconAdd, IconCheck, IconTrash } from "@/components/icons";
+import { IconAdd, IconCheck, IconSignOut, IconTrash } from "@/components/icons";
 import PrintPricingSettingsCard from "@/components/PrintPricingSettingsCard";
+import ConfirmSheet from "@/components/ConfirmSheet";
 
 const FIELDS: Array<{ key: keyof Business; label: string }> = [
   { key: "name", label: "Business name" },
@@ -19,6 +22,7 @@ const FIELDS: Array<{ key: keyof Business; label: string }> = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { businesses, activeBusiness, setActiveBusinessId, reloadBusinesses } = useBusiness();
   const [form, setForm] = useState<Business | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -26,7 +30,15 @@ export default function SettingsPage() {
   const [np, setNp] = useState({ name: "", description: "", price: "", qty: "1" });
   const [newBizName, setNewBizName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pendingArchive, setPendingArchive] = useState<Business | null>(null);
+  const [pendingDeletePreset, setPendingDeletePreset] = useState<Preset | null>(null);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function signOut() {
+    await createClient().auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   useEffect(() => {
     setForm(activeBusiness);
@@ -75,8 +87,10 @@ export default function SettingsPage() {
     }
   }
 
-  async function onArchiveBusiness(b: Business) {
-    if (!confirm(`Archive "${b.name}"? Its invoices stay accessible, but it'll drop out of the switcher.`)) return;
+  async function doArchiveBusiness() {
+    const b = pendingArchive;
+    if (!b) return;
+    setPendingArchive(null);
     try {
       await archiveBusiness(b.id);
       await reloadBusinesses();
@@ -111,8 +125,10 @@ export default function SettingsPage() {
     }
   }
 
-  async function onDeletePreset(p: Preset) {
-    if (!confirm(`Delete preset "${p.name}"?`)) return;
+  async function doDeletePreset() {
+    const p = pendingDeletePreset;
+    if (!p) return;
+    setPendingDeletePreset(null);
     try {
       await deletePreset(p.id);
       setPresets(presets.filter((x) => x.id !== p.id));
@@ -163,7 +179,7 @@ export default function SettingsPage() {
                 </button>
               )}
               {businesses.filter((x) => !x.archived_at).length > 1 && (
-                <button onClick={() => onArchiveBusiness(b)} className="btn-danger icon-btn"
+                <button onClick={() => setPendingArchive(b)} className="btn-danger icon-btn"
                   style={{ flexShrink: 0 }} aria-label={`Archive ${b.name}`}>
                   <IconTrash size={14} />
                 </button>
@@ -250,7 +266,7 @@ export default function SettingsPage() {
                 <div className="money" style={{ fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
                   {formatSGD(p.unit_price_cents)}
                 </div>
-                <button onClick={() => onDeletePreset(p)} className="btn-danger icon-btn" aria-label={`Delete preset ${p.name}`}>
+                <button onClick={() => setPendingDeletePreset(p)} className="btn-danger icon-btn" aria-label={`Delete preset ${p.name}`}>
                   <IconTrash size={14} />
                 </button>
               </div>
@@ -292,6 +308,29 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Sign out */}
+      <button onClick={signOut} className="btn btn-ghost icon-btn"
+        style={{ width: "100%", marginTop: 16, color: "var(--text-secondary)" }}>
+        <IconSignOut size={16} /> Sign out
+      </button>
+
+      <ConfirmSheet
+        open={pendingArchive !== null}
+        title={`Archive "${pendingArchive?.name}"?`}
+        message="Its invoices stay accessible, but it'll drop out of the business switcher."
+        confirmLabel="Archive"
+        onConfirm={doArchiveBusiness}
+        onCancel={() => setPendingArchive(null)}
+      />
+      <ConfirmSheet
+        open={pendingDeletePreset !== null}
+        danger
+        title={`Delete preset "${pendingDeletePreset?.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={doDeletePreset}
+        onCancel={() => setPendingDeletePreset(null)}
+      />
     </main>
   );
 }
