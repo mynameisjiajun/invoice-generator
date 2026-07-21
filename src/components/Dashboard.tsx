@@ -8,14 +8,26 @@ import { isOverdue, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import ConfirmSheet from "@/components/ConfirmSheet";
+import Toast from "@/components/Toast";
 import { IconCamera, IconCheck, IconCopy, IconEdit, IconSearch, IconTrash, IconUndo } from "@/components/icons";
+
+type StatusFilter = "all" | "unpaid" | "overdue" | "paid" | "draft";
+const FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "unpaid", label: "Unpaid" },
+  { key: "overdue", label: "Overdue" },
+  { key: "paid", label: "Paid" },
+  { key: "draft", label: "Draft" },
+];
 
 export default function Dashboard() {
   const { activeBusiness } = useBusiness();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const [pendingDelete, setPendingDelete] = useState<Invoice | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo: () => void } | null>(null);
 
   useEffect(() => {
     if (!activeBusiness) return;
@@ -57,16 +69,30 @@ export default function Dashboard() {
   const unpaidCount = invoices.filter((i) => i.status === "unpaid").length;
   const paidCount = invoices.filter((i) => i.status === "paid").length;
 
-  async function togglePaid(inv: Invoice) {
+  const visible = invoices.filter((inv) => {
+    if (filter === "overdue" ? !isOverdue(inv) : filter !== "all" && inv.status !== filter) return false;
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return [inv.customers?.name, inv.job_event, inv.invoice_number].some((v) => v?.toLowerCase().includes(q));
+  });
+
+  async function applyPaid(inv: Invoice, paid: boolean, announce: boolean) {
     try {
-      const paid = inv.status !== "paid";
       await setPaid(inv.id, paid, inv.business_id);
       setInvoices(invoices!.map((i) => i.id === inv.id
         ? { ...i, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null }
         : i));
+      navigator.vibrate?.(10);
+      if (announce) {
+        setToast({ message: paid ? "Marked paid" : "Marked unpaid", undo: () => applyPaid(inv, !paid, false) });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }
+  }
+
+  function togglePaid(inv: Invoice) {
+    return applyPaid(inv, inv.status !== "paid", true);
   }
 
   async function confirmDelete() {
@@ -97,10 +123,11 @@ export default function Dashboard() {
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 24 }}>
-        <div className="stat-card stat-card--money">
+        <button onClick={() => setFilter("unpaid")} className="stat-card stat-card--money"
+          style={{ textAlign: "left", cursor: "pointer", font: "inherit" }}>
           <div className="stat-value money">{formatSGD(outstanding)}</div>
           <div className="stat-label">Outstanding</div>
-        </div>
+        </button>
         <div className="stat-card stat-card--warning">
           <div className="stat-value">{unpaidCount}</div>
           <div className="stat-label">Unpaid</div>
@@ -112,19 +139,29 @@ export default function Dashboard() {
       </div>
 
       {invoices.length > 3 && (
-        <div style={{ position: "relative", marginBottom: 16 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", pointerEvents: "none", display: "flex" }}>
-            <IconSearch size={16} />
-          </span>
-          <input
-            className="input"
-            type="search"
-            placeholder="Search by client, event, or invoice no."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ paddingLeft: 38 }}
-          />
-        </div>
+        <>
+          <div style={{ position: "relative", marginBottom: 10 }}>
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", pointerEvents: "none", display: "flex" }}>
+              <IconSearch size={16} />
+            </span>
+            <input
+              className="input"
+              type="search"
+              placeholder="Search by client, event, or invoice no."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ paddingLeft: 38 }}
+            />
+          </div>
+          <div className="chip-row">
+            {FILTERS.map((f) => (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                className={`chip ${filter === f.key ? "chip-active" : ""}`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {invoices.length === 0 && (
@@ -138,13 +175,17 @@ export default function Dashboard() {
         </div>
       )}
 
+      {invoices.length > 0 && visible.length === 0 && (
+        <div className="empty-state">
+          <p style={{ marginBottom: 12 }}>Nothing matches.</p>
+          <button onClick={() => { setQuery(""); setFilter("all"); }} className="btn btn-secondary">
+            Clear filters
+          </button>
+        </div>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {invoices.filter((inv) => {
-          const q = query.trim().toLowerCase();
-          if (!q) return true;
-          return [inv.customers?.name, inv.job_event, inv.invoice_number]
-            .some((v) => v?.toLowerCase().includes(q));
-        }).map((inv, idx) => (
+        {visible.map((inv, idx) => (
           <div key={inv.id} className="card animate-fade-in" style={{ animationDelay: `${idx * 0.03}s` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Link href={inv.status === "draft" ? `/invoices/new?draft=${inv.id}` : `/invoices/${inv.id}`}
@@ -200,6 +241,10 @@ export default function Dashboard() {
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
+
+      {toast && (
+        <Toast message={toast.message} onUndo={toast.undo} onDismiss={() => setToast(null)} />
+      )}
     </main>
   );
 }
