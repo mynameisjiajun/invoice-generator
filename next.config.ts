@@ -11,12 +11,17 @@ import type { NextConfig } from "next";
 // React's dev-mode debugging (HMR, reconstructing stack traces) needs the
 // 'unsafe-eval' CSP keyword; it is never needed in a production build.
 const isDev = process.env.NODE_ENV === "development";
+// Vercel's own docs require these vercel.live/vercel.com allowances so the
+// Vercel Toolbar (live comments/preview panel) keeps working under a CSP —
+// https://vercel.com/docs/vercel-toolbar/managing-toolbar#using-a-content-security-policy
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  `script-src 'self' 'unsafe-inline' https://vercel.live${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline' https://vercel.live",
+  "img-src 'self' data: blob: https://vercel.live https://vercel.com",
+  "font-src 'self' https://vercel.live https://assets.vercel.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com",
+  "frame-src https://vercel.live",
   "worker-src 'self' blob:",
   "frame-ancestors 'none'",
 ].join("; ");
