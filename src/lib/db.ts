@@ -28,8 +28,23 @@ export async function archiveBusiness(id: string): Promise<void> {
 export async function listCustomers(businessId: string): Promise<Customer[]> {
   return ok(await db().from("customers").select("*").eq("business_id", businessId).order("name"));
 }
-export async function createCustomer(c: Omit<Customer, "id" | "business_id">, businessId: string): Promise<Customer> {
-  return ok(await db().from("customers").insert({ ...c, business_id: businessId }).select().single());
+/** Create a customer. Pass `id` to assign a specific client number (for
+ *  importing existing clients); omit it to auto-assign the next number.
+ *  A taken number surfaces a friendly error. */
+export async function createCustomer(
+  c: Omit<Customer, "id" | "business_id"> & { id?: number },
+  businessId: string,
+): Promise<Customer> {
+  const { id, ...rest } = c;
+  const payload = { ...rest, business_id: businessId, ...(id != null ? { id } : {}) };
+  const res = await db().from("customers").insert(payload).select().single();
+  if (res.error) {
+    if (res.error.code === "23505" || /duplicate key|unique/i.test(res.error.message)) {
+      throw new Error(`Client number ${id} is already in use`);
+    }
+    throw new Error(res.error.message);
+  }
+  return res.data as Customer;
 }
 export async function updateCustomer(id: number, patch: Partial<Customer>): Promise<void> {
   ok(await db().from("customers").update(patch).eq("id", id).select().single());
