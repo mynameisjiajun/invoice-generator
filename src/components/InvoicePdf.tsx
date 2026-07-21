@@ -9,7 +9,7 @@ import {
 } from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import { formatSgPhone, formatSgAddress } from "@/lib/phone";
-import type { Business, Invoice } from "@/lib/types";
+import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
 
 /* Montserrat (Proxima Nova-style geometric sans), served from public/fonts.
    This file is bundled for the browser (dynamically imported by
@@ -349,10 +349,9 @@ export default function InvoicePdf({
     invoice.discount_value,
   );
   const isReceipt = variant === "receipt";
-  const docWord = isReceipt ? "Receipt" : "Invoice";
 
   return (
-    <Document title={`${docWord} ${invoice.invoice_number ?? "DRAFT"}`}>
+    <Document title={invoiceDocLabel(invoice, variant)}>
       <Page size="A4" style={s.page}>
         {/* ── top accent bars ── */}
         <View style={s.topBar} />

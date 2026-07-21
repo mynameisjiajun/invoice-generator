@@ -7,7 +7,7 @@ import { formatSGD } from "@/lib/money";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
-import type { Business, Invoice } from "@/lib/types";
+import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import {
@@ -83,8 +83,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     const blob = await pdf(
       <InvoicePdf invoice={inv} business={st} qr={qr} logo={logo} variant={variant} />
     ).toBlob();
-    const word = variant === "receipt" ? "Receipt" : "Invoice";
-    const filename = `${word} ${inv.invoice_number ?? "DRAFT"}.pdf`;
+    const filename = `${invoiceDocLabel(inv, variant)}.pdf`;
     return { blob, filename };
   }
 

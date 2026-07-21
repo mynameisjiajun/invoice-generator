@@ -46,6 +46,20 @@ export function isOverdue(inv: Invoice, today = new Date()): boolean {
   return today > due;
 }
 
+/** Label used as the PDF's title and download filename:
+ *  "Invoice for <Name> <DDMMYYYY> <Number>" (sanitized for filenames). */
+export function invoiceDocLabel(inv: Invoice, variant: "invoice" | "receipt" = "invoice"): string {
+  const word = variant === "receipt" ? "Receipt" : "Invoice";
+  const name = inv.customers?.name?.trim() || "Client";
+  const p = inv.issue_date.split("-"); // ISO YYYY-MM-DD
+  const date = p.length === 3 ? `${p[2]}${p[1]}${p[0]}` : inv.issue_date.replace(/-/g, "");
+  const number = inv.invoice_number ?? "DRAFT";
+  return `${word} for ${name} ${date} ${number}`
+    .replace(/[/\\:*?"<>|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export type PrintMaterial = {
   name: string;
   density_g_cm3: number;
