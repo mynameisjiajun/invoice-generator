@@ -20,10 +20,15 @@ export function paynowPayload(opts: {
   merchantName?: string;
 }): string {
   const amount = (opts.amountCents / 100).toFixed(2);
+  // PayNow's mobile proxy value must be digits only — country code + number,
+  // no "+" and no spaces (EMVCo/SGQR spec). DBS's own PayLah scanner quietly
+  // tolerates the extra characters; other banks' scanners (UOB confirmed)
+  // reject the QR outright when they're present.
+  const mobileDigits = opts.mobile.replace(/\D/g, "");
   const merchantAccountInfo =
     tlv("00", "SG.PAYNOW") +
     tlv("01", "0") +            // proxy type: mobile
-    tlv("02", opts.mobile) +    // proxy value
+    tlv("02", mobileDigits) +   // proxy value
     tlv("03", "0");             // amount not editable
   const body =
     tlv("00", "01") +           // payload format

@@ -20,10 +20,18 @@ describe("paynowPayload", () => {
     expect(payload).toContain("010212"); // 01 02 "12" = dynamic
   });
 
-  test("merchant account info template is exact", () => {
-    // 0009SG.PAYNOW | 01 01 "0" (mobile proxy) | 02 11 "+6596561716" | 03 01 "0" (not editable)
-    const inner = "0009SG.PAYNOW" + "01010" + "0211+6596561716" + "03010";
+  test("merchant account info template is exact — mobile proxy value has no '+' (spec requires digits only)", () => {
+    // 0009SG.PAYNOW | 01 01 "0" (mobile proxy) | 02 10 "6596561716" | 03 01 "0" (not editable)
+    const inner = "0009SG.PAYNOW" + "01010" + "02106596561716" + "03010";
     expect(payload).toContain("26" + String(inner.length).padStart(2, "0") + inner);
+  });
+
+  test("strips '+' and spaces from the stored mobile number", () => {
+    const withSpaces = paynowPayload({
+      mobile: "+65 9656 1716", amountCents: 50000, reference: "A-30", merchantName: "CHUA JIA JUN",
+    });
+    expect(withSpaces).toContain("02106596561716");
+    expect(withSpaces).not.toContain("+");
   });
 
   test("contains currency 702, country SG, amount 500.00", () => {
