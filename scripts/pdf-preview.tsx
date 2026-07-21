@@ -74,7 +74,7 @@ const invoice: Invoice = {
     phone: "+65 9698 6338",
     email: "jordaniswhoiam@live.com",
     uen: "202512345A",
-    address: "9 Bedok South Ave 2 #20-530",
+    address: "Block 185 Edgefield Plains #07-294 Singapore 820185",
   },
 };
 

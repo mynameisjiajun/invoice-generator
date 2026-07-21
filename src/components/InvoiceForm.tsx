@@ -11,6 +11,18 @@ import type { Customer, Preset } from "@/lib/types";
 import { IconClose } from "@/components/icons";
 import { useBusiness } from "@/lib/businessContext";
 
+type NewCustomerKey = "name" | "company" | "phone" | "email" | "uen" | "address";
+const NEW_CUSTOMER_FIELDS: {
+  k: NewCustomerKey; label: string; type: string; ac: string; placeholder?: string;
+}[] = [
+  { k: "name", label: "Name", type: "text", ac: "name" },
+  { k: "company", label: "Company name (optional)", type: "text", ac: "organization" },
+  { k: "phone", label: "Phone", type: "tel", ac: "tel", placeholder: "+65 9123 4567" },
+  { k: "email", label: "Email", type: "email", ac: "email" },
+  { k: "uen", label: "UEN (optional)", type: "text", ac: "off" },
+  { k: "address", label: "Address (optional)", type: "text", ac: "street-address" },
+];
+
 export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: string; draftId?: string }) {
   const router = useRouter();
   const { activeBusiness } = useBusiness();
@@ -175,7 +187,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         <select className="input" value={f.newCustomer ? "new" : f.customerId ?? ""}
           onChange={(e) => {
             const v = e.target.value;
-            if (v === "new") set({ newCustomer: { name: "", phone: "", email: "", address: "" }, customerId: null });
+            if (v === "new") set({ newCustomer: { name: "", company: "", phone: "", email: "", uen: "", address: "" }, customerId: null });
             else set({ customerId: v ? Number(v) : null, newCustomer: null });
           }}>
           <option value="">— Select customer —</option>
@@ -184,12 +196,11 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         </select>
         {f.newCustomer && (
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-            {(["name", "phone", "email", "address"] as const).map((k) => (
+            {NEW_CUSTOMER_FIELDS.map(({ k, label, type, ac, placeholder }) => (
               <div key={k}>
-                <label className="input-label">{k[0].toUpperCase() + k.slice(1)}</label>
-                <input className="input" placeholder={k[0].toUpperCase() + k.slice(1)}
-                  type={k === "phone" ? "tel" : k === "email" ? "email" : "text"}
-                  autoComplete={k === "phone" ? "tel" : k === "email" ? "email" : k === "name" ? "name" : "street-address"}
+                <label className="input-label">{label}</label>
+                <input className="input" placeholder={placeholder ?? label}
+                  type={type} autoComplete={ac}
                   value={f.newCustomer![k]}
                   onChange={(e) => set({ newCustomer: { ...f.newCustomer!, [k]: e.target.value } })} />
               </div>

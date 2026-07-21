@@ -4,7 +4,7 @@ export type FormState = {
   invoiceId?: string;
   issueDate: string;
   customerId: number | null;
-  newCustomer: { name: string; phone: string; email: string; address: string } | null;
+  newCustomer: { name: string; company: string; phone: string; email: string; uen: string; address: string } | null;
   jobEvent: string;
   jobDate: string;
   jobLocation: string;

@@ -36,3 +36,20 @@ export function formatSgPhone(phone: string | null | undefined): string {
   if (local.length === 8) return `+65 ${local.slice(0, 4)} ${local.slice(4)}`;
   return (phone ?? "").trim();
 }
+
+/**
+ * Splits a free-text Singapore address into display lines, putting the
+ * 6-digit postal code on its own line as "Singapore XXXXXX". Handles the
+ * common ways it's written — "S123456", "S(123456)", "Singapore 123456", or
+ * a bare trailing "123456". If no 6-digit postal code is found, the trimmed
+ * address is returned as a single line.
+ */
+export function formatSgAddress(address: string | null | undefined): string[] {
+  const raw = (address ?? "").trim();
+  if (!raw) return [];
+  const m = raw.match(/[,\s]*(?:singapore|sg|s)?\s*\(?\s*(\d{6})\)?\s*$/i);
+  if (!m || m.index === undefined) return [raw];
+  const line1 = raw.slice(0, m.index).replace(/[,\s]+$/, "").trim();
+  const postalLine = `Singapore ${m[1]}`;
+  return line1 ? [line1, postalLine] : [postalLine];
+}

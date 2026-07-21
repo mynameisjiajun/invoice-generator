@@ -8,6 +8,7 @@ import {
   Font,
 } from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
+import { formatSgPhone, formatSgAddress } from "@/lib/phone";
 import type { Business, Invoice } from "@/lib/types";
 
 /* Montserrat (Proxima Nova-style geometric sans), served from public/fonts.
@@ -376,9 +377,11 @@ export default function InvoicePdf({
                 {business.name.toUpperCase()}
               </Text>
             )}
-            <Text style={s.businessDetail}>{business.address}</Text>
+            {formatSgAddress(business.address).map((line, i) => (
+              <Text key={i} style={s.businessDetail}>{line}</Text>
+            ))}
             <Text style={s.businessDetail}>
-              {business.phone} · {business.email}
+              {formatSgPhone(business.phone)} · {business.email}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
@@ -412,11 +415,8 @@ export default function InvoicePdf({
             {invoice.customers?.company ? (
               <Text style={[s.infoDetail, { fontWeight: 700, color: C.dark }]}>{invoice.customers.company}</Text>
             ) : null}
-            {invoice.customers?.address ? (
-              <Text style={s.infoDetail}>{invoice.customers.address}</Text>
-            ) : null}
             {invoice.customers?.phone ? (
-              <Text style={s.infoDetail}>{invoice.customers.phone}</Text>
+              <Text style={s.infoDetail}>{formatSgPhone(invoice.customers.phone)}</Text>
             ) : null}
             {invoice.customers?.email ? (
               <Text style={s.infoDetail}>{invoice.customers.email}</Text>
@@ -424,6 +424,11 @@ export default function InvoicePdf({
             {invoice.customers?.uen ? (
               <Text style={s.infoDetail}>UEN {invoice.customers.uen}</Text>
             ) : null}
+            {invoice.customers?.address
+              ? formatSgAddress(invoice.customers.address).map((line, i) => (
+                  <Text key={i} style={s.infoDetail}>{line}</Text>
+                ))
+              : null}
             {!invoice.customers?.company && !invoice.customers?.address && !invoice.customers?.phone && !invoice.customers?.email && (
               <Text style={[s.infoDetail, { fontStyle: "italic" }]}>No contact details on file</Text>
             )}
