@@ -28,17 +28,22 @@ Font.register({
 // Keep names/addresses whole — no hyphenation
 Font.registerHyphenationCallback((word) => [word]);
 
-/* ── colour palette ─────────────────────────────────── */
+/* ── colour palette ─────────────────────────────────────
+   Warm "darkroom / editorial" brand palette, matching the app's on-screen
+   design (paper, ink, rust safelight, light-meter gold) instead of the
+   generic cool navy this used to be. Key names are kept so the whole
+   stylesheet inherits the shift; `rust` and `sage` are new accents. */
 const C = {
-  black: "#0F0F0F",
-  dark: "#1A1A2E",
-  accent: "#16213E",
-  mid: "#5A5A7A",
-  light: "#9494B8",
-  faint: "#E8E8F0",
+  dark: "#221C15",     // warm near-black ink — structural (bars, table head, totals)
+  mid: "#6E6153",      // warm secondary text
+  light: "#A79A85",    // warm tertiary text / labels
+  faint: "#E9E0CB",    // warm hairline / borders
   white: "#FFFFFF",
-  highlight: "#F7F7FB",
-  gold: "#C8A951",
+  highlight: "#F7F2E8", // warm paper — card / alt-row backgrounds
+  gold: "#C8A951",     // light-meter gold — money emphasis
+  rust: "#B8452E",     // safelight red — brand accent, used sparingly
+  sage: "#4E7A5A",     // warm success green (receipts)
+  sageBg: "#E7EEE4",
 };
 
 /* ── styles ─────────────────────────────────────────── */
@@ -51,10 +56,14 @@ const s = StyleSheet.create({
     backgroundColor: C.white,
   },
 
-  /* ── top accent bar ── */
+  /* ── top accent bars: ink with a thin rust "safelight" line ── */
   topBar: {
-    height: 6,
+    height: 5,
     backgroundColor: C.dark,
+  },
+  topBarAccent: {
+    height: 2,
+    backgroundColor: C.rust,
   },
 
   /* ── header area ── */
@@ -103,7 +112,7 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Montserrat",
     fontWeight: 700,
-    color: C.dark,
+    color: C.rust,
     textAlign: "right",
     marginTop: 4,
   },
@@ -232,7 +241,7 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Montserrat",
     fontWeight: 700,
-    color: C.white,
+    color: C.gold,
   },
 
   /* ── payment section ── */
@@ -344,8 +353,9 @@ export default function InvoicePdf({
   return (
     <Document title={`${docWord} ${invoice.invoice_number ?? "DRAFT"}`}>
       <Page size="A4" style={s.page}>
-        {/* ── top accent bar ── */}
+        {/* ── top accent bars ── */}
         <View style={s.topBar} />
+        <View style={s.topBarAccent} />
 
         {/* ── header ── */}
         <View style={s.header}>
@@ -372,7 +382,7 @@ export default function InvoicePdf({
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: "#0B7A5C" } : {}]}>
+            <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: "#4E7A5A" } : {}]}>
               <Text style={s.invoiceBadgeText}>{isReceipt ? "RECEIPT" : "INVOICE"}</Text>
             </View>
             <Text style={s.invoiceNumber}>
@@ -380,7 +390,7 @@ export default function InvoicePdf({
             </Text>
             <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
             {isReceipt && invoice.paid_date && (
-              <Text style={[s.invoiceMeta, { color: "#0B7A5C", fontWeight: 700 }]}>
+              <Text style={[s.invoiceMeta, { color: "#4E7A5A", fontWeight: 700 }]}>
                 Paid {invoice.paid_date}
               </Text>
             )}
@@ -473,7 +483,7 @@ export default function InvoicePdf({
                 </View>
               </>
             )}
-            <View style={[s.totalRowFinal, isReceipt ? { backgroundColor: "#0B7A5C" } : {}]}>
+            <View style={[s.totalRowFinal, isReceipt ? { backgroundColor: "#4E7A5A" } : {}]}>
               <Text style={s.totalLabelFinal}>{isReceipt ? "TOTAL PAID" : "TOTAL DUE"}</Text>
               <Text style={s.totalValueFinal}>
                 {formatSGD(invoice.total_cents)}
@@ -485,8 +495,8 @@ export default function InvoicePdf({
         {/* ── payment info + QR (invoice) / confirmation (receipt) ── */}
         {isReceipt ? (
           <View style={s.paymentSection}>
-            <View style={[s.paymentInfo, { backgroundColor: "#E8FBF5" }]}>
-              <Text style={[s.paymentLabel, { color: "#0B7A5C" }]}>Payment Received</Text>
+            <View style={[s.paymentInfo, { backgroundColor: "#E7EEE4" }]}>
+              <Text style={[s.paymentLabel, { color: "#4E7A5A" }]}>Payment Received</Text>
               <Text style={s.paymentText}>
                 Payment of{" "}
                 <Text style={s.paymentHighlight}>{formatSGD(invoice.total_cents)}</Text>
