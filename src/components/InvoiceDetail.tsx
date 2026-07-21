@@ -117,7 +117,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text, title: filename.replace(".pdf", "") });
         if (variant === "invoice" && inv.status !== "draft") {
-          await markSent(inv.id);
+          await markSent(inv.id, inv.business_id);
           setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
         }
       } else {
@@ -146,7 +146,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     }
     window.open(`${base}?text=${encodeURIComponent(msg)}`, "_blank");
     if (inv.status !== "draft") {
-      markSent(inv.id).then(() => setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() }));
+      markSent(inv.id, inv.business_id).then(() => setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() }));
     }
   }
 
@@ -167,7 +167,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     const inv = invoice!;
     try {
       const paid = inv.status !== "paid";
-      await setPaid(inv.id, paid);
+      await setPaid(inv.id, paid, inv.business_id);
       setInvoice({ ...inv, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");

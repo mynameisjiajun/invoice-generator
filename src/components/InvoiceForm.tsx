@@ -148,7 +148,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     setBusy("final"); setError(null);
     try {
       const id = await persistDraft();
-      await finalizeInvoice(id);
+      // persistDraft() throws before this point if formBusinessId is null.
+      await finalizeInvoice(id, formBusinessId!);
       clearForm();
       router.push(`/invoices/${id}`);
     } catch (e) {

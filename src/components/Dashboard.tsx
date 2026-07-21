@@ -60,7 +60,7 @@ export default function Dashboard() {
   async function togglePaid(inv: Invoice) {
     try {
       const paid = inv.status !== "paid";
-      await setPaid(inv.id, paid);
+      await setPaid(inv.id, paid, inv.business_id);
       setInvoices(invoices!.map((i) => i.id === inv.id
         ? { ...i, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null }
         : i));

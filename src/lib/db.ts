@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
 import { subtotalCents, totalCents } from "@/lib/money";
-import type { Business, Customer, Invoice, Preset, PrintPricingSettings, PrintQuote, PrintQuoteStatus } from "@/lib/types";
+import type {
+  Business, Customer, Invoice, InvoiceEvent, InvoiceEventKind,
+  Preset, PrintPricingSettings, PrintQuote, PrintQuoteStatus,
+} from "@/lib/types";
 
 const db = () => createClient();
 
@@ -105,22 +108,38 @@ export async function saveInvoiceDraft(draft: DraftInput, businessId: string): P
   return ok(await db().from("invoices").insert({ ...computed, business_id: businessId }).select(INVOICE_SELECT).single());
 }
 
-export async function finalizeInvoice(id: string): Promise<string> {
-  return ok(await db().rpc("finalize_invoice", { inv_id: id }));
+/** Best-effort activity log — never throws; a lost event must not fail the action. */
+async function logEvent(invoiceId: string, businessId: string, kind: InvoiceEventKind) {
+  try {
+    await db().from("invoice_events").insert({ invoice_id: invoiceId, business_id: businessId, kind });
+  } catch { /* ignore */ }
 }
 
-export async function setPaid(id: string, paid: boolean): Promise<void> {
+export async function listEvents(invoiceId: string): Promise<InvoiceEvent[]> {
+  return ok(await db().from("invoice_events").select("*")
+    .eq("invoice_id", invoiceId).order("created_at"));
+}
+
+export async function finalizeInvoice(id: string, businessId: string): Promise<string> {
+  const num: string = ok(await db().rpc("finalize_invoice", { inv_id: id }));
+  await logEvent(id, businessId, "created");
+  return num;
+}
+
+export async function setPaid(id: string, paid: boolean, businessId: string): Promise<void> {
   ok(await db().from("invoices").update({
     status: paid ? "paid" : "unpaid",
     paid_date: paid ? new Date().toISOString().slice(0, 10) : null,
   }).eq("id", id).select().single());
+  await logEvent(id, businessId, paid ? "paid" : "unpaid");
 }
 
 /** Stamp first-send time. No-op if already sent (first send wins). */
-export async function markSent(id: string): Promise<void> {
-  ok(await db().from("invoices")
+export async function markSent(id: string, businessId: string): Promise<void> {
+  const res = ok<Invoice[]>(await db().from("invoices")
     .update({ sent_at: new Date().toISOString() })
     .eq("id", id).is("sent_at", null).select());
+  if (res.length > 0) await logEvent(id, businessId, "sent");
 }
 
 /** Deletes an invoice. If it held the most recently issued number, the
