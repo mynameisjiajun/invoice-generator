@@ -18,6 +18,7 @@ export type Invoice = {
   invoice_number: string | null;
   status: InvoiceStatus;
   issue_date: string;            // ISO date
+  due_date: string | null;       // ISO date
   customer_id: number | null;
   job_event: string;
   job_date: string;
@@ -43,10 +44,16 @@ export type Business = {
 
 export function isOverdue(inv: Invoice, today = new Date()): boolean {
   if (inv.status !== "unpaid") return false;
-  const due = new Date(inv.issue_date);
-  due.setDate(due.getDate() + 30);
+  const due = inv.due_date ? new Date(inv.due_date) : new Date(inv.issue_date);
+  if (!inv.due_date) due.setDate(due.getDate() + 30);
   return today > due;
 }
+
+export type InvoiceEventKind = "created" | "sent" | "reminded" | "paid" | "unpaid";
+export type InvoiceEvent = {
+  id: string; invoice_id: string; business_id: string;
+  kind: InvoiceEventKind; created_at: string;
+};
 
 /** Label used as the PDF's title and download filename:
  *  "Invoice for <Name> <DDMMYYYY> <Number>" (sanitized for filenames). */

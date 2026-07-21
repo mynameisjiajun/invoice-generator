@@ -50,6 +50,7 @@ const invoice: Invoice = {
   invoice_number: "A-30",
   status: "unpaid",
   issue_date: "2026-07-04",
+  due_date: "2026-08-03",
   customer_id: 8,
   job_event: "Jordan Birthday Party Shoot",
   job_date: "20 June 2026, 7-9PM (2 Hours)",

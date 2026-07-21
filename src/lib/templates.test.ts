@@ -4,7 +4,7 @@ import type { Business, Invoice } from "./types";
 
 const inv = {
   id: "i1", business_id: "b1", invoice_number: "JJ-0042", status: "unpaid",
-  issue_date: "2026-05-30", customer_id: 1, job_event: "OMM shoot Cam Assistant",
+  issue_date: "2026-05-30", due_date: "2026-06-29", customer_id: 1, job_event: "OMM shoot Cam Assistant",
   job_date: "May 27–29", job_location: "", line_items: [], discount_type: "none",
   discount_value: 0, subtotal_cents: 45000, total_cents: 45000, paid_date: null,
   sent_at: null,
