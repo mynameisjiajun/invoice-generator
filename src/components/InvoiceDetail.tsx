@@ -10,7 +10,7 @@ import { qrDataUrl } from "@/lib/qr";
 import type { Business, Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import {
-  IconCheck, IconCopy, IconDownload, IconEdit, IconReceipt, IconShare,
+  IconCheck, IconCopy, IconDownload, IconEdit, IconMail, IconReceipt, IconShare,
   IconTrash, IconUndo, IconWarning, IconWhatsApp,
 } from "@/components/icons";
 
@@ -138,6 +138,31 @@ export default function InvoiceDetail({ id }: { id: string }) {
     window.open(`${base}?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
+  // Opens a pre-filled Gmail compose draft to the customer's email. Gmail's
+  // compose URL can't carry an attachment, so the body asks the customer to
+  // find the invoice attached — download the PDF (button above) and attach it
+  // before sending.
+  function openGmail() {
+    const inv = invoice!;
+    const email = inv.customers?.email?.trim();
+    if (!email) return;
+    const firstName = (inv.customers?.name ?? "").trim().split(/\s+/)[0] || "there";
+    const paymentLine = business!.paynow_number.trim()
+      ? `You can PayNow to ${business!.paynow_number} (the QR is in the attached PDF), reference ${inv.invoice_number ?? ""}.`
+      : `Payment details are in the attached PDF.`;
+    const subject = `Invoice ${inv.invoice_number ?? ""} from ${business!.name}`;
+    const body =
+      `Hi ${firstName},\n\n` +
+      `Please find attached your invoice ${inv.invoice_number ?? ""} for ` +
+      `${inv.job_event || "your booking"}, total ${formatSGD(inv.total_cents)}.\n\n` +
+      `${paymentLine}\n\n` +
+      `Thank you!\n${business!.name}`;
+    const url =
+      `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}` +
+      `&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, "_blank");
+  }
+
   async function onTogglePaid() {
     const inv = invoice!;
     try {
@@ -216,16 +241,21 @@ export default function InvoiceDetail({ id }: { id: string }) {
           <IconShare /> Share PDF
         </button>
       </div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         {invoice.customers?.phone && (
-          <button onClick={openWhatsApp} className="btn btn-secondary icon-btn btn-whatsapp" style={{ flex: 1 }}>
+          <button onClick={openWhatsApp} className="btn btn-secondary icon-btn btn-whatsapp" style={{ flex: 1, minWidth: 150 }}>
             <IconWhatsApp /> WhatsApp {invoice.customers.name?.split(/\s+/)[0]}
             {!whatsapp.isMobile && <IconWarning size={13} />}
           </button>
         )}
+        {invoice.customers?.email && (
+          <button onClick={openGmail} className="btn btn-secondary icon-btn" style={{ flex: 1, minWidth: 150 }}>
+            <IconMail /> Email {invoice.customers.name?.split(/\s+/)[0]}
+          </button>
+        )}
         {invoice.status === "paid" && (
           <button onClick={() => sharePdf("receipt")} disabled={busy}
-            className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
+            className="btn btn-secondary icon-btn" style={{ flex: 1, minWidth: 150 }}>
             <IconReceipt /> Receipt PDF
           </button>
         )}
