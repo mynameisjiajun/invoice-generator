@@ -157,7 +157,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       // persistDraft() throws before this point if formBusinessId is null.
       await finalizeInvoice(id, formBusinessId!);
       clearForm();
-      router.push(`/invoices/${id}`);
+      router.push(`/invoices/${id}?just=1`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to finalize invoice");
       setBusy("");

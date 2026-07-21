@@ -1051,3 +1051,10 @@ textarea.input {
   color: var(--bg-primary);
   border-color: var(--bg-accent);
 }
+
+/* ── One-time attention pulse (e.g. the Send button right after finalizing) ── */
+@keyframes pulse-once {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); }
+}
+.pulse-once { animation: pulse-once 900ms ease-out 300ms 2; }

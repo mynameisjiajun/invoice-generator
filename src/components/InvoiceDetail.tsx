@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { paynowPayload } from "@/lib/paynow";
@@ -18,6 +18,7 @@ import {
 
 export default function InvoiceDetail({ id }: { id: string }) {
   const router = useRouter();
+  const justFinalized = useSearchParams().get("just") === "1";
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [events, setEvents] = useState<InvoiceEvent[]>([]);
@@ -206,6 +207,11 @@ export default function InvoiceDetail({ id }: { id: string }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <h1 className="page-title">{invoice.invoice_number ?? "Draft"}</h1>
+          {justFinalized && (
+            <p style={{ color: "var(--success)", fontSize: "0.85rem", fontWeight: 600 }}>
+              Created — ready to send
+            </p>
+          )}
           <p style={{ color: "var(--text-tertiary)", fontSize: "0.85rem" }}>
             Issued {invoice.issue_date}
           </p>
@@ -248,7 +254,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
         <button onClick={() => downloadPdf()} disabled={busy} className="btn btn-primary icon-btn" style={{ flex: 1 }}>
           <IconDownload /> {busy ? "Generating…" : "Download PDF"}
         </button>
-        <button onClick={() => sendInvoice()} disabled={busy} className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
+        <button onClick={() => sendInvoice()} disabled={busy}
+          className={`btn btn-secondary icon-btn ${justFinalized ? "pulse-once" : ""}`} style={{ flex: 1 }}>
           <IconShare /> Send invoice
         </button>
       </div>
