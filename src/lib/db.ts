@@ -34,6 +34,18 @@ export async function createCustomer(c: Omit<Customer, "id" | "business_id">, bu
 export async function updateCustomer(id: number, patch: Partial<Customer>): Promise<void> {
   ok(await db().from("customers").update(patch).eq("id", id).select().single());
 }
+/** Change a customer's client number (primary key). Cascades to that
+ *  customer's invoices via the ON UPDATE CASCADE FK (migration 005).
+ *  Throws a friendly error if the target number is already taken. */
+export async function updateCustomerNumber(oldId: number, newId: number): Promise<void> {
+  const res = await db().from("customers").update({ id: newId }).eq("id", oldId).select().single();
+  if (res.error) {
+    if (res.error.code === "23505" || /duplicate key|unique/i.test(res.error.message)) {
+      throw new Error(`Client number ${newId} is already in use`);
+    }
+    throw new Error(res.error.message);
+  }
+}
 
 export async function listPresets(businessId: string): Promise<Preset[]> {
   return ok(await db().from("presets").select("*").eq("business_id", businessId).order("name"));
