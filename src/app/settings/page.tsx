@@ -192,6 +192,28 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
             </div>
           ))}
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ width: 110 }}>
+              <label className="input-label">Invoice prefix</label>
+              <input className="input" value={form.invoice_prefix}
+                onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value })} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="input-label">Next invoice number</label>
+              <input className="input" inputMode="numeric" value={String(form.next_invoice_seq)}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10);
+                  setForm({ ...form, next_invoice_seq: Number.isInteger(n) ? n : 0 });
+                }} />
+            </div>
+          </div>
+          <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", marginTop: -4 }}>
+            Your next finalized invoice will be numbered{" "}
+            <span className="money" style={{ fontWeight: 600 }}>
+              {form.invoice_prefix}{form.next_invoice_seq}
+            </span>.
+          </p>
         </div>
         <button onClick={onSave} className={`btn icon-btn ${saved ? "btn-accent" : "btn-primary"}`}
           style={{ marginTop: 16 }}>

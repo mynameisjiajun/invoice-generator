@@ -109,7 +109,14 @@
 
 html {
   height: 100%;
-  overflow-x: hidden;
+  /* `clip`, not `hidden`: `overflow-x: hidden` forces the cross-axis
+     `overflow-y` to compute as `auto` (per the CSS overflow spec), which
+     — together with `height: 100%` — turns <html> into a fixed-height
+     nested scroll container the mouse wheel can't drive (programmatic
+     scroll still worked, wheel scrolled 0px). `clip` contains horizontal
+     overflow just as well but is exempt from that rule, so `overflow-y`
+     stays `visible` and the viewport scrolls normally again. */
+  overflow-x: clip;
   /* Kills the sideways rubber-band scroll that makes a PWA feel like a
      webpage instead of an installed app. */
   overscroll-behavior: none;
@@ -117,7 +124,7 @@ html {
 
 body {
   min-height: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-y: none;
   position: relative;
   background: var(--bg-primary);
