@@ -24,6 +24,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [offerReceipt, setOfferReceipt] = useState(false);
 
   useEffect(() => {
     getInvoice(id)
@@ -176,6 +177,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
       await setPaid(inv.id, paid, inv.business_id);
       setInvoice({ ...inv, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null });
       listEvents(inv.id).then(setEvents).catch(() => {});
+      if (paid) setOfferReceipt(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }
@@ -319,6 +321,15 @@ export default function InvoiceDetail({ id }: { id: string }) {
         confirmLabel="Delete"
         onConfirm={onDelete}
         onCancel={() => setConfirmingDelete(false)}
+      />
+
+      <ConfirmSheet
+        open={offerReceipt}
+        title="Send receipt?"
+        message={`Send a receipt to ${invoice.customers?.name?.trim().split(/\s+/)[0] ?? "the customer"} now?`}
+        confirmLabel="Send receipt"
+        onConfirm={() => { setOfferReceipt(false); sendInvoice("receipt"); }}
+        onCancel={() => setOfferReceipt(false)}
       />
     </main>
   );
