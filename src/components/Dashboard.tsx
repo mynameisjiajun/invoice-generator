@@ -90,7 +90,7 @@ export default function Dashboard() {
       <OnboardingBanner />
 
       {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 24 }}>
         <div className="stat-card stat-card--money">
           <div className="stat-value money">{formatSGD(outstanding)}</div>
           <div className="stat-label">Outstanding</div>
@@ -160,7 +160,7 @@ export default function Dashboard() {
                 {formatSGD(inv.total_cents)}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 4, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
               {inv.status !== "draft" && (
                 <button onClick={() => togglePaid(inv)} className="btn-ghost icon-btn">
                   {inv.status === "paid" ? <IconUndo /> : <IconCheck />}

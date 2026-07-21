@@ -198,7 +198,8 @@ body::before {
 
 .page-title {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 2.1rem;
+  /* Smaller on narrow phones, full size on wider screens. */
+  font-size: clamp(1.6rem, 6vw, 2.1rem);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -356,6 +357,12 @@ body::before {
 input[type="date"], input[type="time"], input[type="datetime-local"] {
   min-width: 0;
   -webkit-min-logical-width: 0;
+  /* iOS renders the native date control much taller than a text input,
+     which made the "Invoice date" box balloon. Stripping the native
+     appearance makes it size like every other .input (same padding/height),
+     while still opening the picker on tap. */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .input:focus {
@@ -427,8 +434,12 @@ textarea.input {
   border: 1px solid var(--border-subtle);
   border-top: 3px solid var(--stat-accent, var(--border-default));
   border-radius: var(--radius-lg);
-  padding: 16px 20px;
+  padding: 14px 12px;
   box-shadow: var(--shadow-sm);
+  /* Let the card shrink inside a minmax(0,1fr) grid track instead of forcing
+     the whole row wider than the screen (which clipped the 3rd card). */
+  min-width: 0;
+  overflow: hidden;
 }
 .stat-card--money { --stat-accent: var(--money); }
 .stat-card--warning { --stat-accent: var(--warning); }
@@ -436,11 +447,13 @@ textarea.input {
 .stat-card--info { --stat-accent: var(--info); }
 
 .stat-value {
-  font-size: 1.5rem;
+  /* Scales down on narrow phones so amounts like $215.00 fit the card. */
+  font-size: clamp(1.05rem, 4.4vw, 1.5rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .stat-label {
