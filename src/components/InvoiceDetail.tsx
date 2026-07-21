@@ -2,16 +2,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteInvoice, getBusiness, getInvoice, setPaid } from "@/lib/db";
+import { deleteInvoice, getBusiness, getInvoice, markSent, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
+import { emailMessage, whatsappMessage } from "@/lib/templates";
 import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import {
-  IconCheck, IconCopy, IconDownload, IconEdit, IconMail, IconReceipt, IconShare,
+  IconCheck, IconCopy, IconDownload, IconEdit, IconReceipt, IconShare,
   IconTrash, IconUndo, IconWarning, IconWhatsApp,
 } from "@/components/icons";
 
@@ -101,18 +102,32 @@ export default function InvoiceDetail({ id }: { id: string }) {
     setBusy(false);
   }
 
-  async function sharePdf(variant: "invoice" | "receipt" = "invoice") {
+  // One send action: native share sheet with the PDF attached — picking Gmail /
+  // WhatsApp there carries the attachment, which a mailto/compose URL never can.
+  // Some share targets drop the `text` when a file is present (iOS Gmail), so the
+  // message is also copied to the clipboard before the sheet opens.
+  async function sendInvoice(variant: "invoice" | "receipt" = "invoice") {
+    const inv = invoice!; const biz = business!;
     setBusy(true);
     try {
       const { blob, filename } = await generatePdfBlob(variant);
       const file = new File([blob], filename, { type: "application/pdf" });
+      const text = emailMessage(inv, biz);
+      try { await navigator.clipboard.writeText(text); } catch { /* non-fatal */ }
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename.replace(".pdf", "") });
+        await navigator.share({ files: [file], text, title: filename.replace(".pdf", "") });
+        if (variant === "invoice" && inv.status !== "draft") {
+          await markSent(inv.id);
+          setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
+        }
       } else {
+        // Desktop fallback: download the PDF, then open a Gmail compose draft
+        // pre-addressed and pre-bodied — user attaches the just-downloaded file.
         const url = URL.createObjectURL(blob);
         const a = Object.assign(document.createElement("a"), { href: url, download: filename });
         a.click();
         URL.revokeObjectURL(url);
+        openGmailCompose(text);
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") setError((e as Error).message);
@@ -124,40 +139,24 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
   function openWhatsApp() {
     const inv = invoice!;
-    const firstName = (inv.customers?.name ?? "").trim().split(/\s+/)[0] || "there";
-    const paymentLine = business!.paynow_number.trim()
-      ? `You can PayNow via the QR in the PDF (sending it right after this) or to ${business!.paynow_number}. Thank you!`
-      : `Payment details are in the PDF (sending it right after this). Thank you!`;
-    const msg =
-      `Hi ${firstName}! Here's your invoice ${inv.invoice_number ?? ""} for ` +
-      `${inv.job_event || "the shoot"} — total ${formatSGD(inv.total_cents)}. ` +
-      paymentLine;
+    const msg = whatsappMessage(inv, business!);
     const base = whatsapp.e164 ? `https://wa.me/${whatsapp.e164}` : "https://wa.me/";
     if (whatsapp.e164 && !whatsapp.isMobile) {
       if (!confirm(`${inv.customers?.phone} looks like a landline, not a mobile — WhatsApp may not open a chat for it. Try anyway?`)) return;
     }
     window.open(`${base}?text=${encodeURIComponent(msg)}`, "_blank");
+    if (inv.status !== "draft") {
+      markSent(inv.id).then(() => setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() }));
+    }
   }
 
   // Opens a pre-filled Gmail compose draft to the customer's email. Gmail's
-  // compose URL can't carry an attachment, so the body asks the customer to
-  // find the invoice attached — download the PDF (button above) and attach it
-  // before sending.
-  function openGmail() {
+  // compose URL can't carry an attachment, so this is only the desktop
+  // fallback for sendInvoice — the mobile path uses the share sheet instead.
+  function openGmailCompose(body: string) {
     const inv = invoice!;
-    const email = inv.customers?.email?.trim();
-    if (!email) return;
-    const firstName = (inv.customers?.name ?? "").trim().split(/\s+/)[0] || "there";
-    const paymentLine = business!.paynow_number.trim()
-      ? `You can PayNow to ${business!.paynow_number} (the QR is in the attached PDF), reference ${inv.invoice_number ?? ""}.`
-      : `Payment details are in the attached PDF.`;
+    const email = inv.customers?.email?.trim() ?? "";
     const subject = `Invoice ${inv.invoice_number ?? ""} from ${business!.name}`;
-    const body =
-      `Hi ${firstName},\n\n` +
-      `Please find attached your invoice ${inv.invoice_number ?? ""} for ` +
-      `${inv.job_event || "your booking"}, total ${formatSGD(inv.total_cents)}.\n\n` +
-      `${paymentLine}\n\n` +
-      `Thank you!\n${business!.name}`;
     const url =
       `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}` +
       `&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -235,8 +234,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
         <button onClick={() => downloadPdf()} disabled={busy} className="btn btn-primary icon-btn" style={{ flex: 1 }}>
           <IconDownload /> {busy ? "Generating…" : "Download PDF"}
         </button>
-        <button onClick={() => sharePdf()} disabled={busy} className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
-          <IconShare /> Share PDF
+        <button onClick={() => sendInvoice()} disabled={busy} className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
+          <IconShare /> Send invoice
         </button>
       </div>
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
@@ -246,18 +245,18 @@ export default function InvoiceDetail({ id }: { id: string }) {
             {!whatsapp.isMobile && <IconWarning size={13} />}
           </button>
         )}
-        {invoice.customers?.email && (
-          <button onClick={openGmail} className="btn btn-secondary icon-btn" style={{ flex: 1, minWidth: 150 }}>
-            <IconMail /> Email {invoice.customers.name?.split(/\s+/)[0]}
-          </button>
-        )}
         {invoice.status === "paid" && (
-          <button onClick={() => sharePdf("receipt")} disabled={busy}
+          <button onClick={() => sendInvoice("receipt")} disabled={busy}
             className="btn btn-secondary icon-btn" style={{ flex: 1, minWidth: 150 }}>
             <IconReceipt /> Receipt PDF
           </button>
         )}
       </div>
+      {invoice.sent_at && (
+        <p style={{ color: "var(--text-tertiary)", fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+          Sent {new Date(invoice.sent_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+        </p>
+      )}
 
       {/* Manage row */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
