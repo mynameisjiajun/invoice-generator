@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/lib/businessContext";
 import { slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
+import { DEFAULT_EMAIL_TEMPLATE, DEFAULT_WHATSAPP_TEMPLATE } from "@/lib/templates";
 import type { Business, Preset } from "@/lib/types";
 import { IconAdd, IconCheck, IconSignOut, IconTrash } from "@/components/icons";
 import PrintPricingSettingsCard from "@/components/PrintPricingSettingsCard";
@@ -234,6 +235,34 @@ export default function SettingsPage() {
         <button onClick={onSave} className={`btn icon-btn ${saved ? "btn-accent" : "btn-primary"}`}
           style={{ marginTop: 16 }}>
           {saved && <IconCheck size={15} />} {saved ? "Saved" : "Save Settings"}
+        </button>
+      </div>
+
+      {/* Message templates */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Messages — {activeBusiness.name}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label className="input-label">Email message</label>
+            <textarea className="input" rows={6}
+              placeholder={DEFAULT_EMAIL_TEMPLATE}
+              value={form.email_template}
+              onChange={(e) => setForm({ ...form, email_template: e.target.value })} />
+          </div>
+          <div>
+            <label className="input-label">WhatsApp message</label>
+            <textarea className="input" rows={4}
+              placeholder={DEFAULT_WHATSAPP_TEMPLATE}
+              value={form.whatsapp_template}
+              onChange={(e) => setForm({ ...form, whatsapp_template: e.target.value })} />
+          </div>
+          <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", marginTop: -4 }}>
+            Leave blank to use the default shown. Placeholders: {"{name} {first_name} {job} {job_date} {invoice_number} {total} {paynow} {payee_name} {business_name}"}
+          </p>
+        </div>
+        <button onClick={onSave} className={`btn icon-btn ${saved ? "btn-accent" : "btn-primary"}`}
+          style={{ marginTop: 16 }}>
+          {saved && <IconCheck size={15} />} {saved ? "Saved" : "Save Messages"}
         </button>
       </div>
 
