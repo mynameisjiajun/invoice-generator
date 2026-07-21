@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Space_Mono, Work_Sans } from "next/font/google";
-import NavBar from "@/components/NavBar";
+import TopBar from "@/components/TopBar";
+import BottomNav from "@/components/BottomNav";
 import { BusinessProvider } from "@/lib/businessContext";
 import "./globals.css";
 
@@ -60,8 +61,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <BusinessProvider>
-          <NavBar />
+          <TopBar />
           {children}
+          <BottomNav />
         </BusinessProvider>
       </body>
     </html>

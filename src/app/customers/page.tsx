@@ -70,7 +70,15 @@ export default function CustomersPage() {
   }
 
   if (!activeBusiness) {
-    return <div className="page-container"><p style={{ color: "var(--text-tertiary)" }}>Loading…</p></div>;
+    return (
+      <div className="page-container">
+        <div className="skeleton" style={{ height: 36, width: "40%", marginBottom: 10 }} />
+        <div className="skeleton" style={{ height: 18, width: "70%", marginBottom: 24 }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 74 }} />)}
+        </div>
+      </div>
+    );
   }
 
   return (

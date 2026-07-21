@@ -7,6 +7,7 @@ import { formatSGD } from "@/lib/money";
 import { isOverdue, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import OnboardingBanner from "@/components/OnboardingBanner";
+import ConfirmSheet from "@/components/ConfirmSheet";
 import { IconCamera, IconCheck, IconCopy, IconEdit, IconSearch, IconTrash, IconUndo } from "@/components/icons";
 
 export default function Dashboard() {
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Invoice | null>(null);
 
   useEffect(() => {
     if (!activeBusiness) return;
@@ -37,8 +39,13 @@ export default function Dashboard() {
 
   if (!invoices) return (
     <div className="page-container">
-      <div className="card animate-pulse-soft" style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--text-tertiary)" }}>Loading invoices…</p>
+      <div className="skeleton" style={{ height: 40, width: "55%", marginBottom: 10 }} />
+      <div className="skeleton" style={{ height: 18, width: "75%", marginBottom: 24 }} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 24 }}>
+        {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 84 }} />)}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 120 }} />)}
       </div>
     </div>
   );
@@ -62,11 +69,10 @@ export default function Dashboard() {
     }
   }
 
-  async function removeInvoice(inv: Invoice) {
-    const msg = inv.status === "draft"
-      ? "Delete this draft?"
-      : `Delete invoice ${inv.invoice_number}?\n\nThis can't be undone. If it's your most recent invoice, its number will be reused for the next one.`;
-    if (!confirm(msg)) return;
+  async function confirmDelete() {
+    const inv = pendingDelete;
+    if (!inv) return;
+    setPendingDelete(null);
     try {
       await deleteInvoice(inv.id);
       setInvoices(invoices!.filter((i) => i.id !== inv.id));
@@ -175,13 +181,25 @@ export default function Dashboard() {
               <Link href={`/invoices/new?duplicate=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
                 <IconCopy /> Duplicate
               </Link>
-              <button onClick={() => removeInvoice(inv)} className="btn-danger icon-btn" style={{ marginLeft: "auto" }}>
+              <button onClick={() => setPendingDelete(inv)} className="btn-danger icon-btn" style={{ marginLeft: "auto" }}>
                 <IconTrash /> Delete
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      <ConfirmSheet
+        open={pendingDelete !== null}
+        danger
+        title={pendingDelete?.status === "draft" ? "Delete this draft?" : `Delete invoice ${pendingDelete?.invoice_number}?`}
+        message={pendingDelete?.status === "draft"
+          ? "This draft will be permanently removed."
+          : "This can't be undone. If it's your most recent invoice, its number will be reused for the next one."}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }
