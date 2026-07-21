@@ -2,13 +2,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteInvoice, getBusiness, getInvoice, markSent, setPaid } from "@/lib/db";
+import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
 import { emailMessage, whatsappMessage } from "@/lib/templates";
-import { invoiceDocLabel, isOverdue, type Business, type Invoice } from "@/lib/types";
+import { invoiceDocLabel, isOverdue, type Business, type Invoice, type InvoiceEvent } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import {
@@ -20,6 +20,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
+  const [events, setEvents] = useState<InvoiceEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -32,6 +33,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
       })
       .then(setBusiness)
       .catch((e) => setError(e.message));
+    listEvents(id).then(setEvents).catch(() => {});
   }, [id]);
 
   if (error) return (
@@ -119,6 +121,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
         if (variant === "invoice" && inv.status !== "draft") {
           await markSent(inv.id, inv.business_id);
           setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
+          listEvents(inv.id).then(setEvents).catch(() => {});
         }
       } else {
         // Desktop fallback: download the PDF, then open a Gmail compose draft
@@ -146,7 +149,10 @@ export default function InvoiceDetail({ id }: { id: string }) {
     }
     window.open(`${base}?text=${encodeURIComponent(msg)}`, "_blank");
     if (inv.status !== "draft") {
-      markSent(inv.id, inv.business_id).then(() => setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() }));
+      markSent(inv.id, inv.business_id).then(() => {
+        setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
+        listEvents(inv.id).then(setEvents).catch(() => {});
+      });
     }
   }
 
@@ -169,6 +175,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
       const paid = inv.status !== "paid";
       await setPaid(inv.id, paid, inv.business_id);
       setInvoice({ ...inv, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null });
+      listEvents(inv.id).then(setEvents).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }
@@ -282,6 +289,20 @@ export default function InvoiceDetail({ id }: { id: string }) {
           <IconCopy /> Duplicate
         </Link>
       </div>
+
+      {events.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="section-label">Activity</div>
+          {events.map((ev) => (
+            <p key={ev.id} style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+              {({ created: "Invoice created", sent: "Sent", reminded: "Reminder sent",
+                 paid: "Marked paid", unpaid: "Marked unpaid" } as const)[ev.kind]}
+              {" · "}
+              {new Date(ev.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+          ))}
+        </div>
+      )}
 
       <button onClick={() => setConfirmingDelete(true)} className="btn-danger icon-btn"
         style={{ display: "flex", width: "100%", padding: "10px", borderRadius: "var(--radius-sm)" }}>
