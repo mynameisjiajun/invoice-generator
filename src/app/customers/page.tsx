@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useBusiness } from "@/lib/businessContext";
-import { createCustomer, listCustomers, updateCustomer, updateCustomerNumber } from "@/lib/db";
+import {
+  createCustomer, listCustomers, listInvoicesForCustomer, updateCustomer, updateCustomerNumber,
+} from "@/lib/db";
+import { formatSGD } from "@/lib/money";
 import { formatSgPhone } from "@/lib/phone";
-import type { Customer } from "@/lib/types";
+import type { Customer, Invoice } from "@/lib/types";
 import { IconAdd, IconCheck, IconEdit } from "@/components/icons";
 
 type Draft = {
@@ -89,6 +93,17 @@ export default function CustomersPage() {
   const [newDraft, setNewDraft] = useState<Draft>(emptyDraft());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [history, setHistory] = useState<Record<number, Invoice[]>>({});
+
+  function toggleExpand(c: Customer) {
+    setExpandedId(expandedId === c.id ? null : c.id);
+    if (!(c.id in history)) {
+      listInvoicesForCustomer(c.id)
+        .then((invs) => setHistory((h) => ({ ...h, [c.id]: invs })))
+        .catch(() => setHistory((h) => ({ ...h, [c.id]: [] })));
+    }
+  }
 
   function reload() {
     if (!activeBusiness) return;
@@ -245,22 +260,33 @@ export default function CustomersPage() {
                 )}
               </div>
             ) : (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>
-                    {c.name} <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>#{c.id}</span>
+              <>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => toggleExpand(c)}>
+                    <div style={{ fontWeight: 600 }}>
+                      {c.name} <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>#{c.id}</span>
+                    </div>
+                    {c.company && (
+                      <div style={{ color: "var(--text-secondary)", fontSize: "0.82rem", marginTop: 1 }}>{c.company}</div>
+                    )}
+                    <div style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 2 }}>
+                      {[formatSgPhone(c.phone), c.email, c.uen && `UEN : ${c.uen}`, c.address].filter(Boolean).join(" · ") || "No contact details"}
+                    </div>
                   </div>
-                  {c.company && (
-                    <div style={{ color: "var(--text-secondary)", fontSize: "0.82rem", marginTop: 1 }}>{c.company}</div>
-                  )}
-                  <div style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 2 }}>
-                    {[formatSgPhone(c.phone), c.email, c.uen && `UEN : ${c.uen}`, c.address].filter(Boolean).join(" · ") || "No contact details"}
-                  </div>
+                  <button onClick={() => startEdit(c)} className="btn btn-secondary icon-btn" style={{ flexShrink: 0 }}>
+                    <IconEdit size={14} /> Edit
+                  </button>
                 </div>
-                <button onClick={() => startEdit(c)} className="btn btn-secondary icon-btn" style={{ flexShrink: 0 }}>
-                  <IconEdit size={14} /> Edit
-                </button>
-              </div>
+                {expandedId === c.id && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
+                    {!history[c.id] ? (
+                      <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>Loading history…</p>
+                    ) : (
+                      <CustomerHistory invoices={history[c.id]} />
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         ))}
@@ -272,4 +298,46 @@ export default function CustomersPage() {
 function newNumberChanged(draft: Draft, c: Customer): boolean {
   const n = parseInt(draft.number, 10);
   return Number.isInteger(n) && n !== c.id;
+}
+
+function CustomerHistory({ invoices }: { invoices: Invoice[] }) {
+  const lifetime = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_cents, 0);
+  const outstanding = invoices.filter((i) => i.status === "unpaid").reduce((s, i) => s + i.total_cents, 0);
+  const recent = invoices.filter((i) => i.status !== "draft").slice(0, 5);
+
+  if (invoices.length === 0) {
+    return <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>No invoices yet.</p>;
+  }
+
+  return (
+    <>
+      <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
+        <div>
+          <div style={{ color: "var(--text-tertiary)", fontSize: "0.72rem" }}>Lifetime</div>
+          <div className="money" style={{ fontWeight: 700, fontSize: "0.9rem" }}>{formatSGD(lifetime)}</div>
+        </div>
+        {outstanding > 0 && (
+          <div>
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.72rem" }}>Outstanding</div>
+            <div className="money" style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--warning)" }}>
+              {formatSGD(outstanding)}
+            </div>
+          </div>
+        )}
+      </div>
+      {recent.length === 0 ? (
+        <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>No finalized invoices yet.</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {recent.map((inv) => (
+            <Link key={inv.id} href={`/invoices/${inv.id}`}
+              style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", textDecoration: "none", color: "var(--text-secondary)" }}>
+              <span>{inv.invoice_number} · {inv.job_event || inv.issue_date}</span>
+              <span className="money">{formatSGD(inv.total_cents)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
