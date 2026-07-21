@@ -191,3 +191,20 @@ export async function getPrintQuoteFileUrl(path: string): Promise<string> {
   if (res.error) throw new Error(res.error.message);
   return res.data.signedUrl;
 }
+
+/** Full JSON backup — everything needed to reconstruct the business if
+ *  Supabase is ever lost. STL file bytes aren't included, only metadata. */
+export async function exportAllData() {
+  const [businesses, invoices] = await Promise.all([listBusinesses(), listInvoices()]);
+  const perBiz = await Promise.all(businesses.map(async (b) => ({
+    customers: await listCustomers(b.id),
+    presets: await listPresets(b.id),
+    pricing: await getPricingSettings(b.id),
+    printQuotes: await listPrintQuotes(b.id),
+  })));
+  return {
+    exported_at: new Date().toISOString(),
+    businesses: businesses.map((b, i) => ({ ...b, ...perBiz[i] })),
+    invoices,
+  };
+}

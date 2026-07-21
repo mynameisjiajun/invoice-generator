@@ -1,14 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBusiness, archiveBusiness, updateBusiness, listPresets, createPreset, deletePreset } from "@/lib/db";
+import {
+  createBusiness, archiveBusiness, updateBusiness, listPresets, createPreset, deletePreset,
+  exportAllData,
+} from "@/lib/db";
 import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/lib/businessContext";
 import { slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
 import { DEFAULT_EMAIL_TEMPLATE, DEFAULT_WHATSAPP_TEMPLATE } from "@/lib/templates";
 import type { Business, Preset } from "@/lib/types";
-import { IconAdd, IconCheck, IconSignOut, IconTrash } from "@/components/icons";
+import { IconAdd, IconCheck, IconDownload, IconSignOut, IconTrash } from "@/components/icons";
 import PrintPricingSettingsCard from "@/components/PrintPricingSettingsCard";
 import ConfirmSheet from "@/components/ConfirmSheet";
 
@@ -33,6 +36,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [pendingArchive, setPendingArchive] = useState<Business | null>(null);
   const [pendingDeletePreset, setPendingDeletePreset] = useState<Preset | null>(null);
+  const [exporting, setExporting] = useState(false);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function signOut() {
@@ -137,6 +141,24 @@ export default function SettingsPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete preset");
     }
+  }
+
+  async function onDownloadAllData() {
+    setExporting(true);
+    try {
+      const data = await exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), {
+        href: url, download: `invoice-app-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      });
+      a.click();
+      URL.revokeObjectURL(url);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to export data");
+    }
+    setExporting(false);
   }
 
   return (
@@ -336,6 +358,18 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Data */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">Data</div>
+        <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginBottom: 12 }}>
+          Download every business, client, invoice, and preset as one JSON file —
+          a backup you control, independent of Supabase.
+        </p>
+        <button onClick={onDownloadAllData} disabled={exporting} className="btn btn-secondary icon-btn">
+          <IconDownload size={15} /> {exporting ? "Preparing…" : "Download all data"}
+        </button>
       </div>
 
       {/* Sign out */}
