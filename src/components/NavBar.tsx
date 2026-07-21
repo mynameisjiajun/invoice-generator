@@ -3,11 +3,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/lib/businessContext";
-import { IconAdd, IconCamera, IconChart, IconSettings, IconSignOut } from "@/components/icons";
+import { IconAdd, IconCamera, IconChart, IconReceipt, IconSettings, IconSignOut } from "@/components/icons";
 
 const links = [
   { href: "/", label: "Invoices", Icon: IconCamera },
   { href: "/invoices/new", label: "New", Icon: IconAdd },
+  { href: "/quotes", label: "Quotes", Icon: IconReceipt },
   { href: "/stats", label: "Stats", Icon: IconChart },
   { href: "/settings", label: "Settings", Icon: IconSettings },
 ];
@@ -16,7 +17,7 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { businesses, activeBusiness, setActiveBusinessId } = useBusiness();
-  if (pathname.startsWith("/login")) return null;
+  if (pathname.startsWith("/login") || pathname === "/quote" || pathname.startsWith("/quote/")) return null;
 
   async function signOut() {
     await createClient().auth.signOut();

@@ -6,6 +6,7 @@ import { slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
 import type { Business, Preset } from "@/lib/types";
 import { IconAdd, IconCheck, IconTrash } from "@/components/icons";
+import PrintPricingSettingsCard from "@/components/PrintPricingSettingsCard";
 
 const FIELDS: Array<{ key: keyof Business; label: string }> = [
   { key: "name", label: "Business name" },
@@ -197,6 +198,8 @@ export default function SettingsPage() {
           {saved && <IconCheck size={15} />} {saved ? "Saved" : "Save Settings"}
         </button>
       </div>
+
+      <PrintPricingSettingsCard businessId={activeBusiness.id} slug={activeBusiness.slug} />
 
       {/* Service presets */}
       <div className="card">

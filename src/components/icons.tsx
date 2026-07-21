@@ -173,3 +173,12 @@ export function IconChevronDown({ size = 16, className }: IconProps) {
     </svg>
   );
 }
+
+export function IconSend({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
