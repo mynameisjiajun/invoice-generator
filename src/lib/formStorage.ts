@@ -3,6 +3,7 @@ import type { DiscountType, LineItem } from "./money";
 export type FormState = {
   invoiceId?: string;
   issueDate: string;
+  dueDate: string;
   customerId: number | null;
   newCustomer: { name: string; company: string; phone: string; email: string; uen: string; address: string } | null;
   jobEvent: string;
@@ -15,9 +16,17 @@ export type FormState = {
 
 const KEY = "jjv.invoice.form.v1";
 
+export function plusDays(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function emptyForm(): FormState {
+  const issueDate = new Date().toISOString().slice(0, 10);
   return {
-    issueDate: new Date().toISOString().slice(0, 10),
+    issueDate,
+    dueDate: plusDays(issueDate, 30),
     customerId: null,
     newCustomer: null,
     jobEvent: "",

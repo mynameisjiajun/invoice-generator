@@ -89,7 +89,7 @@ export async function getInvoice(id: string): Promise<Invoice> {
 }
 
 export type DraftInput = Pick<Invoice,
-  "issue_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
+  "issue_date" | "due_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
   "line_items" | "discount_type" | "discount_value"> & { id?: string };
 
 /** businessId is required when creating a new draft (draft.id is unset);

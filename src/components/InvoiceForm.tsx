@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   createCustomer, finalizeInvoice, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
 } from "@/lib/db";
-import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib/formStorage";
+import { clearForm, emptyForm, loadForm, plusDays, storeForm, type FormState } from "@/lib/formStorage";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import type { Customer, Preset } from "@/lib/types";
@@ -34,6 +34,9 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   const [error, setError] = useState<string | null>(null);
   const [loadedStatus, setLoadedStatus] = useState<"draft" | "unpaid" | "paid">("draft");
   const [loadedNumber, setLoadedNumber] = useState<string | null>(null);
+  // Whether the user has manually edited the due date — until then it
+  // follows issue date + 30 automatically.
+  const [dueTouched, setDueTouched] = useState(false);
 
   // Resolves which business this form belongs to and loads its initial
   // content. For a brand-new invoice, this intentionally does NOT list
@@ -50,8 +53,11 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         setFormBusinessId(inv.business_id);
         setLoadedStatus(inv.status);
         setLoadedNumber(inv.invoice_number);
+        setDueTouched(true); // an existing invoice's due date is explicit, not a default to auto-follow
         setForm({
-          invoiceId: inv.id, issueDate: inv.issue_date, customerId: inv.customer_id,
+          invoiceId: inv.id, issueDate: inv.issue_date,
+          dueDate: inv.due_date ?? plusDays(inv.issue_date, 30),
+          customerId: inv.customer_id,
           newCustomer: null, jobEvent: inv.job_event, jobDate: inv.job_date,
           jobLocation: inv.job_location, lineItems: inv.line_items,
           discountType: inv.discount_type, discountValue: inv.discount_value,
@@ -125,7 +131,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       set({ customerId: c.id, newCustomer: null });
     }
     const inv = await saveInvoiceDraft({
-      id: f.invoiceId, issue_date: f.issueDate, customer_id: customerId,
+      id: f.invoiceId, issue_date: f.issueDate, due_date: f.dueDate, customer_id: customerId,
       job_event: f.jobEvent, job_date: f.jobDate, job_location: f.jobLocation,
       line_items: f.lineItems.filter((li) => li.description.trim() !== ""),
       discount_type: f.discountType, discount_value: f.discountValue,
@@ -229,10 +235,20 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
             <input className="input" placeholder="e.g. Marina Bay Sands"
               value={f.jobLocation} onChange={(e) => set({ jobLocation: e.target.value })} />
           </div>
-          <div>
-            <label className="input-label">Invoice date</label>
-            <input type="date" className="input" value={f.issueDate}
-              onChange={(e) => set({ issueDate: e.target.value })} />
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label className="input-label">Invoice date</label>
+              <input type="date" className="input" value={f.issueDate}
+                onChange={(e) => {
+                  const issueDate = e.target.value;
+                  set({ issueDate, dueDate: dueTouched ? f.dueDate : plusDays(issueDate, 30) });
+                }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="input-label">Due date</label>
+              <input type="date" className="input" value={f.dueDate}
+                onChange={(e) => { setDueTouched(true); set({ dueDate: e.target.value }); }} />
+            </div>
           </div>
         </div>
       </div>

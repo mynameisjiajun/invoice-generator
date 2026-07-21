@@ -8,7 +8,7 @@ import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
 import { emailMessage, whatsappMessage } from "@/lib/templates";
-import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
+import { invoiceDocLabel, isOverdue, type Business, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import {
@@ -200,6 +200,11 @@ export default function InvoiceDetail({ id }: { id: string }) {
           <p style={{ color: "var(--text-tertiary)", fontSize: "0.85rem" }}>
             Issued {invoice.issue_date}
           </p>
+          {invoice.due_date && (
+            <p style={{ color: isOverdue(invoice) ? "var(--warning)" : "var(--text-tertiary)", fontSize: "0.85rem" }}>
+              Due {invoice.due_date}
+            </p>
+          )}
         </div>
         {statusBadge}
       </div>
