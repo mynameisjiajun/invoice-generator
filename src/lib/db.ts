@@ -116,6 +116,13 @@ export async function setPaid(id: string, paid: boolean): Promise<void> {
   }).eq("id", id).select().single());
 }
 
+/** Stamp first-send time. No-op if already sent (first send wins). */
+export async function markSent(id: string): Promise<void> {
+  ok(await db().from("invoices")
+    .update({ sent_at: new Date().toISOString() })
+    .eq("id", id).is("sent_at", null).select());
+}
+
 /** Deletes an invoice. If it held the most recently issued number, the
  *  sequence rewinds so that number is reused. Returns true when rewound. */
 export async function deleteInvoice(id: string): Promise<boolean> {
