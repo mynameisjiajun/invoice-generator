@@ -1075,9 +1075,15 @@ textarea.input {
   --color-brand-orange: #FF6B00;
   --color-brand-dark: #0A0A0A;
   --color-brand-gray: #171717;
+  --animate-marquee-right: marqueeRight 60s linear infinite;
+}
+/* `inline` is load-bearing: these reference next/font variables that only
+   exist on the portfolio's wrapper div, not on :root. A non-inline token
+   would substitute var(--font-oswald) at :root (where it's undefined) and
+   compute to invalid before descendants ever inherit it. */
+@theme inline {
   --font-apex-display: var(--font-oswald), sans-serif;
   --font-apex-sans: var(--font-inter), sans-serif;
-  --animate-marquee-right: marqueeRight 60s linear infinite;
 }
 @keyframes marqueeRight {
   0% { transform: translateX(-50%); }
