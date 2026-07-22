@@ -1,8 +1,7 @@
 import { Inter, Oswald } from "next/font/google";
-import Portfolio from "@/components/portfolio/Portfolio";
 
-// Self-hosted via next/font: no Google Fonts CDN request, so the strict
-// CSP needs no font-src/style-src additions for this page.
+// Self-hosted via next/font. These variables feed the font-apex-* utilities
+// (see the `@theme inline` block in globals.css — `inline` is load-bearing).
 const oswald = Oswald({
   variable: "--font-oswald",
   subsets: ["latin"],
@@ -15,10 +14,12 @@ const inter = Inter({
   weight: ["300", "400", "600", "700"],
 });
 
-export default function HomePage() {
+export default function PortfolioLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <div data-apex-root className={`${oswald.variable} ${inter.variable} flex-1`}>
-      <Portfolio />
+      {children}
     </div>
   );
 }

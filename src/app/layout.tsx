@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Apex Angles | Videography & Photography",
+  metadataBase: new URL("https://apexcinematics.tech"),
+  title: "Apex Cinematics | Videography & Photography, Singapore",
   description:
-    "Apex Angles — Singapore-based videography and photography. Edgy, cinematic, high-contrast visuals for brands, events, and editorials.",
+    "Apex Cinematics is a Singapore-based studio covering events, documentaries, and social content — cinematic photo and video for everyone and anyone.",
 };
 
 export const viewport: Viewport = {
