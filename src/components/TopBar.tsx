@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useBusiness } from "@/lib/businessContext";
 import { IconCamera, IconChart, IconCheck, IconChevronDown } from "@/components/icons";
 
-const isQuotePublic = (p: string) => p.startsWith("/invoices_login/quote");
+const isQuotePublic = (p: string) => p.startsWith("/invoices_login/quote/");
 
 export default function TopBar() {
   const pathname = usePathname();

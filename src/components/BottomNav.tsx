@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconAdd, IconCamera, IconReceipt, IconSettings, IconUser } from "@/components/icons";
 
-const isQuotePublic = (p: string) => p.startsWith("/invoices_login/quote");
+const isQuotePublic = (p: string) => p.startsWith("/invoices_login/quote/");
 
 const tabs = [
   { href: "/invoices_login/invoices", label: "Invoices", Icon: IconCamera,

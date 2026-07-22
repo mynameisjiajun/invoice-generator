@@ -11,7 +11,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export default async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   // Public, unauthenticated 3D-print quote page lives inside the prefix.
-  if (path.startsWith("/invoices_login/quote")) {
+  if (path.startsWith("/invoices_login/quote/")) {
     return NextResponse.next({ request });
   }
 
