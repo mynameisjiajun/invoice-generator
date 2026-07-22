@@ -1098,3 +1098,16 @@ html:has([data-apex-root]) {
   100% { transform: scale(1.08); }
 }
 .apex-kenburns { animation: kenburns 24s ease-in-out infinite alternate; }
+
+/* ── Cute camera cursor ──
+   A tiny custom cursor for the portfolio only — hotspot at the lens center
+   so clicks land where the "eye" of the camera is. Links/buttons still show
+   the browser's native pointer on hover (not overridden), which reads fine
+   alongside a decorative default-cursor replacement. Falls back to the
+   normal arrow if a browser can't load the SVG cursor. */
+[data-apex-root] {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='2' y='11' width='28' height='17' rx='4' fill='%23FF6B00' stroke='white' stroke-width='1.5'/%3E%3Crect x='11' y='6' width='10' height='6' rx='2' fill='%23FF6B00' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='19.5' r='6.5' fill='%23171717' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='19.5' r='3' fill='%23FF6B00'/%3E%3Ccircle cx='24' cy='15' r='1.6' fill='white'/%3E%3C/svg%3E")
+    16 19,
+    auto;
+}
