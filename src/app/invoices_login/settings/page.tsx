@@ -13,6 +13,7 @@ import { DEFAULT_EMAIL_TEMPLATE, DEFAULT_WHATSAPP_TEMPLATE } from "@/lib/templat
 import type { Business, Preset } from "@/lib/types";
 import { IconAdd, IconCheck, IconDownload, IconSignOut, IconTrash } from "@/components/icons";
 import ConfirmSheet from "@/components/ConfirmSheet";
+import { fileToLogoDataUrl } from "@/lib/logoImage";
 
 const FIELDS: Array<{ key: keyof Business; label: string }> = [
   { key: "name", label: "Business name" },
@@ -37,6 +38,7 @@ export default function SettingsPage() {
   const [pendingDeletePreset, setPendingDeletePreset] = useState<Preset | null>(null);
   const [exporting, setExporting] = useState(false);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   async function signOut() {
     await createClient().auth.signOut();
@@ -75,6 +77,19 @@ export default function SettingsPage() {
       savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save settings");
+    }
+  }
+
+  async function onPickLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file || !form) return;
+    try {
+      const dataUrl = await fileToLogoDataUrl(file);
+      setForm({ ...form, logo_data_url: dataUrl });
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to read image");
     }
   }
 
@@ -230,6 +245,42 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
             </div>
           ))}
+
+          <div>
+            <label className="input-label">Logo (shown on invoice PDFs)</label>
+            {form.logo_data_url ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.logo_data_url}
+                  alt="Business logo"
+                  style={{
+                    height: 48, maxWidth: 150, objectFit: "contain",
+                    borderRadius: "var(--radius-sm)",
+                    // checkerboard so transparent logos stay visible on any theme
+                    background:
+                      "repeating-conic-gradient(var(--border-subtle) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px",
+                  }}
+                />
+                <button onClick={() => logoInputRef.current?.click()} className="btn btn-ghost"
+                  style={{ padding: "4px 10px", fontSize: "0.78rem" }}>
+                  Change
+                </button>
+                <button onClick={() => setForm({ ...form, logo_data_url: null })}
+                  className="btn-danger icon-btn" aria-label="Remove logo">
+                  <IconTrash size={14} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => logoInputRef.current?.click()} className="btn btn-secondary icon-btn">
+                <IconAdd size={15} /> Upload logo
+              </button>
+            )}
+            <input ref={logoInputRef} type="file" accept="image/*" hidden onChange={onPickLogo} />
+            <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", marginTop: 6, marginBottom: 0 }}>
+              For a crisp PDF, upload an image at least 900px wide. Saved when you press Save Settings.
+            </p>
+          </div>
 
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ width: 110 }}>
