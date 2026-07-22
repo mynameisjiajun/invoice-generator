@@ -60,6 +60,19 @@ export const PROJECTS: Project[] = [
     })),
   },
   {
+    slug: "school-orientation-shoot",
+    title: "School Orientation Shoot",
+    type: "photo",
+    cover: "/work/school-orientation-shoot/01.jpg",
+    story:
+      "Editorial studio portraits for a school orientation batch — colored gel lighting and a playful, uniform-inspired styling.",
+    tags: ["Editorial", "Studio"],
+    photos: Array.from({ length: 6 }, (_, i) => ({
+      src: `/work/school-orientation-shoot/${String(i + 1).padStart(2, "0")}.jpg`,
+      alt: `School Orientation Shoot — photo ${i + 1}`,
+    })),
+  },
+  {
     slug: "annexe-project-farewell",
     title: "ANNEXE Project Farewell Video",
     type: "video",
