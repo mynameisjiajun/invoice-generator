@@ -77,9 +77,12 @@ const ScrollReveal: React.FC<{ children: React.ReactNode; className?: string; de
 
 // --- MAIN COMPONENTS ---
 
-const SectionHeader: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
+const SectionHeader: React.FC<{ title: string; subtitle: string; index?: string }> = ({ title, subtitle, index }) => (
   <div className="mb-16">
-    <h3 className="text-brand-orange font-bold uppercase tracking-[0.2em] text-xs mb-2">{subtitle}</h3>
+    <div className="flex items-center gap-3 mb-2">
+      {index && <span className="font-mono text-xs text-neutral-600 tracking-widest">{index}</span>}
+      <h3 className="text-brand-orange font-bold uppercase tracking-[0.2em] text-xs">{subtitle}</h3>
+    </div>
     <h2 className="text-5xl md:text-7xl font-apex-display font-bold text-white uppercase leading-[0.9]">{title}</h2>
   </div>
 );
@@ -160,6 +163,8 @@ const NavBar: React.FC = () => {
 const Portfolio: React.FC = () => {
   const [filter, setFilter] = useState<"all" | ProjectType>("all");
 
+  const [showreelOk, setShowreelOk] = useState(true);
+
   const filteredProjects = PROJECTS.filter(p => filter === "all" || p.type === filter);
 
   return (
@@ -175,15 +180,36 @@ const Portfolio: React.FC = () => {
           style={{ backgroundImage: `url("${NOISE_PATTERN}")` }}
         ></div>
 
-        {/* Background Image */}
+        {/* Background: showreel loop with poster fallback (public/showreel.mp4 is
+            optional — until it exists, the still + Ken Burns zoom carries the hero) */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/80 to-transparent z-10"></div>
           <div className="absolute inset-0 bg-black/40 z-10"></div>
           <img
             src="https://images.unsplash.com/photo-1542998966-267597da09f4?q=80&w=2670&auto=format&fit=crop"
-            className="w-full h-full object-cover opacity-80"
-            alt="Singapore Cityscape"
+            className="w-full h-full object-cover opacity-80 apex-kenburns"
+            alt="Showreel still"
           />
+          {showreelOk && (
+            <video
+              src="/showreel.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onError={() => setShowreelOk(false)}
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
+            />
+          )}
+          {/* Cinematic letterbox bars */}
+          <div className="absolute top-0 left-0 right-0 h-5 bg-black z-20"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-5 bg-black z-20"></div>
+          {/* Timecode chip */}
+          <div className="absolute top-8 right-6 z-20 font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase hidden md:flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
+            REC • APX • SG
+          </div>
         </div>
 
         <div className="container mx-auto px-6 relative z-20 w-full">
@@ -238,7 +264,7 @@ const Portfolio: React.FC = () => {
         <div className="max-w-[1800px] mx-auto px-6">
           <ScrollReveal>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
-              <SectionHeader title="Visual Log" subtitle="Selected Works" />
+              <SectionHeader title="Visual Log" subtitle="Selected Works" index="01" />
 
               {/* Filters */}
               <div className="flex flex-wrap gap-4">
@@ -274,7 +300,7 @@ const Portfolio: React.FC = () => {
       <section id="rates" className="py-24 bg-neutral-900 border-y border-neutral-800">
         <div className="max-w-7xl mx-auto px-6">
           <ScrollReveal>
-            <SectionHeader title="Capabilities" subtitle="Services" />
+            <SectionHeader title="Capabilities" subtitle="Services" index="02" />
           </ScrollReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

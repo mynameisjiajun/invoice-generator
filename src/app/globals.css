@@ -1093,3 +1093,8 @@ textarea.input {
 html:has([data-apex-root]) {
   scroll-behavior: smooth;
 }
+@keyframes kenburns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+.apex-kenburns { animation: kenburns 24s ease-in-out infinite alternate; }
