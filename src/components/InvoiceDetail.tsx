@@ -288,12 +288,12 @@ export default function InvoiceDetail({ id }: { id: string }) {
           </button>
         )}
         {invoice.status !== "paid" && (
-          <Link href={`/invoices/new?draft=${invoice.id}`} className="btn btn-ghost icon-btn"
+          <Link href={`/invoices_login/invoices/new?draft=${invoice.id}`} className="btn btn-ghost icon-btn"
             style={{ flex: 1, textAlign: "center", textDecoration: "none" }}>
             <IconEdit /> Edit
           </Link>
         )}
-        <Link href={`/invoices/new?duplicate=${invoice.id}`} className="btn btn-ghost icon-btn"
+        <Link href={`/invoices_login/invoices/new?duplicate=${invoice.id}`} className="btn btn-ghost icon-btn"
           style={{ flex: 1, textAlign: "center", textDecoration: "none" }}>
           <IconCopy /> Duplicate
         </Link>

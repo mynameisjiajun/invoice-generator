@@ -330,7 +330,7 @@ function CustomerHistory({ invoices }: { invoices: Invoice[] }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {recent.map((inv) => (
-            <Link key={inv.id} href={`/invoices/${inv.id}`}
+            <Link key={inv.id} href={`/invoices_login/invoices/${inv.id}`}
               style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", textDecoration: "none", color: "var(--text-secondary)" }}>
               <span>{inv.invoice_number} · {inv.job_event || inv.issue_date}</span>
               <span className="money">{formatSGD(inv.total_cents)}</span>

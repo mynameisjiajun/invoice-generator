@@ -188,7 +188,7 @@ export default function Dashboard() {
         {visible.map((inv, idx) => (
           <div key={inv.id} className="card animate-fade-in" style={{ animationDelay: `${idx * 0.03}s` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Link href={inv.status === "draft" ? `/invoices/new?draft=${inv.id}` : `/invoices/${inv.id}`}
+              <Link href={inv.status === "draft" ? `/invoices_login/invoices/new?draft=${inv.id}` : `/invoices_login/invoices/${inv.id}`}
                 style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
@@ -215,11 +215,11 @@ export default function Dashboard() {
                 </button>
               )}
               {inv.status !== "paid" && (
-                <Link href={`/invoices/new?draft=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
+                <Link href={`/invoices_login/invoices/new?draft=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
                   <IconEdit /> Edit
                 </Link>
               )}
-              <Link href={`/invoices/new?duplicate=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
+              <Link href={`/invoices_login/invoices/new?duplicate=${inv.id}`} className="btn-ghost icon-btn" style={{ textDecoration: "none" }}>
                 <IconCopy /> Duplicate
               </Link>
               <button onClick={() => setPendingDelete(inv)} className="btn-danger icon-btn" style={{ marginLeft: "auto" }}>
