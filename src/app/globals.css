@@ -1093,12 +1093,6 @@ textarea.input {
 html:has([data-apex-root]) {
   scroll-behavior: smooth;
 }
-@keyframes kenburns {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.08); }
-}
-.apex-kenburns { animation: kenburns 24s ease-in-out infinite alternate; }
-
 /* ── Cute camera cursor ──
    A tiny custom cursor for the portfolio only — hotspot at the lens center
    so clicks land where the "eye" of the camera is. Links/buttons still show

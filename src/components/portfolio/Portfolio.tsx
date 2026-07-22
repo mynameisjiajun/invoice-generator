@@ -15,6 +15,7 @@ import {
 import { Service } from './types';
 import { PROJECTS, type ProjectType } from './projects';
 import ProjectCard from './ProjectCard';
+import HeroCanvas from './HeroCanvas';
 
 // --- ASSETS & CONSTANTS ---
 
@@ -163,8 +164,6 @@ const NavBar: React.FC = () => {
 const Portfolio: React.FC = () => {
   const [filter, setFilter] = useState<"all" | ProjectType>("all");
 
-  const [showreelOk, setShowreelOk] = useState(true);
-
   const filteredProjects = PROJECTS.filter(p => filter === "all" || p.type === filter);
 
   return (
@@ -180,28 +179,10 @@ const Portfolio: React.FC = () => {
           style={{ backgroundImage: `url("${NOISE_PATTERN}")` }}
         ></div>
 
-        {/* Background: showreel loop with poster fallback (public/showreel.mp4 is
-            optional — until it exists, the still + Ken Burns zoom carries the hero) */}
+        {/* Background: cursor-reactive animated texture (no photo needed) */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/80 to-transparent z-10"></div>
-          <div className="absolute inset-0 bg-black/40 z-10"></div>
-          <img
-            src="https://images.unsplash.com/photo-1542998966-267597da09f4?q=80&w=2670&auto=format&fit=crop"
-            className="w-full h-full object-cover opacity-80 apex-kenburns"
-            alt="Showreel still"
-          />
-          {showreelOk && (
-            <video
-              src="/showreel.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              onError={() => setShowreelOk(false)}
-              className="absolute inset-0 w-full h-full object-cover opacity-80"
-            />
-          )}
+          <HeroCanvas />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent z-10"></div>
           {/* Cinematic letterbox bars */}
           <div className="absolute top-0 left-0 right-0 h-5 bg-black z-20"></div>
           <div className="absolute bottom-0 left-0 right-0 h-5 bg-black z-20"></div>
