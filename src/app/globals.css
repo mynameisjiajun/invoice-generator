@@ -1067,7 +1067,7 @@ textarea.input {
 }
 .pulse-once { animation: pulse-once 900ms ease-out 300ms 2; }
 
-/* ── Apex Angles portfolio (route: /) ──
+/* ── Apex Cinematics portfolio (route: /) ──
    Replaces the Vite prototype's tailwind-CDN config. Brand tokens are
    namespaced (brand-*, font-apex-*) so they can't collide with the
    invoice app's design system above. */
