@@ -40,6 +40,7 @@ export type Business = {
   invoice_prefix: string; next_invoice_seq: number;
   archived_at: string | null;
   email_template: string; whatsapp_template: string;
+  logo_data_url: string | null;
 };
 
 export function isOverdue(inv: Invoice, today = new Date()): boolean {

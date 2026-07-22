@@ -42,6 +42,7 @@ const business: Business = {
   archived_at: null,
   email_template: "",
   whatsapp_template: "",
+  logo_data_url: null,
 };
 
 const invoice: Invoice = {
