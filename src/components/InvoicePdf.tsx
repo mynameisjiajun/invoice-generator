@@ -365,7 +365,7 @@ export default function InvoicePdf({
                 src={logo}
                 style={{
                   height: 88,
-                  width: 260,
+                  width: 163,
                   objectFit: "contain",
                   objectPosition: "left center",
                   marginBottom: 8,
