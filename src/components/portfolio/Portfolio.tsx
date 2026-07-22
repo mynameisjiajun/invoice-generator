@@ -17,9 +17,6 @@ import { PROJECTS, type ProjectType } from './projects';
 import ProjectCard from './ProjectCard';
 import HeroCanvas from './HeroCanvas';
 
-// --- ASSETS & CONSTANTS ---
-
-const NOISE_PATTERN = `data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.5'/%3E%3C/svg%3E`;
 
 // --- DATA ---
 
@@ -173,12 +170,6 @@ const Portfolio: React.FC = () => {
       {/* HERO SECTION */}
       <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden border-b border-white/5 pt-20 md:pt-0">
 
-        {/* Grain Overlay */}
-        <div
-          className="absolute inset-0 z-[1] pointer-events-none opacity-20"
-          style={{ backgroundImage: `url("${NOISE_PATTERN}")` }}
-        ></div>
-
         {/* Background: cursor-reactive animated texture (no photo needed) */}
         <div className="absolute inset-0 z-0">
           <HeroCanvas />
@@ -186,8 +177,10 @@ const Portfolio: React.FC = () => {
           {/* Cinematic letterbox bars */}
           <div className="absolute top-0 left-0 right-0 h-5 bg-black z-20"></div>
           <div className="absolute bottom-0 left-0 right-0 h-5 bg-black z-20"></div>
-          {/* Timecode chip */}
-          <div className="absolute top-8 right-6 z-20 font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase hidden md:flex items-center gap-2">
+          {/* Timecode chip — top-28 clears the fixed navbar (its tallest,
+              unscrolled state is ~py-6 plus a 3xl logo, roughly 90px) so it
+              never overlaps nav links/Book Shoot regardless of scroll state. */}
+          <div className="absolute top-28 right-6 z-20 font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase hidden md:flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
             REC • APX • SG
           </div>

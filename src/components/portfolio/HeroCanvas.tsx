@@ -35,14 +35,14 @@ export default function HeroCanvas() {
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = Math.min(110, Math.max(40, Math.round(width / 14)));
+      const count = Math.min(90, Math.max(32, Math.round(width / 18)));
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
-        r: 0.6 + Math.random() * 2.6,
+        r: 3 + Math.random() * 7,
         vx: (Math.random() - 0.5) * 0.15,
         vy: (Math.random() - 0.5) * 0.15,
-        a: 0.08 + Math.random() * 0.5,
+        a: 0.15 + Math.random() * 0.55,
         warm: Math.random() < 0.35,
       }));
     }
@@ -78,11 +78,18 @@ export default function HeroCanvas() {
         }
         if (p.x < -10) p.x = width + 10; else if (p.x > width + 10) p.x = -10;
         if (p.y < -10) p.y = height + 10; else if (p.y > height + 10) p.y = -10;
+
+        // Soft radial glow instead of a hard-edged dot — reads as a diffuse
+        // dust mote / bokeh light rather than flat, aliased static.
+        const [cr, cg, cb] = p.warm ? [255, 107, 0] : [255, 244, 230];
+        const peakA = p.warm ? p.a * 0.8 : p.a * 0.35;
+        const dot = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        dot.addColorStop(0, `rgba(${cr},${cg},${cb},${peakA})`);
+        dot.addColorStop(0.5, `rgba(${cr},${cg},${cb},${peakA * 0.35})`);
+        dot.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.warm
-          ? `rgba(255,107,0,${p.a * 0.8})`
-          : `rgba(255,244,230,${p.a * 0.35})`;
+        ctx.fillStyle = dot;
         ctx.fill();
       }
     }
