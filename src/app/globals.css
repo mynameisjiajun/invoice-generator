@@ -1066,3 +1066,24 @@ textarea.input {
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); }
 }
 .pulse-once { animation: pulse-once 900ms ease-out 300ms 2; }
+
+/* ── Apex Angles portfolio (route: /) ──
+   Replaces the Vite prototype's tailwind-CDN config. Brand tokens are
+   namespaced (brand-*, font-apex-*) so they can't collide with the
+   invoice app's design system above. */
+@theme {
+  --color-brand-orange: #FF6B00;
+  --color-brand-dark: #0A0A0A;
+  --color-brand-gray: #171717;
+  --font-apex-display: var(--font-oswald), sans-serif;
+  --font-apex-sans: var(--font-inter), sans-serif;
+  --animate-marquee-right: marqueeRight 60s linear infinite;
+}
+@keyframes marqueeRight {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+/* The portfolio is a one-pager with #anchor nav links. */
+html:has([data-apex-root]) {
+  scroll-behavior: smooth;
+}
