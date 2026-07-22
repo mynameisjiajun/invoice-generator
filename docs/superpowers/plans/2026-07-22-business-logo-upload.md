@@ -224,7 +224,7 @@ git commit -m "feat: logo image resize helper (fitWithin + canvas data-URL encod
 ### Task 3: Logo control in Settings
 
 **Files:**
-- Modify: `src/app/settings/page.tsx` (imports at top; state near line 40; new JSX inside the "Business Information" card, between the `FIELDS.map` block ending at line 233 and the invoice-prefix row starting at line 235)
+- Modify: `src/app/invoices_login/settings/page.tsx` (imports at top; state near line 40; new JSX inside the "Business Information" card, between the `FIELDS.map` block ending at line 233 and the invoice-prefix row starting at line 235)
 
 **Interfaces:**
 - Consumes: `fileToLogoDataUrl(file: File): Promise<string>` from `@/lib/logoImage` (Task 2); `Business.logo_data_url` (Task 1).
@@ -310,7 +310,7 @@ Expected: both succeed. (`useRef` is already imported on line 2.)
 
 - [ ] **Step 4: Manual verification in the dev app**
 
-`pkill -f "next dev"` first (stale dev servers squat on port 3000), then `npm run dev`, sign in, open Settings and verify:
+`pkill -f "next dev"` first (stale dev servers squat on port 3000), then `npm run dev`, sign in at `/invoices_login`, open `/invoices_login/settings` and verify:
 1. "Upload logo" appears in Business Information when no logo is set.
 2. Picking `JJ Visuals Logo.png` (repo root) shows a ~150px preview on a checkerboard; nothing is saved yet (reload → control is empty again).
 3. Pick again, press **Save Settings** → "Saved"; reload → preview persists.
@@ -321,7 +321,7 @@ Re-upload and save the logo before moving on (Task 4's manual check needs it), a
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/settings/page.tsx
+git add src/app/invoices_login/settings/page.tsx
 git commit -m "feat: per-business logo upload in Settings"
 ```
 
@@ -418,4 +418,4 @@ Expected: Vercel auto-deploys `main`.
 
 - [ ] **Step 2: Post-deploy hand-off (tell the user)**
 
-Production has no logo until one is uploaded: on the deployed app, Settings → Business Information → Upload logo → pick the high-res `JJ Visuals Logo.png` (repo root) → Save Settings → download any invoice PDF to confirm. Mention that the repo-root `JJ Visuals Logo.png` can be deleted afterwards if they're done with it.
+Production has no logo until one is uploaded: on the deployed app, sign in at `/invoices_login`, go to Settings (`/invoices_login/settings`) → Business Information → Upload logo → pick the high-res `JJ Visuals Logo.png` (repo root) → Save Settings → download any invoice PDF to confirm. Mention that the repo-root `JJ Visuals Logo.png` can be deleted afterwards if they're done with it.
