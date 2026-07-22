@@ -157,7 +157,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       // persistDraft() throws before this point if formBusinessId is null.
       await finalizeInvoice(id, formBusinessId!);
       clearForm();
-      router.push(`/invoices/${id}?just=1`);
+      router.push(`/invoices_login/invoices/${id}?just=1`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to finalize invoice");
       setBusy("");
@@ -168,7 +168,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     setBusy("final"); setError(null);
     try {
       const id = await persistDraft();
-      router.push(`/invoices/${id}`);
+      router.push(`/invoices_login/invoices/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save changes");
       setBusy("");
@@ -372,7 +372,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
 
       {editingFinalized ? (
         <div className="action-bar">
-          <button onClick={() => router.push(`/invoices/${f.invoiceId}`)} disabled={busy !== ""}
+          <button onClick={() => router.push(`/invoices_login/invoices/${f.invoiceId}`)} disabled={busy !== ""}
             className="btn btn-secondary" style={{ flex: 1 }}>
             Cancel
           </button>

@@ -18,7 +18,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) { setError(error.message); return; }
-    router.push("/");
+    router.push("/invoices_login/invoices");
     router.refresh();
   }
 

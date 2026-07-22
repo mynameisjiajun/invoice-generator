@@ -33,10 +33,10 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (pathname.startsWith("/login") || pathname === "/quote" || pathname.startsWith("/quote/")) return;
+    if (pathname === "/invoices_login" || pathname.startsWith("/invoices_login/quote")) return;
     reloadBusinesses().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname.startsWith("/login") || pathname === "/quote" || pathname.startsWith("/quote/")]);
+  }, [pathname === "/invoices_login" || pathname.startsWith("/invoices_login/quote")]);
 
   function setActiveBusinessId(id: string) {
     setActiveBusinessIdState(id);

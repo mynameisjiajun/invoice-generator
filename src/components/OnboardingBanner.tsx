@@ -34,7 +34,7 @@ export default function OnboardingBanner() {
         <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 8 }}>
           Add your address, PayNow number, and bank details so every invoice is ready to send.
         </p>
-        <Link href="/settings" onClick={dismiss} className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.8rem" }}>
+        <Link href="/invoices_login/settings" onClick={dismiss} className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: "0.8rem" }}>
           Go to Settings
         </Link>
       </div>

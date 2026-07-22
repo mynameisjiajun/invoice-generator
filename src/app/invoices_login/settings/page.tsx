@@ -41,7 +41,7 @@ export default function SettingsPage() {
 
   async function signOut() {
     await createClient().auth.signOut();
-    router.push("/login");
+    router.push("/invoices_login");
     router.refresh();
   }
 

@@ -189,7 +189,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     setConfirmingDelete(false);
     try {
       await deleteInvoice(inv.id);
-      router.push("/");
+      router.push("/invoices_login/invoices");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }

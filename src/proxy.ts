@@ -9,6 +9,12 @@ import { NextResponse, type NextRequest } from "next/server";
 // outage when the Supabase project was paused). Real access control lives in
 // Supabase RLS, which every table already enforces.
 export default async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  // Public, unauthenticated 3D-print quote page lives inside the prefix.
+  if (path.startsWith("/invoices_login/quote")) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,19 +32,19 @@ export default async function proxy(request: NextRequest) {
   );
   const { data: { session } } = await supabase.auth.getSession();
 
-  const isLogin = request.nextUrl.pathname.startsWith("/login");
+  const isLogin = path === "/invoices_login";
   if (!session && !isLogin) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/invoices_login", request.url));
   }
   if (session && isLogin) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/invoices_login/invoices", request.url));
   }
   return response;
 }
 
 export const config = {
-  // /api and /quote are excluded: API routes return their own status codes,
-  // and /quote/[slug] is the public, unauthenticated 3D-print quote page.
-  // quote(?:$|/) matches only /quote or /quote/..., not /quotes or other prefixes.
-  matcher: ["/((?!api|quote(?:$|/)|_next/static|_next/image|favicon.ico|manifest|icons).*)"],
+  // Only the invoice app is gated. The portfolio (/), /api, and static
+  // assets never touch Supabase. /invoices_login/quote/* is exempted in
+  // code above (matchers can't express that cleanly).
+  matcher: ["/invoices_login/:path*"],
 };

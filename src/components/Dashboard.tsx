@@ -171,7 +171,7 @@ export default function Dashboard() {
           </FocusFrame>
           <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>No invoices yet</p>
           <p style={{ marginBottom: 20 }}>Create your first invoice to get started.</p>
-          <Link href="/invoices/new" className="btn btn-accent">Create invoice</Link>
+          <Link href="/invoices_login/invoices/new" className="btn btn-accent">Create invoice</Link>
         </div>
       )}
 

@@ -127,12 +127,20 @@ body {
   overflow-x: clip;
   overscroll-behavior-y: none;
   position: relative;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: pan-y;
+}
+
+/* Invoice-app theming lives on its wrapper so the portfolio at `/` can
+   bring its own dark theme without fighting the paper tokens. */
+.invoice-app-root {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+body:has(.invoice-app-root) {
+  background: var(--bg-primary);
 }
 
 /* Buttons/links get an instant tap response instead of the ~300ms
@@ -146,7 +154,7 @@ a, button {
    that makes flat color feel like paper/emulsion instead of a screenshot
    of a screen. Cheap (one inline SVG turbulence filter), no JS, and it
    never affects layout or scroll because it's fixed + pointer-events:none. */
-body::before {
+body:has(.invoice-app-root)::before {
   content: "";
   position: fixed;
   inset: 0;

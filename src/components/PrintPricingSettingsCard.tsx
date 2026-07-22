@@ -114,7 +114,7 @@ export default function PrintPricingSettingsCard({ businessId, slug }: { busines
                   setError("Couldn't copy — copy the link above manually");
                   return;
                 }
-                const url = `${window.location.origin}/quote/${slug}`;
+                const url = `${window.location.origin}/invoices_login/quote/${slug}`;
                 navigator.clipboard.writeText(url)
                   .then(() => {
                     setCopied(true);

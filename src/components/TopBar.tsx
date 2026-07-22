@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { useBusiness } from "@/lib/businessContext";
 import { IconCamera, IconChart, IconCheck, IconChevronDown } from "@/components/icons";
 
-const isQuotePublic = (p: string) => p === "/quote" || p.startsWith("/quote/");
+const isQuotePublic = (p: string) => p.startsWith("/invoices_login/quote");
 
 export default function TopBar() {
   const pathname = usePathname();
   const { businesses, activeBusiness, setActiveBusinessId } = useBusiness();
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
-  if (pathname.startsWith("/login") || isQuotePublic(pathname)) return null;
+  if (pathname === "/invoices_login" || isQuotePublic(pathname)) return null;
 
   const active = businesses.filter((b) => !b.archived_at);
   const canSwitch = active.length > 1;
@@ -30,8 +30,8 @@ export default function TopBar() {
           <span>{activeBusiness?.name ?? "…"}</span>
           {canSwitch && <IconChevronDown size={15} className="app-bar-caret" />}
         </button>
-        <Link href="/stats" className="app-bar-action" aria-label="Stats"
-          aria-current={pathname.startsWith("/stats") ? "page" : undefined}>
+        <Link href="/invoices_login/stats" className="app-bar-action" aria-label="Stats"
+          aria-current={pathname.startsWith("/invoices_login/stats") ? "page" : undefined}>
           <IconChart size={19} />
         </Link>
       </header>
