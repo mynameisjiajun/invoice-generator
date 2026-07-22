@@ -375,8 +375,8 @@ const Portfolio: React.FC = () => {
           </ScrollReveal>
 
           <ScrollReveal className="order-1 lg:order-2 relative group delay-200">
-            <div className="aspect-[3/4] bg-neutral-800 relative z-10 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1549488497-2374e2a86577?q=80&w=1600&auto=format&fit=crop" alt="Singapore Streets" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+            <div className="aspect-3/2 bg-neutral-800 relative z-10 overflow-hidden">
+              <img src="/work/about-crew.jpg" alt="The Apex Cinematics crew under the Jewel Changi dome" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
               <div className="absolute inset-0 bg-brand-orange mix-blend-multiply opacity-20 group-hover:opacity-0 transition-opacity"></div>
             </div>
 

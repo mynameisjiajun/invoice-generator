@@ -21,62 +21,43 @@ export type Project = {
   photos: ProjectPhoto[];
 };
 
-// PLACEHOLDER projects — replace each with real work as folders/links arrive.
-// Covers are Unsplash stock; galleries reuse the cover so the lightbox works.
 export const PROJECTS: Project[] = [
   {
-    slug: "neon-nights-clarke-quay",
-    title: "Neon Nights: Clarke Quay",
+    slug: "yue-rou-chinese-fantasy-mv",
+    title: "Yue Rou's Chinese Fantasy Music Video Journey",
     type: "video",
-    cover: "https://images.unsplash.com/photo-1563251433-89a5df263c9b?q=80&w=1600&auto=format&fit=crop",
-    story: "High-energy aftermovie for a sold-out warehouse event in Singapore.",
-    tags: ["Event", "Clarke Quay"],
-    photos: [{ src: "https://images.unsplash.com/photo-1563251433-89a5df263c9b?q=80&w=1600&auto=format&fit=crop", alt: "Concert crowd under neon light" }],
+    cover: "https://i.ytimg.com/vi/QsSV2IPbqhA/maxresdefault.jpg",
+    story:
+      "A wish-journey film for Make-A-Wish Singapore — following Yue Rou as her Chinese-fantasy music video comes to life, from first fitting to final frame.",
+    tags: ["Documentary", "Make-A-Wish Singapore"],
+    youtubeId: "QsSV2IPbqhA",
+    photos: [],
   },
   {
-    slug: "urban-solitude-tiong-bahru",
-    title: "Urban Solitude: Tiong Bahru",
-    type: "video",
-    cover: "https://images.unsplash.com/photo-1626084478170-0e57dfc920e5?q=80&w=1600&auto=format&fit=crop",
-    story: "A moody short documentary exploring the quiet corners of SG heritage estates.",
-    tags: ["Documentary", "Tiong Bahru"],
-    photos: [{ src: "https://images.unsplash.com/photo-1626084478170-0e57dfc920e5?q=80&w=1600&auto=format&fit=crop", alt: "Alley at night in Tiong Bahru" }],
-  },
-  {
-    slug: "streetwear-drop-haji-lane",
-    title: "Streetwear Drop: Haji Lane",
+    slug: "chroma-car-care",
+    title: "Chroma Car Care",
     type: "photo",
-    cover: "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1600&auto=format&fit=crop",
-    story: "Lookbook and social content for a local sustainable fashion brand.",
-    tags: ["Brand", "Haji Lane"],
-    photos: [{ src: "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1600&auto=format&fit=crop", alt: "Streetwear portrait" }],
+    cover: "/work/chroma-car-care/01.jpg",
+    story:
+      "Brand shoot for Chroma Car Care — paintwork gloss, product details, and the finishing touches that sell the shine.",
+    tags: ["Brand", "Automotive"],
+    photos: Array.from({ length: 12 }, (_, i) => ({
+      src: `/work/chroma-car-care/${String(i + 1).padStart(2, "0")}.jpg`,
+      alt: `Chroma Car Care shoot — photo ${i + 1}`,
+    })),
   },
   {
-    slug: "golden-hour-at-mbs",
-    title: "Golden Hour at MBS",
+    slug: "floraisons-pr-event",
+    title: "Floraisons.Co PR Event",
     type: "photo",
-    cover: "https://images.unsplash.com/photo-1506318137071-a8bcbf67119d?q=80&w=1600&auto=format&fit=crop",
-    story: "Influencer campaign featuring the iconic Singapore skyline.",
-    tags: ["Lifestyle", "Marina Bay"],
-    photos: [{ src: "https://images.unsplash.com/photo-1506318137071-a8bcbf67119d?q=80&w=1600&auto=format&fit=crop", alt: "Golden hour skyline portrait" }],
-  },
-  {
-    slug: "the-craftsman",
-    title: "The Craftsman",
-    type: "video",
-    cover: "https://images.unsplash.com/photo-1545648719-2fc513476837?q=80&w=1600&auto=format&fit=crop",
-    story: "Profile documentary on a traditional lantern maker in Chinatown.",
-    tags: ["Documentary", "Chinatown"],
-    photos: [{ src: "https://images.unsplash.com/photo-1545648719-2fc513476837?q=80&w=1600&auto=format&fit=crop", alt: "Craftsman at work" }],
-  },
-  {
-    slug: "speed-and-motion",
-    title: "Speed & Motion",
-    type: "video",
-    cover: "https://images.unsplash.com/photo-1616423640778-28d1b53229bd?q=80&w=1600&auto=format&fit=crop",
-    story: "Event coverage for a local automotive meet.",
-    tags: ["Event", "Automotive"],
-    photos: [{ src: "https://images.unsplash.com/photo-1616423640778-28d1b53229bd?q=80&w=1600&auto=format&fit=crop", alt: "Car in motion at night" }],
+    cover: "/work/floraisons-pr-event/01.jpg",
+    story:
+      "Event coverage for Floraisons.Co's PR launch — the florals, the guests, and the in-between moments that made the room feel alive.",
+    tags: ["Event", "PR Launch"],
+    photos: Array.from({ length: 12 }, (_, i) => ({
+      src: `/work/floraisons-pr-event/${String(i + 1).padStart(2, "0")}.jpg`,
+      alt: `Floraisons.Co PR event — photo ${i + 1}`,
+    })),
   },
 ];
 

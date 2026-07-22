@@ -47,6 +47,7 @@ export default function ProjectDetail({ project }: { project: Project }) {
       </div>
 
       {/* Gallery */}
+      {project.photos.length > 0 && (
       <div className="max-w-[1400px] mx-auto px-6 pb-16">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-1">
           {project.photos.map((photo, i) => (
@@ -56,6 +57,7 @@ export default function ProjectDetail({ project }: { project: Project }) {
           ))}
         </div>
       </div>
+      )}
 
       {/* CTA banner */}
       <section className="py-20 bg-black border-t border-neutral-900 text-center px-6">
