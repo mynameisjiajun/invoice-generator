@@ -12,7 +12,6 @@ import { formatSGD } from "@/lib/money";
 import { DEFAULT_EMAIL_TEMPLATE, DEFAULT_WHATSAPP_TEMPLATE } from "@/lib/templates";
 import type { Business, Preset } from "@/lib/types";
 import { IconAdd, IconCheck, IconDownload, IconSignOut, IconTrash } from "@/components/icons";
-import PrintPricingSettingsCard from "@/components/PrintPricingSettingsCard";
 import ConfirmSheet from "@/components/ConfirmSheet";
 
 const FIELDS: Array<{ key: keyof Business; label: string }> = [
@@ -287,8 +286,6 @@ export default function SettingsPage() {
           {saved && <IconCheck size={15} />} {saved ? "Saved" : "Save Messages"}
         </button>
       </div>
-
-      <PrintPricingSettingsCard businessId={activeBusiness.id} slug={activeBusiness.slug} />
 
       {/* Service presets */}
       <div className="card">

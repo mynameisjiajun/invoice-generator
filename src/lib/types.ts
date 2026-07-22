@@ -69,38 +69,3 @@ export function invoiceDocLabel(inv: Invoice, variant: "invoice" | "receipt" = "
     .trim();
 }
 
-export type PrintMaterial = {
-  name: string;
-  density_g_cm3: number;
-  cost_per_gram_cents: number;
-};
-
-export type PrintPricingSettings = {
-  business_id: string;
-  materials: PrintMaterial[];
-  print_speed_cm3_per_hour: number;
-  cost_per_hour_cents: number;
-  waste_percent: number;
-  infill_percent: number;
-  multi_colour_time_surcharge_percent: number;
-  multi_colour_waste_percent: number;
-  minimum_price_cents: number | null;
-  telegram_handle: string;
-};
-
-export type PrintQuoteStatus = "new" | "contacted" | "archived";
-
-export type PrintQuote = {
-  id: string;
-  business_id: string;
-  material: string;
-  volume_cm3: number;
-  weight_g: number;
-  estimated_hours: number;
-  price_cents: number;
-  file_path: string;
-  multi_colour: boolean;
-  notes: string;
-  status: PrintQuoteStatus;
-  created_at: string;
-};

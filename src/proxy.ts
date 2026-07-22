@@ -10,10 +10,6 @@ import { NextResponse, type NextRequest } from "next/server";
 // Supabase RLS, which every table already enforces.
 export default async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  // Public, unauthenticated 3D-print quote page lives inside the prefix.
-  if (path.startsWith("/invoices_login/quote/")) {
-    return NextResponse.next({ request });
-  }
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
@@ -44,7 +40,6 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   // Only the invoice app is gated. The portfolio (/), /api, and static
-  // assets never touch Supabase. /invoices_login/quote/* is exempted in
-  // code above (matchers can't express that cleanly).
+  // assets never touch Supabase.
   matcher: ["/invoices_login/:path*"],
 };

@@ -1,21 +1,19 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconAdd, IconCamera, IconReceipt, IconSettings, IconUser } from "@/components/icons";
-
-const isQuotePublic = (p: string) => p.startsWith("/invoices_login/quote/");
+import { IconAdd, IconCamera, IconChart, IconSettings, IconUser } from "@/components/icons";
 
 const tabs = [
   { href: "/invoices_login/invoices", label: "Invoices", Icon: IconCamera,
     match: (p: string) => p.startsWith("/invoices_login/invoices") && p !== "/invoices_login/invoices/new" },
-  { href: "/invoices_login/quotes", label: "Quotes", Icon: IconReceipt, match: (p: string) => p.startsWith("/invoices_login/quotes") },
+  { href: "/invoices_login/stats", label: "Dashboard", Icon: IconChart, match: (p: string) => p.startsWith("/invoices_login/stats") },
   { href: "/invoices_login/customers", label: "Clients", Icon: IconUser, match: (p: string) => p.startsWith("/invoices_login/customers") },
   { href: "/invoices_login/settings", label: "Settings", Icon: IconSettings, match: (p: string) => p.startsWith("/invoices_login/settings") },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
-  if (pathname === "/invoices_login" || isQuotePublic(pathname)) return null;
+  if (pathname === "/invoices_login") return null;
 
   const left = tabs.slice(0, 2);
   const right = tabs.slice(2);

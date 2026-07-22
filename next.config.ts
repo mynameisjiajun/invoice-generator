@@ -60,8 +60,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/login", destination: "/invoices_login", permanent: true },
-      // Quote links were shared with customers before the move.
-      { source: "/quote/:slug", destination: "/invoices_login/quote/:slug", permanent: true },
     ];
   },
 };

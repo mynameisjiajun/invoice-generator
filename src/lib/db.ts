@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { subtotalCents, totalCents } from "@/lib/money";
 import type {
-  Business, Customer, Invoice, InvoiceEvent, InvoiceEventKind,
-  Preset, PrintPricingSettings, PrintQuote, PrintQuoteStatus,
+  Business, Customer, Invoice, InvoiceEvent, InvoiceEventKind, Preset,
 } from "@/lib/types";
 
 const db = () => createClient();
@@ -153,54 +152,13 @@ export async function deleteInvoice(id: string): Promise<boolean> {
   return ok(await db().rpc("delete_invoice_rewind", { inv_id: id }));
 }
 
-export async function getPricingSettings(businessId: string): Promise<PrintPricingSettings | null> {
-  const res = await db().from("print_pricing_settings").select("*").eq("business_id", businessId).maybeSingle();
-  if (res.error) throw new Error(res.error.message);
-  return res.data;
-}
-
-export async function savePricingSettings(settings: PrintPricingSettings): Promise<PrintPricingSettings> {
-  return ok(await db().from("print_pricing_settings")
-    .upsert({ ...settings, updated_at: new Date().toISOString() })
-    .select().single());
-}
-
-export async function listPrintQuotes(businessId: string): Promise<PrintQuote[]> {
-  return ok(await db().from("print_quotes").select("*").eq("business_id", businessId).order("created_at", { ascending: false }));
-}
-
-export async function updatePrintQuoteStatus(id: string, status: PrintQuoteStatus): Promise<void> {
-  ok(await db().from("print_quotes").update({ status }).eq("id", id).select().single());
-}
-
-export type SubmitQuoteInput = Omit<PrintQuote, "id" | "created_at" | "status">;
-
-export async function submitPrintQuote(input: SubmitQuoteInput): Promise<PrintQuote> {
-  return ok(await db().from("print_quotes").insert(input).select().single());
-}
-
-export async function uploadPrintQuoteFile(businessId: string, file: File): Promise<string> {
-  const path = `${businessId}/${crypto.randomUUID()}.stl`;
-  const res = await db().storage.from("print-quote-files").upload(path, file);
-  if (res.error) throw new Error(res.error.message);
-  return path;
-}
-
-export async function getPrintQuoteFileUrl(path: string): Promise<string> {
-  const res = await db().storage.from("print-quote-files").createSignedUrl(path, 3600);
-  if (res.error) throw new Error(res.error.message);
-  return res.data.signedUrl;
-}
-
 /** Full JSON backup — everything needed to reconstruct the business if
- *  Supabase is ever lost. STL file bytes aren't included, only metadata. */
+ *  Supabase is ever lost. */
 export async function exportAllData() {
   const [businesses, invoices] = await Promise.all([listBusinesses(), listInvoices()]);
   const perBiz = await Promise.all(businesses.map(async (b) => ({
     customers: await listCustomers(b.id),
     presets: await listPresets(b.id),
-    pricing: await getPricingSettings(b.id),
-    printQuotes: await listPrintQuotes(b.id),
   })));
   return {
     exported_at: new Date().toISOString(),
