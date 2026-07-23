@@ -11,7 +11,7 @@ export default function ProjectDetail({ project }: { project: Project }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
-    <main className="min-h-screen bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
+    <main className="min-h-dvh bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
       {/* Top bar */}
       <div className="max-w-[1400px] mx-auto px-6 pt-8 flex items-center justify-between">
         <Link href="/#portfolio" className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition-colors">

@@ -220,11 +220,11 @@ const Portfolio: React.FC = () => {
   const filteredProjects = PROJECTS.filter(p => filter === "all" || p.type === filter);
 
   return (
-    <div className="min-h-screen bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
+    <div className="min-h-dvh bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
       <NavBar />
 
       {/* HERO SECTION */}
-      <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden border-b border-white/5 pt-20 md:pt-0">
+      <section id="home" className="relative min-h-dvh flex items-center justify-center overflow-hidden border-b border-white/5 pt-20 md:pt-0">
 
         {/* Background: cursor-reactive animated texture (no photo needed) */}
         <div className="absolute inset-0 z-0">
@@ -291,7 +291,7 @@ const Portfolio: React.FC = () => {
       </section>
 
       {/* PORTFOLIO SECTION */}
-      <section id="portfolio" className="py-24 bg-brand-dark relative">
+      <section id="portfolio" className="py-24 bg-brand-dark relative scroll-mt-20">
         <div className="max-w-[1800px] mx-auto px-6">
           <ScrollReveal>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
@@ -328,7 +328,7 @@ const Portfolio: React.FC = () => {
       </section>
 
       {/* SERVICES SECTION */}
-      <section id="rates" className="py-24 bg-neutral-900 border-y border-neutral-800">
+      <section id="rates" className="py-24 bg-neutral-900 border-y border-neutral-800 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <ScrollReveal>
             <SectionHeader title="Capabilities" subtitle="Services" index="02" />
@@ -372,7 +372,7 @@ const Portfolio: React.FC = () => {
       </section>
 
       {/* ABOUT SECTION */}
-      <section id="about" className="py-24 bg-brand-dark relative overflow-hidden">
+      <section id="about" className="py-24 bg-brand-dark relative overflow-hidden scroll-mt-20">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
           <ScrollReveal className="order-2 lg:order-1">
@@ -420,7 +420,7 @@ const Portfolio: React.FC = () => {
       </section>
 
       {/* CONTACT SECTION */}
-      <section id="contact" className="py-24 bg-black border-t border-neutral-900">
+      <section id="contact" className="py-24 bg-black border-t border-neutral-900 scroll-mt-20">
         <div className="max-w-6xl mx-auto px-6">
           <ScrollReveal>
             <div className="text-center mb-16">

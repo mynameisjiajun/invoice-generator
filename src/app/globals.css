@@ -1093,6 +1093,10 @@ textarea.input {
 html:has([data-apex-root]) {
   scroll-behavior: smooth;
 }
+@media (prefers-reduced-motion: reduce) {
+  html:has([data-apex-root]) { scroll-behavior: auto; }
+  [data-apex-root] .animate-marquee-right { animation: none; }
+}
 /* ── Cute camera cursor ──
    A tiny custom cursor for the portfolio only — hotspot at the lens center
    so clicks land where the "eye" of the camera is. Links/buttons still show
