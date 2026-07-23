@@ -89,6 +89,7 @@ const SectionHeader: React.FC<{ title: string; subtitle: string; index?: string 
 const NavBar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeId, setActiveId] = useState('home');
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -96,44 +97,98 @@ const NavBar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Scrollspy: highlight the nav link for the section in view.
+  useEffect(() => {
+    const ids = ['home', 'portfolio', 'rates', 'about', 'contact'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveId(entry.target.id);
+        }
+      },
+      // A slim horizontal band ~40% down the viewport decides the active section.
+      { rootMargin: '-40% 0px -55% 0px' }
+    );
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // Scroll-lock + Escape while the mobile menu is open.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [mobileMenuOpen]);
+
   const navLinks = [
-    { name: 'Work', href: '#portfolio' },
-    { name: 'Services', href: '#rates' },
-    { name: 'Studio', href: '#about' },
+    { name: 'Work', href: '#portfolio', id: 'portfolio' },
+    { name: 'Services', href: '#rates', id: 'rates' },
+    { name: 'Studio', href: '#about', id: 'about' },
   ];
 
   return (
-    <nav className={`fixed top-0 w-full z-40 transition-all duration-300 border-b ${scrolled ? 'bg-black/90 backdrop-blur-md border-neutral-800 py-3' : 'bg-transparent border-transparent py-6'}`}>
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-        <a href="#home" className="text-3xl font-apex-display font-bold text-white tracking-tighter uppercase italic z-50">
-          Apex<span className="text-brand-orange not-italic">Cinematics</span>
-        </a>
-
-        {/* Desktop Nav */}
-        <div className="hidden md:flex gap-12 items-center">
-          {navLinks.map(link => (
-            <a
-              key={link.name}
-              href={link.href}
-              className="text-sm font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition-colors"
-            >
-              {link.name}
-            </a>
-          ))}
-          <a href="#contact" className="px-6 py-2 bg-white text-black font-apex-display font-bold uppercase tracking-wider hover:bg-brand-orange hover:text-white transition-all skew-x-[-10deg]">
-            <span className="skew-x-[10deg] inline-block">Book Shoot</span>
+    <>
+      <nav className={`fixed top-0 w-full z-40 transition-all duration-300 border-b ${scrolled ? 'bg-black/90 backdrop-blur-md border-neutral-800 py-3' : 'bg-transparent border-transparent py-6'}`}>
+        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+          <a href="#home" className="text-3xl font-apex-display font-bold text-white tracking-tighter uppercase italic z-50">
+            Apex<span className="text-brand-orange not-italic">Cinematics</span>
           </a>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex gap-12 items-center">
+            {navLinks.map(link => (
+              <a
+                key={link.name}
+                href={link.href}
+                aria-current={activeId === link.id ? 'true' : undefined}
+                className={`text-sm font-bold uppercase tracking-widest transition-colors border-b-2 pb-1 ${
+                  activeId === link.id
+                    ? 'text-brand-orange border-brand-orange'
+                    : 'text-neutral-400 border-transparent hover:text-white'
+                }`}
+              >
+                {link.name}
+              </a>
+            ))}
+            <a href="#contact" className="px-6 py-2 bg-white text-black font-apex-display font-bold uppercase tracking-wider hover:bg-brand-orange hover:text-white transition-all skew-x-[-10deg]">
+              <span className="skew-x-[10deg] inline-block">Book Shoot</span>
+            </a>
+          </div>
+
+          {/* Mobile Toggle */}
+          <button
+            className="md:hidden text-white z-50"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
         </div>
+      </nav>
 
-        {/* Mobile Toggle */}
-        <button className="md:hidden text-white z-50" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X /> : <Menu />}
-        </button>
-      </div>
-
-      {/* Mobile Menu */}
+      {/* Mobile Menu — a SIBLING of <nav>, never a descendant: the scrolled
+          nav's backdrop-filter would otherwise become the containing block
+          for this fixed overlay and shrink it to the nav strip. */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black flex flex-col justify-center items-center gap-8 animate-fade-in">
+        <div role="dialog" aria-modal="true" className="md:hidden fixed inset-0 z-50 bg-black flex flex-col justify-center items-center gap-8 animate-fade-in">
+          <button
+            className="absolute top-6 right-6 text-white"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={28} />
+          </button>
           {navLinks.map(link => (
             <a
               key={link.name}
@@ -153,7 +208,7 @@ const NavBar: React.FC = () => {
           </a>
         </div>
       )}
-    </nav>
+    </>
   );
 };
 
