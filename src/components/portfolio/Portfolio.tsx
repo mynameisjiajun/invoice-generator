@@ -16,6 +16,7 @@ import { Service } from './types';
 import { PROJECTS, type ProjectType } from './projects';
 import ProjectCard from './ProjectCard';
 import HeroCanvas from './HeroCanvas';
+import HeroVideo from './HeroVideo';
 
 
 // --- DATA ---
@@ -173,6 +174,7 @@ const Portfolio: React.FC = () => {
         {/* Background: cursor-reactive animated texture (no photo needed) */}
         <div className="absolute inset-0 z-0">
           <HeroCanvas />
+          <HeroVideo />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent z-10"></div>
           {/* Cinematic letterbox bars */}
           <div className="absolute top-0 left-0 right-0 h-5 bg-black z-20"></div>
