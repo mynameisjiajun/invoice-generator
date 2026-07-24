@@ -407,7 +407,7 @@ const Portfolio: React.FC = () => {
 
           <ScrollReveal className="order-1 lg:order-2 relative group delay-200">
             <div className="aspect-3/2 bg-neutral-800 relative z-10 overflow-hidden">
-              <img src="/work/about-crew.jpg" alt="The Apex Cinematics crew under the Jewel Changi dome" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+              <img src="/work/ggs-iceland.jpg" alt="GGS Iceland Climate Action Event" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
               <div className="absolute inset-0 bg-brand-orange mix-blend-multiply opacity-20 group-hover:opacity-0 transition-opacity"></div>
             </div>
 
