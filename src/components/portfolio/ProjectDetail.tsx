@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Instagram } from "lucide-react";
 import type { Project } from "./projects";
 import Lightbox from "./Lightbox";
 import YouTubeEmbed from "./YouTubeEmbed";
@@ -25,15 +25,26 @@ export default function ProjectDetail({ project }: { project: Project }) {
 
       {/* Lead media */}
       <div className="max-w-[1400px] mx-auto px-6 mt-8 animate-fade-in">
-        {project.instagramUrl ? (
-          <InstagramEmbed url={project.instagramUrl} title={project.title} />
-        ) : project.youtubeId ? (
+        {project.youtubeId ? (
           <YouTubeEmbed id={project.youtubeId} title={project.title} />
+        ) : project.instagramUrl ? (
+          <InstagramEmbed url={project.instagramUrl} title={project.title} />
         ) : project.cover ? (
           <div className="relative aspect-video overflow-hidden bg-neutral-900">
             <Image src={project.cover} alt={project.title} fill sizes="100vw" priority className="object-cover" />
           </div>
         ) : null}
+
+        {project.youtubeId && project.instagramUrl && (
+          <a
+            href={project.instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-3 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-neutral-400 hover:text-brand-orange transition-colors"
+          >
+            <Instagram size={16} /> Also on Instagram <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+          </a>
+        )}
       </div>
 
       {/* Title + story */}
