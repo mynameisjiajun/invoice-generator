@@ -17,18 +17,15 @@ const isDev = process.env.NODE_ENV === "development";
 // Vercel's own docs require these vercel.live/vercel.com allowances so the
 // Vercel Toolbar (live comments/preview panel) keeps working under a CSP —
 // https://vercel.com/docs/vercel-toolbar/managing-toolbar#using-a-content-security-policy
-// Instagram's oEmbed widget (embed.js) needs its own script/frame/img/connect
-// allowances: it injects an iframe from instagram.com and pulls the post's
-// media from Facebook's CDN (*.cdninstagram.com / *.fbcdn.net).
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://vercel.live https://www.instagram.com${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://vercel.live${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://vercel.live",
-  "img-src 'self' data: blob: https://vercel.live https://vercel.com https://i.ytimg.com https://*.cdninstagram.com https://*.fbcdn.net",
-  "media-src 'self' https://*.cdninstagram.com https://*.fbcdn.net",
+  "img-src 'self' data: blob: https://vercel.live https://vercel.com https://i.ytimg.com",
+  "media-src 'self'",
   "font-src 'self' https://vercel.live https://assets.vercel.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com https://www.instagram.com",
-  "frame-src https://vercel.live https://www.youtube-nocookie.com https://www.instagram.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com",
+  "frame-src https://vercel.live https://www.youtube-nocookie.com",
   "worker-src 'self' blob:",
   "frame-ancestors 'none'",
 ].join("; ");
