@@ -83,16 +83,6 @@ export const PROJECTS: Project[] = [
     youtubeId: "ND4Ct0ticVE",
     photos: [],
   },
-  {
-    slug: "new-zealand-holiday-shoot",
-    title: "New Zealand Holiday Shoot",
-    type: "video",
-    cover: "https://i.ytimg.com/vi/mo3QcXb-XAw/maxresdefault.jpg",
-    story: "A travel documentary following a road trip through New Zealand with friends.",
-    tags: ["Travel", "New Zealand"],
-    youtubeId: "mo3QcXb-XAw",
-    photos: [],
-  },
 ];
 
 export function getProject(slug: string): Project | undefined {
