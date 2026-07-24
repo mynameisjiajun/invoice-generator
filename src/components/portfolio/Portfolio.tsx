@@ -373,9 +373,9 @@ const Portfolio: React.FC = () => {
 
       {/* ABOUT SECTION */}
       <section id="about" className="py-24 bg-brand-dark relative overflow-hidden scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 gap-16 items-center">
 
-          <ScrollReveal className="order-2 lg:order-1">
+          <ScrollReveal className="order-2 sm:order-1">
             <h3 className="text-brand-orange font-bold uppercase tracking-[0.2em] text-xs mb-6">The Studio</h3>
             <h2 className="text-5xl md:text-6xl font-apex-display font-bold text-white uppercase leading-none mb-8">
               Based in Singapore. <br/> <span className="text-neutral-700">Shooting Everywhere.</span>
@@ -405,7 +405,7 @@ const Portfolio: React.FC = () => {
             </div>
           </ScrollReveal>
 
-          <ScrollReveal className="order-1 lg:order-2 relative group delay-200">
+          <ScrollReveal className="order-1 sm:order-2 relative group delay-200 max-w-xs sm:max-w-sm mx-auto sm:mx-0">
             <div className="aspect-2/3 bg-neutral-800 relative z-10 overflow-hidden">
               <img src="/work/ggs-iceland.jpg" alt="GGS Iceland Climate Action Event" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
               <div className="absolute inset-0 bg-brand-orange mix-blend-multiply opacity-20 group-hover:opacity-0 transition-opacity"></div>

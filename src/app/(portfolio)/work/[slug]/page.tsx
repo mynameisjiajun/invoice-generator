@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${project.title} | Apex Cinematics`,
     description: project.story,
-    openGraph: { title: project.title, description: project.story, images: [project.cover] },
+    openGraph: { title: project.title, description: project.story, images: project.cover ? [project.cover] : [] },
   };
 }
 

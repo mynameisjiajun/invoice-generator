@@ -13,21 +13,21 @@ describe("portfolio projects data", () => {
       expect(p.slug).toMatch(/^[a-z0-9-]+$/);
       expect(p.title.length).toBeGreaterThan(0);
       expect(["video", "photo"]).toContain(p.type);
-      expect(p.cover.length).toBeGreaterThan(0);
+      if (p.cover) expect(p.cover.length).toBeGreaterThan(0);
       expect(p.story.length).toBeGreaterThan(0);
     }
   });
 
-  it("photo projects have a gallery; video projects have a youtubeId or photos", () => {
+  it("photo projects have a gallery; video projects have a youtubeId, instagramUrl, or photos", () => {
     for (const p of PROJECTS) {
       if (p.type === "photo") expect(p.photos.length).toBeGreaterThan(0);
-      else expect(Boolean(p.youtubeId) || p.photos.length > 0).toBe(true);
+      else expect(Boolean(p.youtubeId) || Boolean(p.instagramUrl) || p.photos.length > 0).toBe(true);
     }
   });
 
   it("contains no placeholder stock content", () => {
     for (const p of PROJECTS) {
-      expect(p.cover).not.toContain("unsplash");
+      if (p.cover) expect(p.cover).not.toContain("unsplash");
       for (const photo of p.photos) expect(photo.src).not.toContain("unsplash");
     }
   });

@@ -14,10 +14,11 @@ export type Project = {
   slug: string;
   title: string;
   type: ProjectType;
-  cover: string;
+  cover?: string;
   story: string;
   tags: string[];
   youtubeId?: string;
+  instagramUrl?: string;
   photos: ProjectPhoto[];
 };
 
@@ -76,11 +77,10 @@ export const PROJECTS: Project[] = [
     slug: "design-your-dream-future",
     title: "Design Your Dream Future",
     type: "video",
-    cover: "https://i.ytimg.com/vi/ND4Ct0ticVE/maxresdefault.jpg",
     story:
       "Event coverage for a panel and workshop session on designing your future — the conversation, the crowd, and the moments in between.",
     tags: ["Event", "Panel"],
-    youtubeId: "ND4Ct0ticVE",
+    instagramUrl: "https://www.instagram.com/reel/DV7jBB1EjIj/",
     photos: [],
   },
 ];

@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { Project } from "./projects";
 import Lightbox from "./Lightbox";
 import YouTubeEmbed from "./YouTubeEmbed";
+import InstagramEmbed from "./InstagramEmbed";
 
 export default function ProjectDetail({ project }: { project: Project }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -24,13 +25,15 @@ export default function ProjectDetail({ project }: { project: Project }) {
 
       {/* Lead media */}
       <div className="max-w-[1400px] mx-auto px-6 mt-8 animate-fade-in">
-        {project.youtubeId ? (
+        {project.instagramUrl ? (
+          <InstagramEmbed url={project.instagramUrl} title={project.title} />
+        ) : project.youtubeId ? (
           <YouTubeEmbed id={project.youtubeId} title={project.title} />
-        ) : (
+        ) : project.cover ? (
           <div className="relative aspect-video overflow-hidden bg-neutral-900">
             <Image src={project.cover} alt={project.title} fill sizes="100vw" priority className="object-cover" />
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Title + story */}
