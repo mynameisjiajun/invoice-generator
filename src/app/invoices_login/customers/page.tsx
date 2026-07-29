@@ -3,12 +3,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useBusiness } from "@/lib/businessContext";
 import {
-  createCustomer, listCustomers, listInvoicesForCustomer, updateCustomer, updateCustomerNumber,
+  createCustomer, deleteCustomer, listCustomers, listInvoicesForCustomer,
+  updateCustomer, updateCustomerNumber,
 } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { formatSgPhone } from "@/lib/phone";
 import type { Customer, Invoice } from "@/lib/types";
-import { IconAdd, IconCheck, IconEdit } from "@/components/icons";
+import { IconAdd, IconCheck, IconEdit, IconTrash } from "@/components/icons";
+import ConfirmSheet from "@/components/ConfirmSheet";
 
 type Draft = {
   number: string; name: string; company: string; phone: string; email: string; uen: string; address: string;
@@ -95,6 +97,7 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [history, setHistory] = useState<Record<number, Invoice[]>>({});
+  const [pendingDelete, setPendingDelete] = useState<Customer | null>(null);
 
   function toggleExpand(c: Customer) {
     setExpandedId(expandedId === c.id ? null : c.id);
@@ -151,6 +154,46 @@ export default function CustomersPage() {
       reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save customer");
+    }
+    setBusy(false);
+  }
+
+  /** Deleting a client with invoices would orphan them, and the database
+   *  refuses it outright. Check first so the owner gets an explanation
+   *  instead of a constraint error, and only open the confirm sheet when the
+   *  delete can actually go through. */
+  async function askDelete(c: Customer) {
+    setError(null);
+    setBusy(true);
+    try {
+      const invs = history[c.id] ?? await listInvoicesForCustomer(c.id);
+      setHistory((h) => ({ ...h, [c.id]: invs }));
+      if (invs.length > 0) {
+        setError(
+          `${c.name} has ${invs.length} invoice${invs.length === 1 ? "" : "s"} — ` +
+          `delete ${invs.length === 1 ? "it" : "those"} first, or keep the client for your records.`
+        );
+      } else {
+        setPendingDelete(c);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to check this client's invoices");
+    }
+    setBusy(false);
+  }
+
+  async function doDelete() {
+    const c = pendingDelete;
+    if (!c) return;
+    setPendingDelete(null);
+    setBusy(true);
+    try {
+      await deleteCustomer(c.id);
+      setCustomers((cs) => cs.filter((x) => x.id !== c.id));
+      if (expandedId === c.id) setExpandedId(null);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete client");
     }
     setBusy(false);
   }
@@ -273,9 +316,15 @@ export default function CustomersPage() {
                       {[formatSgPhone(c.phone), c.email, c.uen && `UEN : ${c.uen}`, c.address].filter(Boolean).join(" · ") || "No contact details"}
                     </div>
                   </div>
-                  <button onClick={() => startEdit(c)} className="btn btn-secondary icon-btn" style={{ flexShrink: 0 }}>
-                    <IconEdit size={14} /> Edit
-                  </button>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => startEdit(c)} className="btn btn-secondary icon-btn">
+                      <IconEdit size={14} /> Edit
+                    </button>
+                    <button onClick={() => askDelete(c)} disabled={busy}
+                      className="btn-danger icon-btn" aria-label={`Delete ${c.name}`}>
+                      <IconTrash size={14} />
+                    </button>
+                  </div>
                 </div>
                 {expandedId === c.id && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
@@ -291,6 +340,16 @@ export default function CustomersPage() {
           </div>
         ))}
       </div>
+
+      <ConfirmSheet
+        open={pendingDelete !== null}
+        danger
+        title={`Delete ${pendingDelete?.name}?`}
+        message="This client has no invoices, so nothing else is affected. This can't be undone."
+        confirmLabel="Delete"
+        onConfirm={doDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }
