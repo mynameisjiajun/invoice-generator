@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { listInvoices } from "@/lib/db";
+import { todayLocalIso } from "@/lib/date";
 import { formatSGD } from "@/lib/money";
 import { clientStats, monthlyStats, yearlyStats } from "@/lib/stats";
 import type { Invoice } from "@/lib/types";
@@ -10,18 +11,41 @@ import { useBusiness } from "@/lib/businessContext";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function StatsPage() {
-  const { activeBusiness } = useBusiness();
+  const { businesses, activeBusiness } = useBusiness();
   const [scope, setScope] = useState<"active" | "all">("active");
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState<string | null>(null);
+  // null until the first load resolves, at which point it's set to the
+  // most recent year with data (falling back to this year if there's none)
+  // — otherwise this defaults to today's year and can show an empty chart
+  // with no explanation when all your invoices are from an earlier year.
+  const [year, setYear] = useState<number | null>(null);
 
   useEffect(() => {
     if (scope === "active" && !activeBusiness) return;
     setInvoices(null);
-    listInvoices(scope === "active" ? activeBusiness!.id : undefined).then(setInvoices);
+    setError(null);
+    listInvoices(scope === "active" ? activeBusiness!.id : undefined)
+      .then((list) => {
+        setInvoices(list);
+        setYear((current) => {
+          if (current !== null) return current;
+          const years = yearlyStats(list);
+          return years[0]?.year ?? Number(todayLocalIso().slice(0, 4));
+        });
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load stats"));
   }, [scope, activeBusiness]);
 
-  if (!invoices) return (
+  if (error) return (
+    <div className="page-container">
+      <div className="card" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
+        <p style={{ color: "var(--warning)", fontWeight: 600 }}>Error: {error}</p>
+      </div>
+    </div>
+  );
+
+  if (!invoices || year === null) return (
     <div className="page-container">
       <div className="card animate-pulse-soft" style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "var(--text-tertiary)" }}>Loading stats…</p>
@@ -42,22 +66,30 @@ export default function StatsPage() {
       const str = String(v ?? "");
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
     };
+    const businessName = new Map(businesses.map((b) => [b.id, b.name]));
+    const header = ["Invoice No", "Status", "Issue Date", "Paid Date", "Customer", "Event", "Location",
+      "Subtotal (SGD)", "Discount Type", "Discount Value", "Total (SGD)"];
+    if (scope === "all") header.unshift("Business");
     const rows = [
-      ["Invoice No", "Status", "Issue Date", "Paid Date", "Customer", "Event", "Location",
-       "Subtotal (SGD)", "Discount Type", "Discount Value", "Total (SGD)"],
-      ...invoices!.map((i) => [
-        i.invoice_number ?? "DRAFT", i.status, i.issue_date, i.paid_date ?? "",
-        i.customers?.name ?? "", i.job_event, i.job_location,
-        (i.subtotal_cents / 100).toFixed(2), i.discount_type, i.discount_value,
-        (i.total_cents / 100).toFixed(2),
-      ]),
+      header,
+      ...invoices!.map((i) => {
+        const row = [
+          i.invoice_number ?? "DRAFT", i.status, i.issue_date, i.paid_date ?? "",
+          i.customers?.name ?? "", i.job_event, i.job_location,
+          (i.subtotal_cents / 100).toFixed(2), i.discount_type, i.discount_value,
+          (i.total_cents / 100).toFixed(2),
+        ];
+        if (scope === "all") row.unshift(businessName.get(i.business_id) ?? "");
+        return row;
+      }),
     ];
     const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
+    const name = scope === "active" ? (activeBusiness?.slug ?? "invoices") : "all-businesses";
     const a = Object.assign(document.createElement("a"), {
       href: url,
-      download: `jj-visuals-invoices-${new Date().toISOString().slice(0, 10)}.csv`,
+      download: `${name}-invoices-${todayLocalIso()}.csv`,
     });
     a.click();
     URL.revokeObjectURL(url);
@@ -104,8 +136,9 @@ export default function StatsPage() {
         </div>
       </div>
 
+      <div className="stats-grid">
       {/* By year */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card stats-year-card" style={{ marginBottom: 16 }}>
         <div className="section-label">By Year</div>
         {years.map((y) => (
           <button key={y.year} onClick={() => setYear(y.year)}
@@ -124,33 +157,45 @@ export default function StatsPage() {
       </div>
 
       {/* Monthly chart */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card stats-chart-card" style={{ marginBottom: 16 }}>
         <div className="section-label">{year} Monthly Breakdown</div>
-        <div className="bar-chart-container">
-          {months.map((m) => (
-            <div key={m.month} className="bar-column">
-              <div className="bar-outer" style={{ height: `${(m.invoicedCents / max) * 100}%` }}>
-                <div className="bar-inner"
-                  style={{ height: m.invoicedCents ? `${(m.collectedCents / m.invoicedCents) * 100}%` : 0 }} />
-              </div>
-              <span className="bar-label">{MONTHS[m.month - 1]}</span>
+        {months.every((m) => m.invoicedCents === 0) ? (
+          <div className="empty-state" style={{ padding: "24px 0" }}>
+            <p>No invoices in {year}. Pick a different year above.</p>
+          </div>
+        ) : (
+          <>
+            <div className="bar-chart-container">
+              {months.map((m) => (
+                <div key={m.month} className="bar-column"
+                  title={`${MONTHS[m.month - 1]} ${year} — ${formatSGD(m.invoicedCents)} invoiced · ${formatSGD(m.collectedCents)} collected`}>
+                  {m.invoicedCents > 0 && (
+                    <span className="bar-value">{formatSGD(m.invoicedCents)}</span>
+                  )}
+                  <div className="bar-outer" style={{ height: m.invoicedCents ? `${Math.max(4, (m.invoicedCents / max) * 100)}%` : 0 }}>
+                    <div className="bar-inner"
+                      style={{ height: m.invoicedCents ? `${(m.collectedCents / m.invoicedCents) * 100}%` : 0 }} />
+                  </div>
+                  <span className="bar-label">{MONTHS[m.month - 1]}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-            <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--border-subtle)" }} />
-            Invoiced
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-            <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--accent)" }} />
-            Collected
-          </div>
-        </div>
+            <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--border-subtle)" }} />
+                Invoiced
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--accent)" }} />
+                Collected
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* By client */}
-      <div className="card">
+      <div className="card stats-client-card">
         <div className="section-label">By Client</div>
         {clients.length === 0 && (
           <p style={{ color: "var(--text-tertiary)", fontSize: "0.85rem" }}>No data yet.</p>
@@ -184,6 +229,7 @@ export default function StatsPage() {
             </div>
           );
         })}
+      </div>
       </div>
     </main>
   );

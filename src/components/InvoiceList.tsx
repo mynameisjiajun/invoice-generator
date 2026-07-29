@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { deleteInvoice, listInvoices, setPaid } from "@/lib/db";
 import { useBusiness } from "@/lib/businessContext";
+import { todayLocalIso } from "@/lib/date";
 import { formatSGD } from "@/lib/money";
 import { isOverdue, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
@@ -20,14 +21,14 @@ const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "draft", label: "Draft" },
 ];
 
-export default function Dashboard() {
+export default function InvoiceList() {
   const { activeBusiness } = useBusiness();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [pendingDelete, setPendingDelete] = useState<Invoice | null>(null);
-  const [toast, setToast] = useState<{ message: string; undo: () => void } | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
 
   useEffect(() => {
     if (!activeBusiness) return;
@@ -80,7 +81,7 @@ export default function Dashboard() {
     try {
       await setPaid(inv.id, paid, inv.business_id);
       setInvoices(invoices!.map((i) => i.id === inv.id
-        ? { ...i, status: paid ? "paid" : "unpaid", paid_date: paid ? new Date().toISOString().slice(0, 10) : null }
+        ? { ...i, status: paid ? "paid" : "unpaid", paid_date: paid ? todayLocalIso() : null }
         : i));
       navigator.vibrate?.(10);
       if (announce) {
@@ -100,8 +101,11 @@ export default function Dashboard() {
     if (!inv) return;
     setPendingDelete(null);
     try {
-      await deleteInvoice(inv.id);
+      const rewound = await deleteInvoice(inv.id);
       setInvoices(invoices!.filter((i) => i.id !== inv.id));
+      if (rewound) {
+        setToast({ message: `Deleted — ${inv.invoice_number} will be reused` });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }
@@ -134,7 +138,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card stat-card--success">
           <div className="stat-value">{paidCount}</div>
-          <div className="stat-label">Collected</div>
+          <div className="stat-label">Paid</div>
         </div>
       </div>
 
@@ -184,7 +188,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="invoice-list-grid">
         {visible.map((inv, idx) => (
           <div key={inv.id} className="card animate-fade-in" style={{ animationDelay: `${idx * 0.03}s` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

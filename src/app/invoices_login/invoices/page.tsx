@@ -1,5 +1,5 @@
-import Dashboard from "@/components/Dashboard";
+import InvoiceList from "@/components/InvoiceList";
 
 export default function Home() {
-  return <Dashboard />;
+  return <InvoiceList />;
 }

@@ -539,6 +539,13 @@ textarea.input {
   letter-spacing: 0.04em;
 }
 
+.bar-value {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 /* ── Nav ── */
 /* Bottom edge reads like a filmstrip's sprocket holes — small perforations
    instead of a plain rule, the one place the photography motif shows up
@@ -1066,6 +1073,149 @@ textarea.input {
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); }
 }
 .pulse-once { animation: pulse-once 900ms ease-out 300ms 2; }
+
+/* ══════════════════════════════════════════════════════════════════
+   Desktop web layout (invoice app only, ≥1024px)
+   Everything in this block is additive and scoped to min-width:1024px.
+   The mobile PWA layout above must render byte-identical below that
+   breakpoint — do not edit the rules above to "clean up" alongside this
+   block; add desktop-only overrides here instead.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Base (mobile) layout for containers that get a desktop-only grid
+   treatment inside the media query below. Below 1024px these render
+   exactly as the plain stacked divs they replace: `display: contents`
+   makes the wrapper invisible to layout, so its children stack in the
+   surrounding flow precisely as if the wrapper didn't exist. */
+.invoice-list-grid { display: flex; flex-direction: column; gap: 12px; }
+.invoice-form-grid { display: contents; }
+.invoice-form-grid > div { display: contents; }
+.stats-grid { display: contents; }
+
+@media (min-width: 1024px) {
+  /* Bottom tab bar -> left sidebar rail. Reuses the exact same markup as
+     mobile (BottomNav.tsx renders no desktop-specific DOM), just reflowed:
+     column instead of row, full viewport height, icon+label side by side. */
+  .bottom-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    bottom: 0;
+    z-index: 60;
+    width: 232px;
+    max-width: none;
+    height: 100vh;
+    min-height: 0;
+    margin: 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 22px 14px;
+    border-top: none;
+    border-right: 1px solid var(--border-subtle);
+  }
+  .bottom-nav-tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.86rem;
+  }
+  .bottom-nav-tab:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+  .bottom-nav-tab--active { background: var(--bg-surface); }
+  /* The FAB (icon-only "+" on mobile) becomes a labelled primary button
+     pinned to the top of the rail via flex `order`, no markup change. */
+  .bottom-nav-fab {
+    order: -1;
+    width: auto;
+    height: auto;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+  }
+  .bottom-nav-fab::after {
+    content: "New invoice";
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .bottom-nav-fab:hover { background: var(--accent-hover); }
+
+  /* Shift the whole app shell right to clear the fixed sidebar. */
+  .app-bar { padding-left: 246px; }
+  .page-container { max-width: 1100px; margin-left: 246px; margin-right: auto; }
+  .action-bar { max-width: 1100px; }
+
+  /* Desktop-native affordances that don't apply on touch. */
+  .card:hover { border-color: var(--border-default); }
+  .chip:hover { border-color: var(--border-default); color: var(--text-primary); }
+  .year-btn:hover { background: var(--bg-surface-hover); }
+  .stat-card:hover { border-color: var(--border-default); }
+  .btn:focus-visible,
+  .btn-ghost:focus-visible,
+  .btn-danger:focus-visible,
+  .btn-accent:focus-visible,
+  .icon-btn:focus-visible,
+  .chip:focus-visible,
+  .card:has(a:focus-visible),
+  .input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Confirm sheets read as bottom sheets on mobile; on desktop they read
+     better as a centered modal (a bottom sheet with nothing but the
+     mouse to dismiss it feels like a mis-styled dialog). Same markup,
+     same Escape-to-close behavior — just repositioned. */
+  .sheet-backdrop { align-items: center; }
+  .sheet {
+    max-width: 420px;
+    border-radius: var(--radius-xl);
+  }
+
+  /* Invoice list: two-column card grid instead of a single stacked column. */
+  .invoice-list-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  /* Invoice form: customer/job details beside line items/totals instead of
+     one long stacked column, with the action bar staying reachable via the
+     existing sticky behavior rather than trailing at the document's end. */
+  .invoice-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .invoice-form-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Stats: monthly chart alongside the year/client breakdown instead of
+     three full-width stacked cards. Grid areas (not DOM order) place the
+     three cards, so the mobile markup order — By Year, Chart, By Client —
+     stays untouched; only desktop position changes. */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas: "chart year" "chart client";
+    gap: 16px;
+    align-items: start;
+  }
+  .stats-year-card { grid-area: year; margin-bottom: 0 !important; }
+  .stats-chart-card { grid-area: chart; margin-bottom: 0 !important; }
+  .stats-client-card { grid-area: client; }
+}
 
 /* ── Apex Cinematics portfolio (route: /) ──
    Replaces the Vite prototype's tailwind-CDN config. Brand tokens are

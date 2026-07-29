@@ -6,7 +6,7 @@ import { IconAdd, IconCamera, IconChart, IconSettings, IconUser } from "@/compon
 const tabs = [
   { href: "/invoices_login/invoices", label: "Invoices", Icon: IconCamera,
     match: (p: string) => p.startsWith("/invoices_login/invoices") && p !== "/invoices_login/invoices/new" },
-  { href: "/invoices_login/stats", label: "Dashboard", Icon: IconChart, match: (p: string) => p.startsWith("/invoices_login/stats") },
+  { href: "/invoices_login/stats", label: "Stats", Icon: IconChart, match: (p: string) => p.startsWith("/invoices_login/stats") },
   { href: "/invoices_login/customers", label: "Clients", Icon: IconUser, match: (p: string) => p.startsWith("/invoices_login/customers") },
   { href: "/invoices_login/settings", label: "Settings", Icon: IconSettings, match: (p: string) => p.startsWith("/invoices_login/settings") },
 ];
