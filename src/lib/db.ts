@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { subtotalCents, totalCents } from "@/lib/money";
+import { todayLocalIso } from "@/lib/date";
 import type {
   Business, Customer, Invoice, InvoiceEvent, InvoiceEventKind, Preset,
 } from "@/lib/types";
@@ -17,7 +18,9 @@ export async function listBusinesses(): Promise<Business[]> {
 export async function getBusiness(id: string): Promise<Business> {
   return ok(await db().from("businesses").select("*").eq("id", id).single());
 }
-export async function createBusiness(input: { name: string; slug: string }): Promise<Business> {
+export async function createBusiness(
+  input: { name: string; slug: string; invoice_prefix: string },
+): Promise<Business> {
   return ok(await db().from("businesses").insert(input).select().single());
 }
 export async function updateBusiness(id: string, patch: Partial<Business>): Promise<void> {
@@ -51,6 +54,21 @@ export async function createCustomer(
 export async function updateCustomer(id: number, patch: Partial<Customer>): Promise<void> {
   ok(await db().from("customers").update(patch).eq("id", id).select().single());
 }
+/** Deletes a client. The invoices FK has no ON DELETE action (deliberately —
+ *  see 005_customer_number_cascade.sql), so the database refuses to delete a
+ *  client that still has invoices rather than orphaning or cascading them.
+ *  That refusal is surfaced as a readable message; the UI checks up front too,
+ *  this is the backstop for a client invoiced between check and confirm. */
+export async function deleteCustomer(id: number): Promise<void> {
+  const res = await db().from("customers").delete().eq("id", id).select();
+  if (res.error) {
+    if (res.error.code === "23503" || /foreign key|violates/i.test(res.error.message)) {
+      throw new Error("This client still has invoices — delete those first");
+    }
+    throw new Error(res.error.message);
+  }
+}
+
 /** Change a customer's client number (primary key). Cascades to that
  *  customer's invoices via the ON UPDATE CASCADE FK (migration 005).
  *  Throws a friendly error if the target number is already taken. */
@@ -133,7 +151,7 @@ export async function finalizeInvoice(id: string, businessId: string): Promise<s
 export async function setPaid(id: string, paid: boolean, businessId: string): Promise<void> {
   ok(await db().from("invoices").update({
     status: paid ? "paid" : "unpaid",
-    paid_date: paid ? new Date().toISOString().slice(0, 10) : null,
+    paid_date: paid ? todayLocalIso() : null,
   }).eq("id", id).select().single());
   await logEvent(id, businessId, paid ? "paid" : "unpaid");
 }

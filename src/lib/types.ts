@@ -1,4 +1,5 @@
 import type { DiscountType, LineItem } from "./money";
+import { plusDaysIso, todayLocalIso } from "./date";
 
 export type Customer = {
   id: number; business_id: string; name: string; company: string; phone: string;
@@ -43,11 +44,10 @@ export type Business = {
   logo_data_url: string | null;
 };
 
-export function isOverdue(inv: Invoice, today = new Date()): boolean {
+export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {
   if (inv.status !== "unpaid") return false;
-  const due = inv.due_date ? new Date(inv.due_date) : new Date(inv.issue_date);
-  if (!inv.due_date) due.setDate(due.getDate() + 30);
-  return today > due;
+  const due = inv.due_date ?? plusDaysIso(inv.issue_date, 30);
+  return todayIso > due;
 }
 
 export type InvoiceEventKind = "created" | "sent" | "reminded" | "paid" | "unpaid";

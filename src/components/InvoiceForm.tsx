@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCustomer, finalizeInvoice, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
 } from "@/lib/db";
-import { clearForm, emptyForm, loadForm, plusDays, storeForm, type FormState } from "@/lib/formStorage";
+import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib/formStorage";
+import { plusDaysIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import type { Customer, Preset } from "@/lib/types";
@@ -25,7 +26,7 @@ const NEW_CUSTOMER_FIELDS: {
 
 export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: string; draftId?: string }) {
   const router = useRouter();
-  const { activeBusiness } = useBusiness();
+  const { businesses, activeBusiness } = useBusiness();
   const [form, setForm] = useState<FormState | null>(null);
   const [formBusinessId, setFormBusinessId] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -37,16 +38,25 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   // Whether the user has manually edited the due date — until then it
   // follows issue date + 30 automatically.
   const [dueTouched, setDueTouched] = useState(false);
+  // Which draft/duplicate id (or "new") has already been loaded — see the
+  // effect below.
+  const loadedRef = useRef<string | null>(null);
 
   // Resolves which business this form belongs to and loads its initial
-  // content. For a brand-new invoice, this intentionally does NOT list
-  // `activeBusiness` in its dependency array — it captures whichever
-  // business is active at the moment this effect first runs (component
-  // mount, or draftId/duplicateId changing to load a *different* existing
-  // invoice) and then ignores later nav switches, so an in-progress draft's
-  // business can never change out from under the owner mid-edit. See the
-  // Task 10 header note above for the reasoning.
+  // content, exactly once per thing-being-edited. `loadedRef` holds the key
+  // already loaded: a draft/duplicate id, or the constant "new".
+  //
+  // For a brand-new invoice the key never changes, so once a business has
+  // been captured, later nav switches are ignored and an in-progress draft's
+  // business can never change out from under the owner mid-edit. A new
+  // invoice still has to *wait* for `activeBusiness` (BusinessProvider may
+  // not have loaded on first mount), which is why activeBusiness is in the
+  // dependency list — the "new" key guard, not the deps, is what freezes it.
   useEffect(() => {
+    const key = draftId ?? duplicateId ?? "new";
+    if (loadedRef.current === key) return;
+    if (!draftId && !duplicateId && !activeBusiness) return; // wait for a business
+    loadedRef.current = key;
     (async () => {
       if (draftId) {
         const inv = await getInvoice(draftId);
@@ -55,8 +65,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         setLoadedNumber(inv.invoice_number);
         setDueTouched(true); // an existing invoice's due date is explicit, not a default to auto-follow
         setForm({
-          invoiceId: inv.id, issueDate: inv.issue_date,
-          dueDate: inv.due_date ?? plusDays(inv.issue_date, 30),
+          invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
+          dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, 30),
           customerId: inv.customer_id,
           newCustomer: null, jobEvent: inv.job_event, jobDate: inv.job_date,
           jobLocation: inv.job_location, lineItems: inv.line_items,
@@ -66,29 +76,21 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         const inv = await getInvoice(duplicateId);
         setFormBusinessId(inv.business_id);
         setForm({
-          ...emptyForm(), customerId: inv.customer_id, jobEvent: inv.job_event,
+          ...emptyForm(), businessId: inv.business_id, customerId: inv.customer_id, jobEvent: inv.job_event,
           jobDate: inv.job_date, jobLocation: inv.job_location,
           lineItems: inv.line_items, discountType: inv.discount_type,
           discountValue: inv.discount_value,
         });
       } else {
-        if (!activeBusiness) return;
-        setFormBusinessId(activeBusiness.id);
-        setForm(loadForm() ?? emptyForm());
+        const bizId = activeBusiness!.id;
+        setFormBusinessId(bizId);
+        setForm(loadForm(bizId) ?? { ...emptyForm(), businessId: bizId });
       }
-    })().catch((e) => setError(e instanceof Error ? e.message : "Failed to load invoice"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftId, duplicateId]);
-
-  // If activeBusiness wasn't ready yet on first mount (still loading from
-  // BusinessProvider), pick it up once it arrives — but only for a
-  // brand-new invoice that hasn't resolved a business yet at all.
-  useEffect(() => {
-    if (draftId || duplicateId) return;
-    if (formBusinessId || !activeBusiness) return;
-    setFormBusinessId(activeBusiness.id);
-    setForm((prev) => prev ?? loadForm() ?? emptyForm());
-  }, [draftId, duplicateId, formBusinessId, activeBusiness]);
+    })().catch((e) => {
+      loadedRef.current = null; // let a retry re-attempt the failed load
+      setError(e instanceof Error ? e.message : "Failed to load invoice");
+    });
+  }, [draftId, duplicateId, activeBusiness]);
 
   useEffect(() => {
     if (!formBusinessId) return;
@@ -119,10 +121,24 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   );
 
   const f = form;
-  const set = (patch: Partial<FormState>) => setForm({ ...f, ...patch });
+  const formBusiness = businesses.find((b) => b.id === formBusinessId);
+  // Functional updater: merges onto the latest state rather than the `f`
+  // snapshot closed over at render time. persistDraft() below calls set()
+  // twice across an await boundary (once after creating a new customer,
+  // once after saving the draft) — merging onto a stale `f` would let the
+  // second call silently undo the first, leaving newCustomer un-cleared and
+  // risking a duplicate customer being created if the user retries after a
+  // failure (e.g. a finalize that errors after the draft save).
+  const set = (patch: Partial<FormState>) => setForm((prev) => (prev ? { ...prev, ...patch } : prev));
 
   async function persistDraft(): Promise<string> {
     if (!formBusinessId) throw new Error("No business selected");
+    // Saving drops lines with no description (see the filter below) — a
+    // priced line with a blank description would otherwise be counted in
+    // the on-screen total but silently vanish from what's actually saved.
+    if (f.lineItems.some((li) => li.description.trim() === "" && li.qty * li.unitPriceCents !== 0)) {
+      throw new Error("A line item has a price but no description — add one or remove the line");
+    }
     let customerId = f.customerId;
     if (f.newCustomer && f.newCustomer.name.trim()) {
       const c = await createCustomer({ ...f.newCustomer, phone: formatSgPhone(f.newCustomer.phone) }, formBusinessId);
@@ -188,6 +204,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           : "Fill in the details below"}
       </p>
 
+      <div className="invoice-form-grid">
+      <div>
       {/* Customer section */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="section-label">Customer</div>
@@ -241,7 +259,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
               <input type="date" className="input" value={f.issueDate}
                 onChange={(e) => {
                   const issueDate = e.target.value;
-                  set({ issueDate, dueDate: dueTouched ? f.dueDate : plusDays(issueDate, 30) });
+                  set({ issueDate, dueDate: dueTouched ? f.dueDate : plusDaysIso(issueDate, 30) });
                 }} />
             </div>
             <div style={{ flex: 1 }}>
@@ -252,7 +270,9 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           </div>
         </div>
       </div>
+      </div>
 
+      <div>
       {/* Line items */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -355,6 +375,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           <span>{formatSGD(totals.total)}</span>
         </div>
       </div>
+      </div>
+      </div>
 
       {error && (
         <div style={{
@@ -383,7 +405,16 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           </button>
         </div>
       ) : (
-        <div className="action-bar">
+        <div className="action-bar" style={{ flexDirection: "column" }}>
+          {formBusiness && (
+            <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", margin: "0 0 8px", width: "100%" }}>
+              This will be invoice{" "}
+              <span className="money" style={{ fontWeight: 600 }}>
+                {formBusiness.invoice_prefix}{formBusiness.next_invoice_seq}
+              </span>.
+            </p>
+          )}
+          <div style={{ display: "flex", gap: 10, width: "100%" }}>
           <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
             {busy === "draft" ? "Saving…" : "Save Draft"}
           </button>
@@ -392,6 +423,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
             className="btn btn-primary" style={{ flex: 1 }}>
             {busy === "final" ? "Finalizing…" : "Finalize Invoice"}
           </button>
+          </div>
         </div>
       )}
     </main>

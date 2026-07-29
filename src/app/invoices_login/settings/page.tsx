@@ -7,7 +7,7 @@ import {
 } from "@/lib/db";
 import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/lib/businessContext";
-import { slugify } from "@/lib/slug";
+import { invoicePrefix, slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
 import { DEFAULT_EMAIL_TEMPLATE, DEFAULT_WHATSAPP_TEMPLATE } from "@/lib/templates";
 import type { Business, Preset } from "@/lib/types";
@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [pendingArchive, setPendingArchive] = useState<Business | null>(null);
   const [pendingDeletePreset, setPendingDeletePreset] = useState<Preset | null>(null);
+  const [pendingRemoveLogo, setPendingRemoveLogo] = useState(false);
   const [exporting, setExporting] = useState(false);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,12 +47,19 @@ export default function SettingsPage() {
     router.refresh();
   }
 
+  // Depend on the business's id, not the `activeBusiness` object itself.
+  // BusinessProvider rebuilds a fresh `businesses` array (and therefore a
+  // fresh `activeBusiness` object identity) on most route changes, even
+  // when the underlying row hasn't changed. Depending on the object would
+  // re-run this effect in the background and stomp any in-progress edits
+  // (e.g. an uploaded-but-not-yet-saved logo) back to the last-loaded value.
   useEffect(() => {
     setForm(activeBusiness);
     if (activeBusiness) {
       listPresets(activeBusiness.id).then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
     }
-  }, [activeBusiness]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBusiness?.id]);
 
   useEffect(() => {
     return () => {
@@ -69,8 +77,20 @@ export default function SettingsPage() {
 
   async function onSave() {
     try {
-      await updateBusiness(form!.id, form!);
-      await reloadBusinesses();
+      // Send only what actually changed, not the whole form snapshot — a
+      // stale field elsewhere on the form (e.g. from a background reload
+      // that raced an edit) must never overwrite a column the user didn't
+      // touch. This is what silently blanked the logo before: any Save
+      // press sent the entire form back, including whatever logo_data_url
+      // happened to be in state at that moment.
+      const patch: Partial<Business> = {};
+      for (const key of Object.keys(form!) as (keyof Business)[]) {
+        if (form![key] !== activeBusiness![key]) (patch as Record<string, unknown>)[key] = form![key];
+      }
+      if (Object.keys(patch).length > 0) {
+        await updateBusiness(form!.id, patch);
+        await reloadBusinesses();
+      }
       setSaved(true);
       setError(null);
       if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
@@ -96,7 +116,11 @@ export default function SettingsPage() {
   async function onAddBusiness() {
     if (!newBizName.trim()) return;
     try {
-      const b = await createBusiness({ name: newBizName.trim(), slug: slugify(newBizName) });
+      const b = await createBusiness({
+        name: newBizName.trim(),
+        slug: slugify(newBizName),
+        invoice_prefix: invoicePrefix(newBizName, businesses.map((x) => x.invoice_prefix)),
+      });
       setNewBizName("");
       await reloadBusinesses();
       setActiveBusinessId(b.id);
@@ -266,7 +290,7 @@ export default function SettingsPage() {
                   style={{ padding: "4px 10px", fontSize: "0.78rem" }}>
                   Change
                 </button>
-                <button onClick={() => setForm({ ...form, logo_data_url: null })}
+                <button onClick={() => setPendingRemoveLogo(true)}
                   className="btn-danger icon-btn" aria-label="Remove logo">
                   <IconTrash size={14} />
                 </button>
@@ -293,7 +317,7 @@ export default function SettingsPage() {
               <input className="input" inputMode="numeric" value={String(form.next_invoice_seq)}
                 onChange={(e) => {
                   const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10);
-                  setForm({ ...form, next_invoice_seq: Number.isInteger(n) ? n : 0 });
+                  setForm({ ...form, next_invoice_seq: Number.isInteger(n) ? Math.max(1, n) : 1 });
                 }} />
             </div>
           </div>
@@ -441,6 +465,15 @@ export default function SettingsPage() {
         confirmLabel="Delete"
         onConfirm={doDeletePreset}
         onCancel={() => setPendingDeletePreset(null)}
+      />
+      <ConfirmSheet
+        open={pendingRemoveLogo}
+        danger
+        title="Remove logo?"
+        message="Invoice PDFs will show your business name as text instead. Not saved until you press Save Settings."
+        confirmLabel="Remove"
+        onConfirm={() => { setForm({ ...form, logo_data_url: null }); setPendingRemoveLogo(false); }}
+        onCancel={() => setPendingRemoveLogo(false)}
       />
     </main>
   );
