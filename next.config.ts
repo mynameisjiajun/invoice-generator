@@ -24,7 +24,7 @@ const csp = [
   "img-src 'self' data: blob: https://vercel.live https://vercel.com https://i.ytimg.com",
   "media-src 'self'",
   "font-src 'self' https://vercel.live https://assets.vercel.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com https://vitals.vercel-insights.com",
   "frame-src https://vercel.live https://www.youtube-nocookie.com",
   "worker-src 'self' blob:",
   "frame-ancestors 'none'",
