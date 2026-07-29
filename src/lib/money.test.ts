@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
-  lineTotalCents, subtotalCents, discountCents, totalCents, formatSGD,
+  lineTotalCents, subtotalCents, discountCents, totalCents, formatSGD, formatSGDCompact,
   type LineItem,
 } from "./money";
 
@@ -44,5 +44,16 @@ describe("money", () => {
     expect(formatSGD(50000)).toBe("$500.00");
     expect(formatSGD(123456)).toBe("$1,234.56");
     expect(formatSGD(0)).toBe("$0.00");
+  });
+
+  test("formatSGDCompact stays short enough for a chart bar label", () => {
+    expect(formatSGDCompact(0)).toBe("$0");
+    expect(formatSGDCompact(45000)).toBe("$450");
+    expect(formatSGDCompact(220000)).toBe("$2.2k");
+    expect(formatSGDCompact(200000)).toBe("$2k");       // no trailing .0
+    expect(formatSGDCompact(130000000)).toBe("$1.3M");
+    expect(formatSGDCompact(-45000)).toBe("-$450");
+    // the whole point: never wider than a ~22px column at 12 bars
+    expect(formatSGDCompact(987654321).length).toBeLessThanOrEqual(7);
   });
 });

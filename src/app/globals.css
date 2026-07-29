@@ -496,8 +496,16 @@ textarea.input {
   background: rgba(37, 211, 102, 0.08);
 }
 
-/* ── Bar Chart ── */
+/* ── Bar Chart ──
+   `.bar-track` exists to give the bars a definite height to be a percentage
+   OF. Without it the bars sat directly in `.bar-column`, which shrink-wraps
+   its content (the container is align-items: flex-end), so `height: N%`
+   resolved against an auto-height parent, computed to auto, and every bar
+   collapsed to the 2px min-height — the chart rendered flat at every value.
+   Keep the track's height explicit; `flex: 1` here re-breaks it by letting
+   the bar overflow the column and swallow the month label. */
 .bar-chart-container {
+  --bar-track-h: 104px;
   display: flex;
   align-items: flex-end;
   gap: 6px;
@@ -507,10 +515,20 @@ textarea.input {
 
 .bar-column {
   flex: 1;
+  min-width: 0; /* let columns shrink below label width instead of overflowing */
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+}
+
+.bar-track {
+  height: var(--bar-track-h);
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
 }
 
 .bar-outer {
@@ -519,7 +537,7 @@ textarea.input {
   background: var(--border-subtle);
   position: relative;
   transition: height 0.4s ease;
-  min-height: 2px;
+  min-height: 2px; /* months with no invoices read as a flat baseline tick */
 }
 
 .bar-inner {
@@ -539,7 +557,12 @@ textarea.input {
   letter-spacing: 0.04em;
 }
 
+/* Per-bar value. Hidden on phones: twelve columns share ~330px, so ~22px
+   each, and any money string is wider than that — showing them pushed the
+   chart 403px wide inside a 328px card and scrolled the whole page
+   sideways. Desktop columns are ~80px, where a compact value fits. */
 .bar-value {
+  display: none;
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--text-secondary);
@@ -1200,6 +1223,16 @@ textarea.input {
     flex-direction: column;
     gap: 16px;
   }
+
+  /* Columns are ~80px here rather than ~22px, so each bar can carry its
+     value and the chart gets room to breathe. */
+  .bar-chart-container {
+    --bar-track-h: 190px;
+    height: 240px;
+    gap: 10px;
+  }
+  .bar-value { display: block; }
+  .bar-label { font-size: 0.68rem; }
 
   /* Stats: monthly chart alongside the year/client breakdown instead of
      three full-width stacked cards. Grid areas (not DOM order) place the

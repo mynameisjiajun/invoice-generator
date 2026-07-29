@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { listInvoices } from "@/lib/db";
 import { todayLocalIso } from "@/lib/date";
-import { formatSGD } from "@/lib/money";
+import { formatSGD, formatSGDCompact } from "@/lib/money";
 import { clientStats, monthlyStats, yearlyStats } from "@/lib/stats";
 import type { Invoice } from "@/lib/types";
 import { IconFileExport } from "@/components/icons";
@@ -170,11 +170,15 @@ export default function StatsPage() {
                 <div key={m.month} className="bar-column"
                   title={`${MONTHS[m.month - 1]} ${year} — ${formatSGD(m.invoicedCents)} invoiced · ${formatSGD(m.collectedCents)} collected`}>
                   {m.invoicedCents > 0 && (
-                    <span className="bar-value">{formatSGD(m.invoicedCents)}</span>
+                    <span className="bar-value">{formatSGDCompact(m.invoicedCents)}</span>
                   )}
-                  <div className="bar-outer" style={{ height: m.invoicedCents ? `${Math.max(4, (m.invoicedCents / max) * 100)}%` : 0 }}>
-                    <div className="bar-inner"
-                      style={{ height: m.invoicedCents ? `${(m.collectedCents / m.invoicedCents) * 100}%` : 0 }} />
+                  {/* .bar-track gives the bar a definite height to be a % of */}
+                  <div className="bar-track">
+                    <div className="bar-outer"
+                      style={{ height: m.invoicedCents ? `${Math.max(4, (m.invoicedCents / max) * 100)}%` : 0 }}>
+                      <div className="bar-inner"
+                        style={{ height: m.invoicedCents ? `${(m.collectedCents / m.invoicedCents) * 100}%` : 0 }} />
+                    </div>
                   </div>
                   <span className="bar-label">{MONTHS[m.month - 1]}</span>
                 </div>

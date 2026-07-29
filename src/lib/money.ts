@@ -26,3 +26,19 @@ export function formatSGD(cents: number): string {
     style: "currency", currency: "SGD", currencyDisplay: "symbol",
   }).replace("SGD", "$").replace("S$", "$");
 }
+
+/** Short money for tight spots like chart bar labels, where a full
+ *  "$2,200.00" is wider than the column it sits above: $450, $2.2k, $1.3M. */
+export function formatSGDCompact(cents: number): string {
+  const dollars = Math.round(cents / 100);
+  const abs = Math.abs(dollars);
+  const sign = dollars < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}$${trimZero(abs / 1_000_000)}M`;
+  if (abs >= 1_000) return `${sign}$${trimZero(abs / 1_000)}k`;
+  return `${sign}$${abs}`;
+}
+
+/** 2.0 -> "2", 2.25 -> "2.3" — one decimal, without a trailing ".0". */
+function trimZero(n: number): string {
+  return n.toFixed(1).replace(/\.0$/, "");
+}
