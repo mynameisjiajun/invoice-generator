@@ -1,0 +1,60 @@
+# Second, independent keepalive for the free-tier Supabase project.
+#
+# The primary one is the Vercel cron in vercel.json -> /api/keepalive. This
+# workflow deliberately duplicates it from outside Vercel, so a failed deploy,
+# a rotated CRON_SECRET, or a Vercel-side hiccup can't quietly let the project
+# sit idle for 7 days and pause. It talks to Supabase directly.
+#
+# The query must reach Postgres to count as activity — an Auth/config endpoint
+# returns 200 without the database seeing anything, which is exactly how the
+# original ping failed. RLS denies the anon key every row, so a healthy
+# response is an empty array; the query still ran.
+#
+# Setup: add repo secrets SUPABASE_URL and SUPABASE_ANON_KEY under
+# Settings -> Secrets and variables -> Actions. (The anon key is public by
+# design — it ships in the browser bundle — but keeping it out of the YAML
+# means rotating it doesn't need a commit.)
+#
+# Caveat worth remembering: GitHub disables scheduled workflows in a repo with
+# no commits for 60 days, and emails you first. If that mail arrives, re-enable
+# it from the Actions tab, or the Vercel cron is carrying this alone.
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Daily at 03:17 UTC. Off-the-hour on purpose: GitHub's scheduler queues
+    # heavily at :00 and can drop runs at peak times.
+    - cron: "17 3 * * *"
+  workflow_dispatch: # so you can prove it works without waiting for tomorrow
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase so the inactivity timer resets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "::error::SUPABASE_URL / SUPABASE_ANON_KEY repo secrets are not set — the ping cannot run."
+            exit 1
+          fi
+
+          status=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL}/rest/v1/businesses?select=id&limit=1")
+
+          echo "HTTP ${status}"
+          cat /tmp/body.txt
+
+          # A paused project stops resolving in DNS entirely, so curl fails
+          # before this check — which is the alarm we want.
+          if [ "${status}" != "200" ]; then
+            echo "::error::Supabase returned ${status}; the project may be paused or unhealthy."
+            exit 1
+          fi
