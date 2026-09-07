@@ -13,6 +13,16 @@ export function crc16ccitt(input: string): string {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
+/**
+ * Reduce a stored PayNow mobile to the bare 8-digit local number:
+ * "+65 9656 1716", "6596561716" and "96561716" all become "96561716".
+ * Anything that doesn't look like an SG mobile is left as digits-only.
+ */
+export function normaliseMobile(mobile: string): string {
+  const digits = mobile.replace(/\D/g, "");
+  return /^65[89]\d{7}$/.test(digits) ? digits.slice(2) : digits;
+}
+
 export function paynowPayload(opts: {
   mobile: string;
   amountCents: number;
@@ -20,11 +30,10 @@ export function paynowPayload(opts: {
   merchantName?: string;
 }): string {
   const amount = (opts.amountCents / 100).toFixed(2);
-  // PayNow's mobile proxy value must be digits only — country code + number,
-  // no "+" and no spaces (EMVCo/SGQR spec). DBS's own PayLah scanner quietly
-  // tolerates the extra characters; other banks' scanners (UOB confirmed)
-  // reject the QR outright when they're present.
-  const mobileDigits = opts.mobile.replace(/\D/g, "");
+  // PayNow's mobile proxy value must be digits only — no "+" and no spaces.
+  // It must also be the bare 8-digit local number: POSB/DBS rejects the QR
+  // when the 65 country code is prefixed, so strip it off.
+  const mobileDigits = normaliseMobile(opts.mobile);
   const merchantAccountInfo =
     tlv("00", "SG.PAYNOW") +
     tlv("01", "0") +            // proxy type: mobile

@@ -340,7 +340,7 @@ export default function SettingsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label className="input-label">Email message</label>
-            <textarea className="input" rows={6}
+            <textarea className="input" rows={12}
               placeholder={DEFAULT_EMAIL_TEMPLATE}
               value={form.email_template}
               onChange={(e) => setForm({ ...form, email_template: e.target.value })} />

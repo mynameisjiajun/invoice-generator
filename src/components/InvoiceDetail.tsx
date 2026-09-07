@@ -12,9 +12,25 @@ import { invoiceDocLabel, isOverdue, type Business, type Invoice, type InvoiceEv
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import {
-  IconCheck, IconCopy, IconDownload, IconEdit, IconReceipt, IconShare,
-  IconTrash, IconUndo, IconWarning, IconWhatsApp,
+  IconCheck, IconCopy, IconDownload, IconEdit, IconMail, IconReceipt, IconSend,
+  IconShare, IconTrash, IconUndo, IconWarning, IconWhatsApp,
 } from "@/components/icons";
+
+/** Blob → bare base64 (no data-URL prefix), for posting a PDF as JSON.
+ *  FileReader rather than Buffer/btoa: this runs in the browser, and btoa on a
+ *  binary string breaks on bytes above 0x7F. */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read the generated PDF"));
+    reader.onload = () => {
+      const result = String(reader.result);
+      const comma = result.indexOf(",");
+      resolve(comma === -1 ? result : result.slice(comma + 1));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
 
 export default function InvoiceDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -26,6 +42,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [offerReceipt, setOfferReceipt] = useState(false);
+  const [confirmingEmail, setConfirmingEmail] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     getInvoice(id)
@@ -119,6 +137,43 @@ export default function InvoiceDetail({ id }: { id: string }) {
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") setError((e as Error).message);
+    }
+    setBusy(false);
+  }
+
+  // Sends (or drafts) the invoice through the owner's Gmail via /api/gmail/send.
+  // The PDF is rendered here — that's where @react-pdf/renderer and the QR code
+  // already live — and posted up as base64. Recipient, subject and body are
+  // derived server-side from the invoice, so this call can't be redirected.
+  async function emailInvoice(mode: "send" | "draft", variant: "invoice" | "receipt" = "invoice") {
+    const inv = invoice!;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const { blob } = await generatePdfBlob(variant);
+      const pdfBase64 = await blobToBase64(blob);
+      const res = await fetch("/api/gmail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: inv.id, mode, variant, pdfBase64 }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Sending failed");
+
+      if (mode === "draft") {
+        setNotice(`Draft ready in Gmail for ${json.to}.`);
+        window.open(json.url, "_blank");
+      } else {
+        setNotice(`Sent to ${json.to}.`);
+        if (variant === "invoice" && inv.status !== "draft") {
+          await markSent(inv.id, inv.business_id);
+          setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
+          listEvents(inv.id).then(setEvents).catch(() => {});
+        }
+      }
+    } catch (e) {
+      setError((e as Error).message);
     }
     setBusy(false);
   }
@@ -242,6 +297,21 @@ export default function InvoiceDetail({ id }: { id: string }) {
           <IconShare /> Send invoice
         </button>
       </div>
+      {invoice.customers?.email?.trim() && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+          <button onClick={() => setConfirmingEmail(true)} disabled={busy}
+            className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
+            <IconSend /> Email now
+          </button>
+          <button onClick={() => emailInvoice("draft")} disabled={busy}
+            className="btn btn-ghost icon-btn" style={{ flex: 1 }}>
+            <IconMail /> Draft email
+          </button>
+        </div>
+      )}
+      {notice && (
+        <p style={{ color: "var(--text-tertiary)", fontSize: 13, marginBottom: 10 }}>{notice}</p>
+      )}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         {invoice.customers?.phone && (
           <button onClick={openWhatsApp} className="btn btn-secondary icon-btn btn-whatsapp" style={{ flex: 1, minWidth: 150 }}>
@@ -311,6 +381,15 @@ export default function InvoiceDetail({ id }: { id: string }) {
         confirmLabel="Delete"
         onConfirm={onDelete}
         onCancel={() => setConfirmingDelete(false)}
+      />
+
+      <ConfirmSheet
+        open={confirmingEmail}
+        title="Send this invoice now?"
+        message={`It will be emailed straight to ${invoice.customers?.email?.trim()} from your Gmail, with the PDF attached. An email can't be unsent.`}
+        confirmLabel="Send now"
+        onConfirm={() => { setConfirmingEmail(false); emailInvoice("send"); }}
+        onCancel={() => setConfirmingEmail(false)}
       />
 
       <ConfirmSheet

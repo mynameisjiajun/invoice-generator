@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { renderTemplate, templateVars, emailMessage, DEFAULT_EMAIL_TEMPLATE } from "./templates";
+import {
+  renderTemplate, templateVars, emailMessage, emailSubject, tidyMessage,
+  DEFAULT_EMAIL_TEMPLATE,
+} from "./templates";
 import type { Business, Invoice } from "./types";
 
 const inv = {
@@ -47,14 +50,73 @@ describe("templateVars", () => {
   });
 });
 
+describe("tidyMessage", () => {
+  it("drops a preposition left dangling by a blank placeholder", () => {
+    expect(tidyMessage("Thank you for having me at the shoot on  — I enjoyed it."))
+      .toBe("Thank you for having me at the shoot — I enjoyed it.");
+    expect(tidyMessage("Invoice for the shoot on ")).toBe("Invoice for the shoot");
+  });
+  it("leaves a real date alone", () => {
+    expect(tidyMessage("at the shoot on May 27–29 — thanks."))
+      .toBe("at the shoot on May 27–29 — thanks.");
+  });
+  it("collapses double spaces and space before punctuation", () => {
+    expect(tidyMessage("total  $450.00 .")).toBe("total $450.00.");
+  });
+  it("preserves blank lines, so paragraphs survive", () => {
+    expect(tidyMessage("Hi Jane,\n\nThanks.")).toBe("Hi Jane,\n\nThanks.");
+  });
+});
+
 describe("emailMessage", () => {
   it("uses the default template when business template is empty", () => {
     expect(emailMessage(inv, biz)).toBe(
-      "Hello!\nAttached is the invoice for OMM shoot Cam Assistant for May 27–29! Do let me know if you have any questions!\n\n--\nRegards,\nChua Jia Jun"
+      [
+        "Hi Jane,",
+        "",
+        "Thank you for having me at OMM shoot Cam Assistant on May 27–29 — I really enjoyed it.",
+        "",
+        "Please find invoice JJ-0042 attached, for a total of $450.00. " +
+          "You can pay by PayNow using the QR code in the PDF, or to 91234567.",
+        "",
+        "Do let me know if you have any questions.",
+        "",
+        "Kind regards,",
+        "Chua Jia Jun",
+        "JJ Media",
+      ].join("\n")
+    );
+  });
+  it("greets by first name", () => {
+    expect(emailMessage(inv, biz).startsWith("Hi Jane,")).toBe(true);
+  });
+  it("falls back to 'there' when the customer has no name", () => {
+    const anon = { ...inv, customers: null } as Invoice;
+    expect(emailMessage(anon, biz).startsWith("Hi there,")).toBe(true);
+  });
+  it("reads cleanly when the job date is blank", () => {
+    const undated = { ...inv, job_date: "" } as Invoice;
+    expect(emailMessage(undated, biz)).toContain(
+      "Thank you for having me at OMM shoot Cam Assistant — I really enjoyed it."
     );
   });
   it("uses the stored template when set", () => {
     const custom = { ...biz, email_template: "Yo {first_name}" } as Business;
     expect(emailMessage(inv, custom)).toBe("Yo Jane");
+  });
+  it("the default template only uses placeholders templateVars supplies", () => {
+    const known = new Set(Object.keys(templateVars(inv, biz)));
+    const used = [...DEFAULT_EMAIL_TEMPLATE.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+    expect(used.filter((k) => !known.has(k))).toEqual([]);
+  });
+});
+
+describe("emailSubject", () => {
+  it("names the invoice and the business", () => {
+    expect(emailSubject(inv, biz)).toBe("Invoice JJ-0042 from JJ Media");
+  });
+  it("collapses the gap left by a missing invoice number", () => {
+    const draft = { ...inv, invoice_number: null } as Invoice;
+    expect(emailSubject(draft, biz)).toBe("Invoice from JJ Media");
   });
 });
