@@ -5,21 +5,22 @@ import type { Business, Invoice } from "@/lib/types";
 // evolve without a migration. Placeholders: {name} {first_name} {job} {job_date}
 // {invoice_number} {total} {paynow} {payee_name} {business_name}
 export const DEFAULT_EMAIL_TEMPLATE = [
-  "Hi {first_name},",
+  "Hello {first_name},",
   "",
-  "Thank you for having me at {job} on {job_date} — I really enjoyed it.",
+  "Attached is the invoice for {job} on {job_date}! It was a pleasure working on this with you.",
   "",
-  "Please find invoice {invoice_number} attached, for a total of {total}. " +
-    "You can pay by PayNow using the QR code in the PDF, or to {paynow}.",
+  "The total comes up to {total} — payable via PayNow using the QR code in the PDF, or directly to {paynow}.",
   "",
-  "Do let me know if you have any questions.",
+  "Do let me know if you have any questions!",
   "",
-  "Kind regards,",
+  "Best,",
   "{payee_name}",
-  "{business_name}",
 ].join("\n");
 
-export const DEFAULT_EMAIL_SUBJECT = "Invoice {invoice_number} from {business_name}";
+// Matches how the user names invoices by hand: project name + the role
+// they did, e.g. "Invoice for OMM WAGNER'S SIEGFRIED cam assist" — {job}
+// already carries both, since that's what goes into the job field per-invoice.
+export const DEFAULT_EMAIL_SUBJECT = "Invoice for {job}";
 
 export const DEFAULT_WHATSAPP_TEMPLATE =
   "Hi {first_name}! Here's your invoice {invoice_number} for {job} — total {total}. " +

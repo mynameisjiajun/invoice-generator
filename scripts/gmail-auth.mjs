@@ -1,40 +1,102 @@
 #!/usr/bin/env node
-// One-time Google OAuth consent, run on your own machine:
+// (Re-)authorise Gmail sending. Run on your own machine:
 //
 //   npm run gmail:auth
 //
-// Prints a refresh token to paste into GMAIL_REFRESH_TOKEN (locally in
-// .env.local, and in the Vercel project's environment variables). Nothing here
-// runs in production — the deployed app only ever refreshes the token this
-// produces.
+// Opens Google's consent screen, catches the redirect locally, then writes
+// the resulting refresh token straight into .env.local AND (if the Vercel
+// CLI is installed and linked) into the Vercel project's Production +
+// Preview env vars — no manual copy-pasting into two places.
+//
+// ⚠️  If your OAuth app is still in "Testing" publishing status, the refresh
+// token this produces WILL stop working in 7 days — that's a hard Google
+// rule, not a bug. Fix it once, permanently:
+//   Google Cloud Console → APIs & Services → OAuth consent screen → Publish App
+// You'll still see an "unverified app" warning on the consent screen each
+// time you re-auth — that's expected for personal use, click through it.
 //
 // Prerequisites, in Google Cloud Console (console.cloud.google.com):
 //   1. Create a project, enable the Gmail API.
-//   2. OAuth consent screen: External, add yourself as a test user.
+//   2. OAuth consent screen: External, add yourself as a test user, then
+//      Publish App (see the warning above).
 //   3. Credentials → OAuth client ID → Web application, with
 //      http://localhost:53682/oauth2callback as an authorised redirect URI.
 //   4. Put the client id/secret in .env.local as GOOGLE_CLIENT_ID and
 //      GOOGLE_CLIENT_SECRET before running this.
 
 import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
-import { spawn } from "node:child_process";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const PORT = 53682;
 const REDIRECT_URI = `http://localhost:${PORT}/oauth2callback`;
 const SCOPE = "https://www.googleapis.com/auth/gmail.compose";
+const ENV_PATH = fileURLToPath(new URL("../.env.local", import.meta.url));
 
 // Read .env.local directly: this is a standalone script, not a Next process,
 // so it doesn't get Next's automatic env loading.
 function envFromFile() {
   const out = {};
   try {
-    for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
+    for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
       const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
       if (m) out[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
     }
   } catch { /* file is optional; env vars may be set another way */ }
   return out;
+}
+
+/** Upserts KEY=value lines into .env.local, preserving everything else
+ *  (comments, blank lines, unrelated vars) and each key's existing position
+ *  if it's already there. */
+function writeEnvLocal(updates) {
+  let text = "";
+  try { text = readFileSync(ENV_PATH, "utf8"); } catch { /* created fresh below */ }
+  let lines = text.length ? text.split("\n") : [];
+  const remaining = new Map(Object.entries(updates));
+
+  lines = lines.map((line) => {
+    const m = line.match(/^([A-Z0-9_]+)=/);
+    if (m && remaining.has(m[1])) {
+      const key = m[1];
+      const value = remaining.get(key);
+      remaining.delete(key);
+      return `${key}=${value}`;
+    }
+    return line;
+  });
+
+  if (remaining.size) {
+    if (lines.length && lines[lines.length - 1] !== "") lines.push("");
+    for (const [key, value] of remaining) lines.push(`${key}=${value}`);
+  }
+
+  writeFileSync(ENV_PATH, lines.join("\n").replace(/\n{3,}$/, "\n\n"));
+}
+
+/** Best-effort push to Vercel's Production + Preview env vars, via the
+ *  `vercel` CLI. Silently skipped (not a hard failure) if the CLI is
+ *  missing or the project isn't linked — .env.local is already updated
+ *  either way, and the setup doc covers the manual fallback. */
+function pushToVercel(key, value) {
+  const hasCli = spawnSync("vercel", ["--version"], { stdio: "ignore" }).status === 0;
+  if (!hasCli) return { pushed: false, reason: "Vercel CLI not found on PATH" };
+  if (!existsSync(fileURLToPath(new URL("../.vercel/project.json", import.meta.url)))) {
+    return { pushed: false, reason: "this directory isn't linked to a Vercel project (run `vercel link`)" };
+  }
+  for (const target of ["production", "preview"]) {
+    // --force overwrites the existing value instead of failing when the key
+    // is already set, which it will be on every re-auth after the first.
+    const add = spawnSync(
+      "vercel", ["env", "add", key, target, "--value", value, "--force", "--yes"],
+      { stdio: ["ignore", "ignore", "pipe"] },
+    );
+    if (add.status !== 0) {
+      return { pushed: false, reason: `\`vercel env add ${key} ${target}\` failed: ${add.stderr?.toString().trim()}` };
+    }
+  }
+  return { pushed: true };
 }
 
 const fileEnv = envFromFile();
@@ -121,12 +183,25 @@ const server = createServer(async (req, res) => {
     if (profile.ok) address = (await profile.json()).emailAddress ?? address;
   } catch { /* non-fatal — the token is still good */ }
 
-  reply(res, 200, `Authorised <strong>${address}</strong>. The refresh token is in your terminal.`);
+  reply(res, 200, `Authorised <strong>${address}</strong>. Saving the token now — check the terminal.`);
 
   console.log(`\n  Authorised mailbox: ${address}\n`);
-  console.log("  Add these to .env.local and to your Vercel project's env vars:\n");
-  console.log(`GMAIL_SENDER=${address}`);
-  console.log(`GMAIL_REFRESH_TOKEN=${json.refresh_token}\n`);
+
+  writeEnvLocal({ GMAIL_SENDER: address, GMAIL_REFRESH_TOKEN: json.refresh_token });
+  console.log("  ✓ Wrote GMAIL_SENDER and GMAIL_REFRESH_TOKEN into .env.local");
+
+  console.log("  Pushing to Vercel (production + preview)…");
+  const senderPush = pushToVercel("GMAIL_SENDER", address);
+  const tokenPush = pushToVercel("GMAIL_REFRESH_TOKEN", json.refresh_token);
+  if (senderPush.pushed && tokenPush.pushed) {
+    console.log("  ✓ Updated GMAIL_SENDER and GMAIL_REFRESH_TOKEN on Vercel — redeploy to pick them up:");
+    console.log("      vercel --prod\n");
+  } else {
+    console.log(`  ⚠ Couldn't update Vercel automatically (${(senderPush.reason || tokenPush.reason)}).`);
+    console.log("    Paste these into the Vercel dashboard yourself (Settings → Environment Variables):\n");
+    console.log(`GMAIL_SENDER=${address}`);
+    console.log(`GMAIL_REFRESH_TOKEN=${json.refresh_token}\n`);
+  }
   console.log("  Treat the refresh token like a password — it can send mail as you.\n");
 
   server.close();
@@ -137,6 +212,9 @@ server.listen(PORT, () => {
   console.log("\n  Opening Google's consent screen in your browser.");
   console.log("  If it doesn't open, paste this URL in yourself:\n");
   console.log(`  ${authUrl}\n`);
+  console.log("  Reminder: if the OAuth consent screen is still in \"Testing\" status, this");
+  console.log("  token will stop working again in 7 days. Publish it once, permanently:");
+  console.log("  https://console.cloud.google.com/apis/credentials/consent\n");
   const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
   spawn(opener, [authUrl], { stdio: "ignore", detached: true, shell: process.platform === "win32" }).unref();
 });

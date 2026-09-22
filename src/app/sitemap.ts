@@ -11,5 +11,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),
+    // Listed so Google can find it on its own — its OAuth review checks that
+    // the privacy policy URL is genuinely reachable and indexable.
+    { url: `${BASE}/privacy`, changeFrequency: "yearly", priority: 0.3 },
   ];
 }

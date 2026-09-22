@@ -72,32 +72,30 @@ describe("emailMessage", () => {
   it("uses the default template when business template is empty", () => {
     expect(emailMessage(inv, biz)).toBe(
       [
-        "Hi Jane,",
+        "Hello Jane,",
         "",
-        "Thank you for having me at OMM shoot Cam Assistant on May 27–29 — I really enjoyed it.",
+        "Attached is the invoice for OMM shoot Cam Assistant on May 27–29! It was a pleasure working on this with you.",
         "",
-        "Please find invoice JJ-0042 attached, for a total of $450.00. " +
-          "You can pay by PayNow using the QR code in the PDF, or to 91234567.",
+        "The total comes up to $450.00 — payable via PayNow using the QR code in the PDF, or directly to 91234567.",
         "",
-        "Do let me know if you have any questions.",
+        "Do let me know if you have any questions!",
         "",
-        "Kind regards,",
+        "Best,",
         "Chua Jia Jun",
-        "JJ Media",
       ].join("\n")
     );
   });
   it("greets by first name", () => {
-    expect(emailMessage(inv, biz).startsWith("Hi Jane,")).toBe(true);
+    expect(emailMessage(inv, biz).startsWith("Hello Jane,")).toBe(true);
   });
   it("falls back to 'there' when the customer has no name", () => {
     const anon = { ...inv, customers: null } as Invoice;
-    expect(emailMessage(anon, biz).startsWith("Hi there,")).toBe(true);
+    expect(emailMessage(anon, biz).startsWith("Hello there,")).toBe(true);
   });
   it("reads cleanly when the job date is blank", () => {
     const undated = { ...inv, job_date: "" } as Invoice;
     expect(emailMessage(undated, biz)).toContain(
-      "Thank you for having me at OMM shoot Cam Assistant — I really enjoyed it."
+      "Attached is the invoice for OMM shoot Cam Assistant! It was a pleasure working on this with you."
     );
   });
   it("uses the stored template when set", () => {
@@ -112,11 +110,11 @@ describe("emailMessage", () => {
 });
 
 describe("emailSubject", () => {
-  it("names the invoice and the business", () => {
-    expect(emailSubject(inv, biz)).toBe("Invoice JJ-0042 from JJ Media");
+  it("names the job — project + role, matching how invoices are titled by hand", () => {
+    expect(emailSubject(inv, biz)).toBe("Invoice for OMM shoot Cam Assistant");
   });
-  it("collapses the gap left by a missing invoice number", () => {
-    const draft = { ...inv, invoice_number: null } as Invoice;
-    expect(emailSubject(draft, biz)).toBe("Invoice from JJ Media");
+  it("falls back to a generic job name when job_event is blank", () => {
+    const bare = { ...inv, job_event: "" } as Invoice;
+    expect(emailSubject(bare, biz)).toBe("Invoice for the shoot");
   });
 });
