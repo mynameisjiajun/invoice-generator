@@ -10,6 +10,7 @@ import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import type { Customer, Preset } from "@/lib/types";
 import { IconClose } from "@/components/icons";
+import NumberInput from "@/components/NumberInput";
 import { useBusiness } from "@/lib/businessContext";
 
 type NewCustomerKey = "name" | "company" | "phone" | "email" | "uen" | "address";
@@ -35,9 +36,6 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   const [error, setError] = useState<string | null>(null);
   const [loadedStatus, setLoadedStatus] = useState<"draft" | "unpaid" | "paid">("draft");
   const [loadedNumber, setLoadedNumber] = useState<string | null>(null);
-  // Whether the user has manually edited the due date — until then it
-  // follows issue date + 30 automatically.
-  const [dueTouched, setDueTouched] = useState(false);
   // Which draft/duplicate id (or "new") has already been loaded — see the
   // effect below.
   const loadedRef = useRef<string | null>(null);
@@ -63,10 +61,11 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
         setFormBusinessId(inv.business_id);
         setLoadedStatus(inv.status);
         setLoadedNumber(inv.invoice_number);
-        setDueTouched(true); // an existing invoice's due date is explicit, not a default to auto-follow
         setForm({
           invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
           dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, 30),
+          // An existing invoice's dates are explicit, not defaults to roll forward.
+          issueTouched: true, dueTouched: true,
           customerId: inv.customer_id,
           newCustomer: null, jobEvent: inv.job_event, jobDate: inv.job_date,
           jobLocation: inv.job_location, lineItems: inv.line_items,
@@ -259,13 +258,17 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
               <input type="date" className="input" value={f.issueDate}
                 onChange={(e) => {
                   const issueDate = e.target.value;
-                  set({ issueDate, dueDate: dueTouched ? f.dueDate : plusDaysIso(issueDate, 30) });
+                  set({
+                    issueDate,
+                    issueTouched: true,
+                    dueDate: f.dueTouched ? f.dueDate : plusDaysIso(issueDate, 30),
+                  });
                 }} />
             </div>
             <div style={{ flex: 1 }}>
               <label className="input-label">Due date</label>
               <input type="date" className="input" value={f.dueDate}
-                onChange={(e) => { setDueTouched(true); set({ dueDate: e.target.value }); }} />
+                onChange={(e) => set({ dueDate: e.target.value, dueTouched: true })} />
             </div>
           </div>
         </div>
@@ -308,16 +311,18 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ width: 72 }}>
                   <label className="input-label">Qty</label>
-                  <input className="input" inputMode="decimal" placeholder="1"
+                  <NumberInput placeholder="1"
+                    aria-label={`Quantity for line ${i + 1}`}
                     style={{ textAlign: "center" }}
-                    value={li.qty || ""}
-                    onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, qty: parseFloat(e.target.value) || 0 } : x) })} />
+                    value={li.qty}
+                    onValueChange={(n) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, qty: n } : x) })} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="input-label">Unit price ($)</label>
-                  <input className="input" inputMode="decimal" placeholder="0.00"
-                    value={li.unitPriceCents ? li.unitPriceCents / 100 : ""}
-                    onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, unitPriceCents: Math.round((parseFloat(e.target.value) || 0) * 100) } : x) })} />
+                  <NumberInput placeholder="0.00"
+                    aria-label={`Unit price for line ${i + 1}`}
+                    value={li.unitPriceCents / 100}
+                    onValueChange={(n) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, unitPriceCents: Math.round(n * 100) } : x) })} />
                 </div>
                 <div style={{ textAlign: "right", minWidth: 80, paddingTop: 20 }}>
                   <span className="money" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
@@ -350,10 +355,11 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
             <option value="percent">Percent (%)</option>
           </select>
           {f.discountType !== "none" && (
-            <input className="input" inputMode="decimal" placeholder={f.discountType === "amount" ? "0.00" : "10"}
+            <NumberInput placeholder={f.discountType === "amount" ? "0.00" : "10"}
+              aria-label={f.discountType === "amount" ? "Discount amount in dollars" : "Discount percentage"}
               style={{ flex: 1 }}
-              value={f.discountValue || ""}
-              onChange={(e) => set({ discountValue: parseFloat(e.target.value) || 0 })} />
+              value={f.discountValue}
+              onValueChange={(n) => set({ discountValue: n })} />
           )}
         </div>
       </div>

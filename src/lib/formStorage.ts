@@ -9,6 +9,13 @@ export type FormState = {
   businessId?: string;
   issueDate: string;
   dueDate: string;
+  /** Whether the owner has deliberately set these dates. Until they have,
+   *  the dates are just defaults and are re-derived from "today" whenever
+   *  the form is restored — an autosaved form is otherwise frozen at the
+   *  day it was last typed into, which silently backdates the invoice.
+   *  Once touched, a deliberate backdate is never overwritten. */
+  issueTouched?: boolean;
+  dueTouched?: boolean;
   customerId: number | null;
   newCustomer: { name: string; company: string; phone: string; email: string; uen: string; address: string } | null;
   jobEvent: string;
@@ -26,6 +33,8 @@ export function emptyForm(): FormState {
   return {
     issueDate,
     dueDate: plusDaysIso(issueDate, 30),
+    issueTouched: false,
+    dueTouched: false,
     customerId: null,
     newCustomer: null,
     jobEvent: "",
@@ -39,6 +48,33 @@ export function emptyForm(): FormState {
 
 export function storeForm(s: FormState): void {
   localStorage.setItem(KEY, JSON.stringify(s));
+}
+
+/** Rolls untouched dates forward to today.
+ *
+ *  The form autosaves to localStorage on every keystroke and is restored the
+ *  next time "New Invoice" is opened — days or weeks later. Its `issueDate`
+ *  was stamped by emptyForm() on whatever day the form was started, so
+ *  without this an invoice created today goes out dated last Tuesday, and
+ *  nothing on screen looks wrong enough to notice.
+ *
+ *  Only untouched dates move. A deliberately backdated invoice (last month's
+ *  job, invoiced now) stays exactly where the owner put it — which is why
+ *  this keys off the touched flags rather than just comparing to today.
+ *
+ *  A due date that is still tracking issue + 30 follows the issue date along;
+ *  one that was set by hand does not. Forms saved before these flags existed
+ *  have them undefined, and so are treated as untouched — correct for the
+ *  common case of a stale scratch form. */
+function refreshDates(form: FormState): FormState {
+  if (form.issueTouched) return form;
+  const issueDate = todayLocalIso();
+  if (issueDate === form.issueDate) return form;
+  return {
+    ...form,
+    issueDate,
+    dueDate: form.dueTouched ? form.dueDate : plusDaysIso(issueDate, 30),
+  };
 }
 
 /** Restores the autosaved form for `businessId`.
@@ -59,7 +95,7 @@ export function loadForm(businessId?: string): FormState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null || !("lineItems" in parsed)) return null;
-    const form = parsed as FormState;
+    const form = refreshDates(parsed as FormState);
     if (businessId && form.businessId === businessId) return form;
     return { ...form, businessId, invoiceId: undefined, customerId: null, newCustomer: null };
   } catch {
