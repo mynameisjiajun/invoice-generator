@@ -78,23 +78,64 @@ function writeEnvLocal(updates) {
 /** Best-effort push to Vercel's Production + Preview env vars, via the
  *  `vercel` CLI. Silently skipped (not a hard failure) if the CLI is
  *  missing or the project isn't linked — .env.local is already updated
- *  either way, and the setup doc covers the manual fallback. */
+ *  either way, and the setup doc covers the manual fallback.
+ *
+ *  Vercel stores a separate record per (key, target) combination, and
+ *  `env add --force` only overwrites the record for the target named. A
+ *  key whose single record covers BOTH targets therefore ends up split:
+ *  the named target gets the new value and the other silently keeps the
+ *  old one. That shipped a dead refresh token to Preview once already.
+ *  So: remove every record for the key first, then add both targets
+ *  fresh, then read the result back rather than trusting exit codes. */
 function pushToVercel(key, value) {
   const hasCli = spawnSync("vercel", ["--version"], { stdio: "ignore" }).status === 0;
   if (!hasCli) return { pushed: false, reason: "Vercel CLI not found on PATH" };
   if (!existsSync(fileURLToPath(new URL("../.vercel/project.json", import.meta.url)))) {
     return { pushed: false, reason: "this directory isn't linked to a Vercel project (run `vercel link`)" };
   }
+
+  // Clear whatever is there. Each of these fails harmlessly when no such
+  // record exists, which is the normal case on a first run.
   for (const target of ["production", "preview"]) {
-    // --force overwrites the existing value instead of failing when the key
-    // is already set, which it will be on every re-auth after the first.
-    const add = spawnSync(
-      "vercel", ["env", "add", key, target, "--value", value, "--force", "--yes"],
-      { stdio: ["ignore", "ignore", "pipe"] },
+    spawnSync("vercel", ["env", "rm", key, target, "--yes"], { stdio: "ignore" });
+  }
+  spawnSync("vercel", ["env", "rm", key, "--yes"], { stdio: "ignore" });
+
+  for (const target of ["production", "preview"]) {
+    let add = spawnSync(
+      "vercel", ["env", "add", key, target, "--value", value, "--yes"],
+      { stdio: ["ignore", "pipe", "pipe"] },
     );
-    if (add.status !== 0) {
-      return { pushed: false, reason: `\`vercel env add ${key} ${target}\` failed: ${add.stderr?.toString().trim()}` };
+
+    // Older CLIs (seen on 54.6.1) ignore --yes for Preview and ask which git
+    // branch to scope the variable to, exiting without writing anything.
+    // Retry pinned to the current branch — narrower than "all preview
+    // branches", but it beats silently leaving Preview on a stale value.
+    const out = (add.stdout?.toString() || "") + (add.stderr?.toString() || "");
+    if (add.status !== 0 && out.includes("git_branch_required")) {
+      const branch = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { stdio: ["ignore", "pipe", "ignore"] })
+        .stdout?.toString().trim() || "main";
+      add = spawnSync(
+        "vercel", ["env", "add", key, target, branch, "--value", value, "--yes"],
+        { stdio: ["ignore", "ignore", "pipe"] },
+      );
+      if (add.status === 0) {
+        console.log(`    note: ${key} scoped to Preview (${branch}) — your Vercel CLI is too old to target all preview branches. \`npm i -g vercel@latest\` fixes that.`);
+      }
     }
+
+    if (add.status !== 0) {
+      const err = (add.stderr?.toString() || "").split("\n").filter((l) => /error/i.test(l)).join("; ");
+      return { pushed: false, reason: `could not set ${key} for ${target}${err ? `: ${err}` : ""}` };
+    }
+  }
+
+  // Verify rather than trust: confirm the key now shows up for both targets.
+  const ls = spawnSync("vercel", ["env", "ls"], { stdio: ["ignore", "pipe", "ignore"] });
+  const rows = (ls.stdout?.toString() || "").split("\n").filter((l) => l.includes(key));
+  const covers = (t) => rows.some((l) => l.toLowerCase().includes(t));
+  if (!covers("production") || !covers("preview")) {
+    return { pushed: false, reason: `${key} did not come back set for both Production and Preview` };
   }
   return { pushed: true };
 }

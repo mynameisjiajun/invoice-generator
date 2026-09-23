@@ -11,6 +11,8 @@ import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money
 import type { Customer, Preset } from "@/lib/types";
 import { IconClose } from "@/components/icons";
 import NumberInput from "@/components/NumberInput";
+import ConfirmSheet from "@/components/ConfirmSheet";
+import Toast from "@/components/Toast";
 import { useBusiness } from "@/lib/businessContext";
 
 type NewCustomerKey = "name" | "company" | "phone" | "email" | "uen" | "address";
@@ -36,6 +38,8 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   const [error, setError] = useState<string | null>(null);
   const [loadedStatus, setLoadedStatus] = useState<"draft" | "unpaid" | "paid">("draft");
   const [loadedNumber, setLoadedNumber] = useState<string | null>(null);
+  const [confirmingFinalize, setConfirmingFinalize] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   // Which draft/duplicate id (or "new") has already been loaded — see the
   // effect below.
   const loadedRef = useRef<string | null>(null);
@@ -159,6 +163,10 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
     setBusy("draft"); setError(null);
     try {
       await persistDraft();
+      // Nothing else on screen changes when a draft saves — without this the
+      // only feedback is the button label flicking back from "Saving…", which
+      // is indistinguishable from nothing having happened.
+      setToast("Draft saved");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save draft");
     }
@@ -166,6 +174,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   }
 
   async function onFinalize() {
+    setConfirmingFinalize(false);
     setBusy("final"); setError(null);
     try {
       const id = await persistDraft();
@@ -191,6 +200,12 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   }
 
   const editingFinalized = loadedStatus !== "draft";
+  // Who the invoice is for, whether they're an existing client or one being
+  // created alongside this invoice.
+  const customerLabel =
+    f.newCustomer?.name.trim() ||
+    customers.find((c) => c.id === f.customerId)?.name ||
+    "No client";
 
   return (
     <main className="page-container animate-fade-in">
@@ -424,7 +439,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
             {busy === "draft" ? "Saving…" : "Save Draft"}
           </button>
-          <button onClick={onFinalize}
+          <button onClick={() => setConfirmingFinalize(true)}
             disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
             className="btn btn-primary" style={{ flex: 1 }}>
             {busy === "final" ? "Finalizing…" : "Finalize Invoice"}
@@ -432,6 +447,19 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
           </div>
         </div>
       )}
+      <ConfirmSheet
+        open={confirmingFinalize}
+        title="Finalize this invoice?"
+        message={
+          `${customerLabel} · ${formBusiness ? `${formBusiness.invoice_prefix}${formBusiness.next_invoice_seq}` : "next number"} · ${formatSGD(totals.total)}` +
+          "\n\nThis assigns the invoice number and locks it in. Check the total reads what you expect."
+        }
+        confirmLabel="Finalize"
+        onConfirm={onFinalize}
+        onCancel={() => setConfirmingFinalize(false)}
+      />
+
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </main>
   );
 }

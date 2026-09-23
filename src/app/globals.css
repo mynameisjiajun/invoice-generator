@@ -990,6 +990,10 @@ textarea.input {
   font-size: 0.9rem;
   line-height: 1.55;
   margin-bottom: 20px;
+  /* Honour newlines so a sheet can show a summary line (client · number ·
+     total) above its explanation. Existing single-sentence messages are
+     unaffected. */
+  white-space: pre-line;
 }
 .sheet-actions {
   display: flex;
