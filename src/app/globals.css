@@ -1283,35 +1283,30 @@ textarea.input {
    namespaced (brand-*, font-apex-*) so they can't collide with the
    invoice app's design system above. */
 @theme {
-  /* "Screening room": the page is the dark auditorium, the work is the
-     lit screen. Amber is tungsten light — used sparingly (focus, active
-     link, the subtitle cue), never as a fill. */
-  --color-brand-dark: #1B1A17;   /* projection-room graphite */
-  --color-brand-gray: #24221E;   /* raised surfaces (inputs, lightbox) */
-  --color-brand-rule: #34312B;   /* hairlines */
-  --color-brand-paper: #EEE9DF;  /* screen white — primary text */
-  --color-brand-muted: #8E887C;  /* house lights — secondary text */
-  --color-brand-accent: #D9A441; /* tungsten */
+  --color-brand-orange: #FF6B00;
+  --color-brand-dark: #0A0A0A;
+  --color-brand-gray: #171717;
+  --animate-marquee-right: marqueeRight 60s linear infinite;
 }
 /* `inline` is load-bearing: these reference next/font variables that only
    exist on the portfolio's wrapper div, not on :root. A non-inline token
    would substitute var(--font-oswald) at :root (where it's undefined) and
    compute to invalid before descendants ever inherit it. */
 @theme inline {
-  --font-apex-display: var(--font-cormorant), Georgia, serif;
-  --font-apex-sans: var(--font-hanken), system-ui, sans-serif;
+  --font-apex-display: var(--font-oswald), sans-serif;
+  --font-apex-sans: var(--font-inter), sans-serif;
+}
+@keyframes marqueeRight {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
 }
 /* The portfolio is a one-pager with #anchor nav links. */
 html:has([data-apex-root]) {
   scroll-behavior: smooth;
-  background: var(--color-brand-dark);
-}
-[data-apex-root] :focus-visible {
-  outline: 2px solid var(--color-brand-accent);
-  outline-offset: 3px;
 }
 @media (prefers-reduced-motion: reduce) {
   html:has([data-apex-root]) { scroll-behavior: auto; }
+  [data-apex-root] .animate-marquee-right { animation: none; }
 }
 /* ── Camera cursor (from the owner's Camera.ani) ──
    Browsers can't read .ani files, so its three 32px frames live in

@@ -25,29 +25,29 @@ const CONTACT = "chuajiajun2705@gmail.com";
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-12">
-      <h2 className="text-3xl md:text-4xl font-apex-display text-brand-paper mb-4">
+      <h2 className="text-2xl md:text-3xl font-apex-display font-bold text-white uppercase tracking-tight mb-4">
         {title}
       </h2>
-      <div className="space-y-4 text-brand-muted leading-relaxed">{children}</div>
+      <div className="space-y-4 text-neutral-400 leading-relaxed">{children}</div>
     </section>
   );
 }
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-dvh bg-brand-dark text-brand-paper font-apex-sans selection:bg-brand-accent selection:text-brand-dark">
+    <div className="min-h-dvh bg-brand-dark text-neutral-200 font-apex-sans selection:bg-brand-orange selection:text-white">
       <div className="max-w-3xl mx-auto px-6 py-20 md:py-28">
         <Link
           href="/"
-          className="text-brand-muted hover:text-brand-paper transition-colors"
+          className="text-brand-orange text-xs font-bold uppercase tracking-[0.2em] hover:text-white transition-colors"
         >
           ← Apex Cinematics
         </Link>
 
-        <h1 className="mt-8 text-5xl md:text-7xl font-apex-display leading-[1.02]">
+        <h1 className="mt-8 text-4xl md:text-6xl font-apex-display font-bold text-white uppercase leading-[0.95]">
           Privacy Policy
         </h1>
-        <p className="mt-4 text-sm text-brand-muted">
+        <p className="mt-4 font-mono text-xs text-neutral-600 tracking-widest uppercase">
           Last updated {UPDATED}
         </p>
 
@@ -86,13 +86,13 @@ export default function PrivacyPage() {
             <p>
               The invoicing tool can send invoices from the business owner&apos;s own Gmail
               account. To do this it requests a single Google OAuth scope:
-              <code className="mx-1 px-1.5 py-0.5 bg-brand-gray text-brand-accent text-sm rounded">
+              <code className="mx-1 px-1.5 py-0.5 bg-brand-gray text-brand-orange text-sm rounded">
                 gmail.compose
               </code>
               which permits creating drafts and sending mail, and nothing else.
             </p>
             <p>
-              <strong className="text-brand-paper">
+              <strong className="text-neutral-200">
                 It cannot read your inbox, and it does not have permission to.
               </strong>{" "}
               No mailbox contents are ever requested, retrieved, analysed or stored. The only
@@ -105,14 +105,14 @@ export default function PrivacyPage() {
               delivery. They are stored in the owner&apos;s own Gmail account exactly as any sent
               email would be.
             </p>
-            <p className="border-l-2 border-brand-accent pl-4">
+            <p className="border-l-2 border-brand-orange pl-4">
               Apex Cinematics&apos; use and transfer of information received from Google APIs
               adheres to the{" "}
               <a
                 href="https://developers.google.com/terms/api-services-user-data-policy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-brand-paper hover:text-white underline decoration-brand-paper/30 underline-offset-4 transition-colors"
+                className="text-brand-orange hover:text-white underline underline-offset-4 transition-colors"
               >
                 Google API Services User Data Policy
               </a>
@@ -133,10 +133,10 @@ export default function PrivacyPage() {
                 ["Google (Gmail API)", "sending invoice emails, only as described above"],
               ].map(([name, role]) => (
                 <li key={name} className="flex gap-3">
-                  <span className="text-brand-accent mt-1">—</span>
+                  <span className="text-brand-orange mt-1">—</span>
                   <span>
-                    <strong className="text-brand-paper">{name}</strong>
-                    <span className="text-brand-muted"> · {role}</span>
+                    <strong className="text-neutral-200">{name}</strong>
+                    <span className="text-neutral-500"> · {role}</span>
                   </span>
                 </li>
               ))}
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
                 href="https://myaccount.google.com/permissions"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-brand-paper hover:text-white underline decoration-brand-paper/30 underline-offset-4 transition-colors"
+                className="text-brand-orange hover:text-white underline underline-offset-4 transition-colors"
               >
                 Google Account permissions
               </a>
@@ -180,7 +180,7 @@ export default function PrivacyPage() {
               Questions about this policy, or about information held about you:{" "}
               <a
                 href={`mailto:${CONTACT}`}
-                className="text-brand-paper hover:text-white underline decoration-brand-paper/30 underline-offset-4 transition-colors"
+                className="text-brand-orange hover:text-white underline underline-offset-4 transition-colors"
               >
                 {CONTACT}
               </a>
@@ -188,10 +188,10 @@ export default function PrivacyPage() {
           </Section>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-brand-rule">
+        <div className="mt-16 pt-8 border-t border-neutral-800">
           <Link
             href="/"
-            className="text-brand-muted hover:text-brand-paper transition-colors"
+            className="text-neutral-500 text-xs font-bold uppercase tracking-[0.2em] hover:text-brand-orange transition-colors"
           >
             ← Back to Apex Cinematics
           </Link>
