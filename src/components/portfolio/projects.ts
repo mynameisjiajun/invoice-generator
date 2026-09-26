@@ -1,10 +1,18 @@
 // ── The single source of truth for portfolio content. ──
+// ADD / REMOVE / REORDER PHOTOS in a project:
+//   Just add or delete image files in public/work/<slug>/ — every JPG/PNG/WebP
+//   in the folder shows up automatically, in file-name order (01, 02, … 10).
+//   The first photo is the cover unless `cover` is set.
 // TO ADD A PROJECT:
-//   1. Drop JPGs into public/work/<slug>/  (e.g. public/work/my-wedding/01.jpg)
-//   2. Add an entry below: photos reference "/work/<slug>/01.jpg" etc.
+//   1. Make a folder public/work/<slug>/ and drop the photos in
+//      (slug = lowercase-with-dashes, e.g. public/work/my-wedding/).
+//   2. Copy an entry below and set photos: folderPhotos("<slug>", "<alt text>").
 //   3. Video projects: upload to YouTube (unlisted is fine), set youtubeId
 //      to the 11-char ID from the URL. Photo projects: omit youtubeId.
+// REORDER PROJECTS: move entries up/down — the top one shows first.
 // Tags are what/where only ("Wedding · Sentosa") — never camera/lens/gear.
+
+import workPhotos from "./work-photos.json";
 
 export type ProjectType = "video" | "photo";
 
@@ -22,7 +30,16 @@ export type Project = {
   photos: ProjectPhoto[];
 };
 
-export const PROJECTS: Project[] = [
+// The photo in the "Studio" section on the home page.
+export const ABOUT_PHOTO = "/work/ggs-iceland.jpg";
+
+// Every image in public/work/<slug>/ (see scripts/scan-work-photos.mjs).
+function folderPhotos(slug: string, altPrefix: string): ProjectPhoto[] {
+  const files: string[] = (workPhotos as Record<string, string[]>)[slug] ?? [];
+  return files.map((src, i) => ({ src, alt: `${altPrefix} — photo ${i + 1}` }));
+}
+
+const ENTRIES: Project[] = [
   {
     slug: "yue-rou-chinese-fantasy-mv",
     title: "Yue Rou's Chinese Fantasy Music Video Journey",
@@ -38,40 +55,28 @@ export const PROJECTS: Project[] = [
     slug: "chroma-car-care",
     title: "Chroma Car Care",
     type: "photo",
-    cover: "/work/chroma-car-care/01.jpg",
     story:
       "Brand shoot for Chroma Car Care — paintwork gloss, product details, and the finishing touches that sell the shine.",
     tags: ["Brand", "Automotive"],
-    photos: Array.from({ length: 12 }, (_, i) => ({
-      src: `/work/chroma-car-care/${String(i + 1).padStart(2, "0")}.jpg`,
-      alt: `Chroma Car Care shoot — photo ${i + 1}`,
-    })),
+    photos: folderPhotos("chroma-car-care", "Chroma Car Care shoot"),
   },
   {
     slug: "floraisons-pr-event",
     title: "Floraisons.Co PR Event",
     type: "photo",
-    cover: "/work/floraisons-pr-event/01.jpg",
     story:
       "Event coverage for Floraisons.Co's PR launch — the florals, the guests, and the in-between moments that made the room feel alive.",
     tags: ["Event", "PR Launch"],
-    photos: Array.from({ length: 12 }, (_, i) => ({
-      src: `/work/floraisons-pr-event/${String(i + 1).padStart(2, "0")}.jpg`,
-      alt: `Floraisons.Co PR event — photo ${i + 1}`,
-    })),
+    photos: folderPhotos("floraisons-pr-event", "Floraisons.Co PR event"),
   },
   {
     slug: "school-orientation-shoot",
     title: "School Orientation Shoot",
     type: "photo",
-    cover: "/work/school-orientation-shoot/01.jpg",
     story:
       "Editorial studio portraits for a school orientation batch — colored gel lighting and a playful, uniform-inspired styling.",
     tags: ["Editorial", "Studio"],
-    photos: Array.from({ length: 6 }, (_, i) => ({
-      src: `/work/school-orientation-shoot/${String(i + 1).padStart(2, "0")}.jpg`,
-      alt: `School Orientation Shoot — photo ${i + 1}`,
-    })),
+    photos: folderPhotos("school-orientation-shoot", "School Orientation Shoot"),
   },
   {
     slug: "design-your-dream-future",
@@ -86,6 +91,9 @@ export const PROJECTS: Project[] = [
     photos: [],
   },
 ];
+
+// A photo project's cover falls back to its first photo.
+export const PROJECTS: Project[] = ENTRIES.map((p) => ({ ...p, cover: p.cover ?? p.photos[0]?.src }));
 
 export function getProject(slug: string): Project | undefined {
   return PROJECTS.find((p) => p.slug === slug);

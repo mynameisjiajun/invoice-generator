@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "photos": "node scripts/scan-work-photos.mjs",
+    "predev": "npm run photos",
     "dev": "next dev",
+    "prebuild": "npm run photos",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
