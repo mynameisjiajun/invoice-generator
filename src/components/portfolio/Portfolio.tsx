@@ -17,6 +17,7 @@ import type { Project, ProjectType } from './projects';
 import ProjectCard from './ProjectCard';
 import HeroCanvas from './HeroCanvas';
 import HeroVideo from './HeroVideo';
+import EnquiryForm from './EnquiryForm';
 
 
 // --- DATA ---
@@ -212,6 +213,19 @@ const NavBar: React.FC = () => {
   );
 };
 
+/** How the first card spans so the grid has no empty cells: at 2 columns an
+ *  odd count needs it double-width; at 3 columns, a count of 3n+2 does. A
+ *  double-width card uses 32:9 so it stays the same height as a 16:9 one. */
+function leadLayout(count: number): { span: string; aspect: string } | null {
+  const md = count % 2 === 1 && count > 1;
+  const lg = count % 3 === 2;
+  if (!md && !lg) return null;
+  return {
+    span: `${md ? "md:col-span-2" : ""} ${lg ? "lg:col-span-2" : "lg:col-span-1"}`.trim(),
+    aspect: `aspect-video ${md ? "md:aspect-[32/9]" : ""} ${lg ? "lg:aspect-[32/9]" : "lg:aspect-video"}`.trim(),
+  };
+}
+
 // --- MAIN APP COMPONENT ---
 
 const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ projects, aboutPhoto }) => {
@@ -244,7 +258,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
         </div>
 
         <div className="container mx-auto px-6 relative z-20 w-full">
-          <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-12 pb-20 md:pb-0">
+          <div className="pb-20 md:pb-0">
             <div className="max-w-4xl">
               <ScrollReveal>
                 <div className="flex items-center gap-3 mb-6">
@@ -265,15 +279,16 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                   Apex Cinematics is a Singapore-based studio covering events, documentaries, and social content — cinematic photo and video for everyone and anyone.
                 </p>
               </ScrollReveal>
-            </div>
 
-            <div className="flex flex-col gap-4 w-full md:w-auto animate-fade-in" style={{ animationDelay: '500ms' }}>
-              <a href="#portfolio" className="px-8 py-4 bg-brand-orange text-white font-bold uppercase tracking-wider hover:bg-orange-600 transition-all text-center">
-                View Work
-              </a>
-              <a href="#contact" className="px-8 py-4 border border-white/20 backdrop-blur-md bg-black/30 text-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all text-center">
-                Get In Touch
-              </a>
+              {/* Calls to action sit directly under the intro they follow from. */}
+              <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '500ms' }}>
+                <a href="#portfolio" className="px-8 py-4 bg-brand-orange text-white font-bold uppercase tracking-wider hover:bg-orange-600 transition-all text-center">
+                  View Work
+                </a>
+                <a href="#contact" className="px-8 py-4 border border-white/20 backdrop-blur-md bg-black/30 text-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all text-center">
+                  Get In Touch
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -292,13 +307,14 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
       {/* PORTFOLIO SECTION */}
       <section id="portfolio" className="py-24 bg-brand-dark relative scroll-mt-20">
-        <div className="max-w-[1800px] mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-6">
           <ScrollReveal>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
               <SectionHeader title="Visual Log" subtitle="Selected Works" index="01" />
 
-              {/* Filters */}
-              <div className="flex flex-wrap gap-4">
+              {/* Filters — md:mb-16 matches SectionHeader's bottom margin so
+                  the tabs sit on the heading's baseline, not below it. */}
+              <div className="flex flex-wrap gap-6 -mt-10 mb-10 md:mt-0 md:mb-16">
                 {(["all", "video", "photo"] as const).map((cat) => (
                   <button
                     key={cat}
@@ -318,11 +334,14 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
           {/* Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-            {filteredProjects.map((project, idx) => (
-              <ScrollReveal key={project.slug} delayMs={idx * 80}>
-                <ProjectCard project={project} />
-              </ScrollReveal>
-            ))}
+            {filteredProjects.map((project, idx) => {
+              const layout = idx === 0 ? leadLayout(filteredProjects.length) : null;
+              return (
+                <ScrollReveal key={project.slug} delayMs={idx * 80} className={layout?.span ?? ""}>
+                  <ProjectCard project={project} aspectClass={layout?.aspect} wide={!!layout?.span} />
+                </ScrollReveal>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -407,8 +426,9 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
           <ScrollReveal className="order-1 sm:order-2 relative group delay-200 max-w-xs sm:max-w-sm mx-auto sm:mx-0">
             <div className="aspect-2/3 bg-neutral-800 relative z-10 overflow-hidden">
-              <img src={aboutPhoto} alt="GGS Iceland Climate Action Event" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
-              <div className="absolute inset-0 bg-brand-orange mix-blend-multiply opacity-20 group-hover:opacity-0 transition-opacity"></div>
+              {/* Toned until hovered on laptops; phones can't hover, so they get full colour. */}
+              <img src={aboutPhoto} alt="Jia Jun of Apex Cinematics, holding a camera" className="w-full h-full object-cover md:grayscale md:group-hover:grayscale-0 transition-all duration-500" />
+              <div className="absolute inset-0 bg-brand-orange mix-blend-multiply opacity-0 md:opacity-20 md:group-hover:opacity-0 transition-opacity"></div>
             </div>
 
             {/* Decorative Elements */}
@@ -461,6 +481,12 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                 </a>
               </div>
               <p className="text-center text-neutral-500 text-sm mt-8 font-mono uppercase tracking-widest">Based in Singapore · Available for travel</p>
+
+              <div className="mt-12 pt-12 border-t border-neutral-800">
+                <h3 className="text-3xl md:text-4xl font-apex-display font-bold text-white uppercase mb-2">Or send the details</h3>
+                <p className="text-neutral-400 mb-8">A few lines is enough — date, type of shoot and a rough budget help me quote faster.</p>
+                <EnquiryForm />
+              </div>
             </div>
           </ScrollReveal>
         </div>

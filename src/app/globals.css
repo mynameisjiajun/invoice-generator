@@ -1309,19 +1309,22 @@ html:has([data-apex-root]) {
   [data-apex-root] .animate-marquee-right { animation: none; }
 }
 /* ── Camera cursor (from the owner's Camera.ani) ──
-   Browsers can't read .ani files, so its three 32px frames live in
-   public/cursor/ and this recreates its 0→1→2→1 flash loop (≈167ms per
-   frame, the .ani's own rate). The hotspot is the arrow tip (0 0), as in the
-   original. Browsers that don't animate `cursor` show the first frame;
-   links and buttons keep the native hand so clickability stays obvious. */
+   Browsers can't read .ani files, so its three frames live in public/cursor/
+   and this recreates its 0→1→2→1 flash loop (≈167ms per frame, the .ani's
+   own rate). The original 32px pixel art is scaled 2× (nearest-neighbour, so
+   it stays crisp) to 64px, with a 128px image-set version for Retina
+   screens; the plain url() line is the fallback where image-set isn't
+   supported for cursors. Hotspot is the arrow tip (0 0), as in the original.
+   Browsers that don't animate `cursor` show the first frame; links and
+   buttons keep the native hand so clickability stays obvious. */
 @keyframes camera-cursor {
-  0%, 24.99% { cursor: url("/cursor/camera-0.png") 0 0, auto; }
-  25%, 49.99% { cursor: url("/cursor/camera-1.png") 0 0, auto; }
-  50%, 74.99% { cursor: url("/cursor/camera-2.png") 0 0, auto; }
-  75%, 100% { cursor: url("/cursor/camera-1.png") 0 0, auto; }
+  0%, 24.99% { cursor: url("/cursor/camera-0.png") 0 0, auto; cursor: image-set(url("/cursor/camera-0.png") 1x, url("/cursor/camera-0@2x.png") 2x) 0 0, auto; }
+  25%, 49.99% { cursor: url("/cursor/camera-1.png") 0 0, auto; cursor: image-set(url("/cursor/camera-1.png") 1x, url("/cursor/camera-1@2x.png") 2x) 0 0, auto; }
+  50%, 74.99% { cursor: url("/cursor/camera-2.png") 0 0, auto; cursor: image-set(url("/cursor/camera-2.png") 1x, url("/cursor/camera-2@2x.png") 2x) 0 0, auto; }
+  75%, 100% { cursor: url("/cursor/camera-1.png") 0 0, auto; cursor: image-set(url("/cursor/camera-1.png") 1x, url("/cursor/camera-1@2x.png") 2x) 0 0, auto; }
 }
 [data-apex-root] {
-  cursor: url("/cursor/camera-0.png") 0 0, auto;
+  cursor: url("/cursor/camera-0.png") 0 0, auto; cursor: image-set(url("/cursor/camera-0.png") 1x, url("/cursor/camera-0@2x.png") 2x) 0 0, auto;
   animation: camera-cursor 0.67s infinite;
 }
 @media (prefers-reduced-motion: reduce) {
