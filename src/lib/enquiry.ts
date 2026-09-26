@@ -49,6 +49,8 @@ export function parseEnquiry(form: FormData): { ok: true; value: EnquiryInput } 
 /** Bots fill hidden fields and submit instantly; people do neither. */
 export function looksLikeBot(form: FormData, now = Date.now()): boolean {
   if (field(form, "website")) return true;
-  const started = Number(field(form, "started"));
-  return !Number.isFinite(started) || now - started < 3000;
+  const raw = field(form, "started");
+  const started = Number(raw);
+  // A missing timestamp means the form wasn't filled in on the page.
+  return !raw || !Number.isFinite(started) || now - started < 3000;
 }
