@@ -14,6 +14,7 @@ import type { Business, Preset } from "@/lib/types";
 import { IconAdd, IconCheck, IconDownload, IconSignOut, IconTrash } from "@/components/icons";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import { fileToLogoDataUrl } from "@/lib/logoImage";
+import { clearOfflineData } from "@/components/ServiceWorker";
 
 const FIELDS: Array<{ key: keyof Business; label: string }> = [
   { key: "name", label: "Business name" },
@@ -43,6 +44,7 @@ export default function SettingsPage() {
 
   async function signOut() {
     await createClient().auth.signOut();
+    clearOfflineData();
     router.push("/invoices_login");
     router.refresh();
   }

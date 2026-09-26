@@ -3,6 +3,7 @@ import { Fraunces, Space_Mono, Work_Sans } from "next/font/google";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { BusinessProvider } from "@/lib/businessContext";
+import ServiceWorker from "@/components/ServiceWorker";
 
 // Editorial pairing: a warm, high-contrast serif for headlines (the
 // "magazine" voice) against a humanist grotesque for UI text, with a
@@ -60,6 +61,7 @@ export default function InvoiceAppLayout({
         <TopBar />
         {children}
         <BottomNav />
+        <ServiceWorker />
       </BusinessProvider>
     </div>
   );

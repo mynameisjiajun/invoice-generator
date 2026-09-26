@@ -32,11 +32,11 @@ export default function YouTubeEmbed({ id, title }: { id: string; title: string 
         alt={title}
         fill
         sizes="100vw"
-        className="object-cover opacity-70 transition-all duration-700 group-hover:opacity-100 group-hover:scale-105"
+        className="object-cover opacity-85 transition-opacity duration-500 group-hover:opacity-100"
       />
       <span className="absolute inset-0 flex items-center justify-center">
-        <span className="w-20 h-20 bg-brand-orange flex items-center justify-center transition-transform group-hover:scale-110">
-          <Play size={32} className="text-white translate-x-[2px]" />
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-paper/95 text-brand-dark transition-transform duration-300 group-hover:scale-105">
+          <Play size={28} className="translate-x-0.5" fill="currentColor" />
         </span>
       </span>
     </button>

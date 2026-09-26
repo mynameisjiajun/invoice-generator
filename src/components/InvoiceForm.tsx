@@ -27,7 +27,12 @@ const NEW_CUSTOMER_FIELDS: {
   { k: "address", label: "Address (optional)", type: "text", ac: "street-address" },
 ];
 
-export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: string; draftId?: string }) {
+/** Starting values for a brand-new invoice (e.g. from a website enquiry). */
+export type InvoicePrefill = { customerId: number; jobEvent?: string; jobDate?: string };
+
+export default function InvoiceForm({ duplicateId, draftId, prefill }: {
+  duplicateId?: string; draftId?: string; prefill?: InvoicePrefill;
+}) {
   const router = useRouter();
   const { businesses, activeBusiness } = useBusiness();
   const [form, setForm] = useState<FormState | null>(null);
@@ -55,7 +60,7 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
   // not have loaded on first mount), which is why activeBusiness is in the
   // dependency list — the "new" key guard, not the deps, is what freezes it.
   useEffect(() => {
-    const key = draftId ?? duplicateId ?? "new";
+    const key = draftId ?? duplicateId ?? (prefill ? `prefill:${prefill.customerId}` : "new");
     if (loadedRef.current === key) return;
     if (!draftId && !duplicateId && !activeBusiness) return; // wait for a business
     loadedRef.current = key;
@@ -87,12 +92,17 @@ export default function InvoiceForm({ duplicateId, draftId }: { duplicateId?: st
       } else {
         const bizId = activeBusiness!.id;
         setFormBusinessId(bizId);
-        setForm(loadForm(bizId) ?? { ...emptyForm(), businessId: bizId });
+        // A prefilled invoice starts fresh rather than restoring an unrelated autosaved form.
+        setForm(prefill
+          ? { ...emptyForm(), businessId: bizId, customerId: prefill.customerId, jobEvent: prefill.jobEvent ?? "", jobDate: prefill.jobDate ?? "" }
+          : loadForm(bizId) ?? { ...emptyForm(), businessId: bizId });
       }
     })().catch((e) => {
       loadedRef.current = null; // let a retry re-attempt the failed load
       setError(e instanceof Error ? e.message : "Failed to load invoice");
     });
+    // prefill is fixed per page visit (it comes from the URL), so it needn't be a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftId, duplicateId, activeBusiness]);
 
   useEffect(() => {

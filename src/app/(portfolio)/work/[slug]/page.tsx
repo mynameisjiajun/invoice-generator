@@ -18,7 +18,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${project.title} | Apex Cinematics`,
     description: project.story,
-    openGraph: { title: project.title, description: project.story, images: project.cover ? [project.cover] : [] },
+    alternates: { canonical: `https://apexcinematics.tech/work/${project.slug}` },
+    openGraph: {
+      type: "article", siteName: "Apex Cinematics", locale: "en_SG",
+      title: project.title, description: project.story, images: project.cover ? [project.cover] : [],
+    },
+    twitter: { card: "summary_large_image", title: project.title, description: project.story, images: project.cover ? [project.cover] : [] },
   };
 }
 

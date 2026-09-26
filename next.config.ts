@@ -56,7 +56,12 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The invoice app's service worker must never be served stale, or a
+      // fix to it could take days to reach the phone.
+      { source: "/invoice-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
+    ];
   },
   async redirects() {
     return [

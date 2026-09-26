@@ -2,8 +2,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Instagram } from "lucide-react";
+import { ArrowLeft, Instagram } from "lucide-react";
 import type { Project } from "./projects";
+import { projectKind } from "./ProjectCard";
 import Lightbox from "./Lightbox";
 import YouTubeEmbed from "./YouTubeEmbed";
 import InstagramEmbed from "./InstagramEmbed";
@@ -12,84 +13,64 @@ export default function ProjectDetail({ project }: { project: Project }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
-    <main className="min-h-dvh bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
-      {/* Top bar */}
-      <div className="max-w-[1400px] mx-auto px-6 pt-8 flex items-center justify-between">
-        <Link href="/#portfolio" className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition-colors">
+    <main className="min-h-dvh bg-brand-dark text-brand-paper font-apex-sans selection:bg-brand-accent selection:text-brand-dark">
+      <div className="mx-auto flex max-w-350 items-center justify-between px-4 pt-6 md:px-10">
+        <Link href="/#work" className="inline-flex items-center gap-2 text-brand-muted hover:text-brand-paper">
           <ArrowLeft size={16} /> All work
         </Link>
-        <span className="text-2xl font-apex-display font-bold text-white uppercase italic">
-          Apex<span className="text-brand-orange not-italic">Cinematics</span>
-        </span>
+        <Link href="/" className="font-apex-display text-[1.6rem] font-semibold text-brand-paper">Apex Cinematics</Link>
       </div>
 
       {/* Lead media */}
-      <div className="max-w-[1400px] mx-auto px-6 mt-8 animate-fade-in">
+      <div className="mx-auto mt-8 max-w-350 px-4 md:px-10">
         {project.youtubeId ? (
           <YouTubeEmbed id={project.youtubeId} title={project.title} />
         ) : project.instagramUrl ? (
           <InstagramEmbed url={project.instagramUrl} title={project.title} />
         ) : project.cover ? (
-          <div className="relative aspect-video overflow-hidden bg-neutral-900">
-            <Image src={project.cover} alt={project.title} fill sizes="100vw" priority className="object-cover" />
+          <div className="relative aspect-3/2 md:aspect-[2.39/1] overflow-hidden bg-brand-gray">
+            <Image src={project.cover} alt={project.title} fill sizes="(max-width: 1400px) 100vw, 1400px" priority className="object-cover" />
           </div>
         ) : null}
+      </div>
 
+      {/* Title + story */}
+      <div className="mx-auto max-w-350 px-4 py-14 md:px-10 md:py-20">
+        <p className="text-brand-muted">{projectKind(project)}</p>
+        <h1 className="mt-3 max-w-4xl font-apex-display text-5xl leading-[1.02] md:text-7xl">{project.title}</h1>
+        <p className="mt-8 max-w-2xl text-lg leading-relaxed text-brand-muted">{project.story}</p>
         {project.youtubeId && project.instagramUrl && (
-          <a
-            href={project.instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group mt-3 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-neutral-400 hover:text-brand-orange transition-colors"
-          >
-            <Instagram size={16} /> Also on Instagram <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+          <a href={project.instagramUrl} target="_blank" rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-2 text-brand-paper underline decoration-brand-paper/25 underline-offset-4 hover:decoration-brand-paper">
+            <Instagram size={16} /> Also on Instagram
           </a>
         )}
       </div>
 
-      {/* Title + story */}
-      <div className="max-w-[1400px] mx-auto px-6 py-12">
-        <span className="text-brand-orange font-bold uppercase tracking-[0.2em] text-xs">
-          {project.type === "video" ? "Video" : "Photo"} — {project.tags.join(" · ")}
-        </span>
-        <h1 className="text-4xl md:text-6xl font-apex-display font-bold text-white uppercase leading-[0.9] mt-3 mb-6">
-          {project.title}
-        </h1>
-        <p className="max-w-2xl text-lg text-neutral-400 font-light leading-relaxed border-l-2 border-brand-orange pl-6">
-          {project.story}
-        </p>
-      </div>
-
       {/* Gallery */}
       {project.photos.length > 0 && (
-      <div className="max-w-[1400px] mx-auto px-6 pb-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-1">
-          {project.photos.map((photo, i) => (
-            <button key={photo.src} onClick={() => setLightboxIndex(i)} aria-label={`Open photo: ${photo.alt}`} className="group relative aspect-square overflow-hidden bg-neutral-900">
-              <Image src={photo.src} alt={photo.alt} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover opacity-90 transition-all duration-500 group-hover:opacity-100 group-hover:scale-105" />
-            </button>
-          ))}
+        <div className="mx-auto max-w-350 px-4 pb-20 md:px-10">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3">
+            {project.photos.map((photo, i) => (
+              <button key={photo.src} onClick={() => setLightboxIndex(i)} aria-label={`Open photo ${i + 1} of ${project.photos.length}`}
+                className="group relative aspect-4/5 overflow-hidden bg-brand-gray">
+                <Image src={photo.src} alt={photo.alt} fill sizes="(max-width: 768px) 50vw, 460px"
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]" />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
       )}
 
-      {/* CTA banner */}
-      <section className="py-20 bg-black border-t border-neutral-900 text-center px-6">
-        <h2 className="text-4xl md:text-6xl font-apex-display font-bold text-white uppercase mb-8">
-          Like this? Let&apos;s shoot yours.
-        </h2>
-        <Link href="/#contact" className="inline-flex items-center gap-3 px-10 py-5 bg-brand-orange text-white font-bold uppercase tracking-widest hover:bg-orange-600 transition-all">
-          Get in touch <ArrowRight size={20} />
+      <section className="border-t border-brand-rule px-4 py-20 text-center md:py-28">
+        <h2 className="mx-auto max-w-2xl font-apex-display text-4xl leading-tight md:text-6xl">Planning something similar?</h2>
+        <Link href="/#enquire" className="mt-9 inline-block bg-brand-paper px-8 py-3.5 font-medium text-brand-dark hover:bg-white">
+          Enquire about a shoot
         </Link>
       </section>
 
       {lightboxIndex !== null && (
-        <Lightbox
-          photos={project.photos}
-          index={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
-        />
+        <Lightbox photos={project.photos} index={lightboxIndex} onClose={() => setLightboxIndex(null)} onNavigate={setLightboxIndex} />
       )}
     </main>
   );
