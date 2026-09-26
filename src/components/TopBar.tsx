@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useBusiness } from "@/lib/businessContext";
-import { IconCamera, IconCheck, IconChevronDown } from "@/components/icons";
+import { IconCamera, IconCheck, IconChevronDown, IconGlobe } from "@/components/icons";
 
 export default function TopBar() {
   const pathname = usePathname();
@@ -13,6 +14,7 @@ export default function TopBar() {
 
   const active = businesses.filter((b) => !b.archived_at);
   const canSwitch = active.length > 1;
+  const onWebsite = pathname.startsWith("/invoices_login/portfolio");
 
   return (
     <>
@@ -27,6 +29,12 @@ export default function TopBar() {
           <span>{activeBusiness?.name ?? "…"}</span>
           {canSwitch && <IconChevronDown size={15} className="app-bar-caret" />}
         </button>
+        <Link href="/invoices_login/portfolio" aria-label="Edit website"
+          aria-current={onWebsite ? "page" : undefined}
+          className={`app-bar-action app-bar-action--labelled ${onWebsite ? "app-bar-action--active" : ""}`}>
+          <IconGlobe size={18} />
+          <span>Website</span>
+        </Link>
       </header>
 
       {switcherOpen && (

@@ -1,18 +1,9 @@
-// ── The single source of truth for portfolio content. ──
-// ADD / REMOVE / REORDER PHOTOS in a project:
-//   Just add or delete image files in public/work/<slug>/ — every JPG/PNG/WebP
-//   in the folder shows up automatically, in file-name order (01, 02, … 10).
-//   The first photo is the cover unless `cover` is set.
-// TO ADD A PROJECT:
-//   1. Make a folder public/work/<slug>/ and drop the photos in
-//      (slug = lowercase-with-dashes, e.g. public/work/my-wedding/).
-//   2. Copy an entry below and set photos: folderPhotos("<slug>", "<alt text>").
-//   3. Video projects: upload to YouTube (unlisted is fine), set youtubeId
-//      to the 11-char ID from the URL. Photo projects: omit youtubeId.
-// REORDER PROJECTS: move entries up/down — the top one shows first.
+// Portfolio content types plus the pure helpers shared by the public site
+// (src/lib/portfolio/data.ts) and the admin page (/invoices_login/portfolio).
+// Content itself lives in Supabase: tables portfolio_projects,
+// portfolio_photos and portfolio_site, images in the `portfolio` bucket
+// (see supabase/migrations/017_portfolio.sql).
 // Tags are what/where only ("Wedding · Sentosa") — never camera/lens/gear.
-
-import workPhotos from "./work-photos.json";
 
 export type ProjectType = "video" | "photo";
 
@@ -30,75 +21,79 @@ export type Project = {
   photos: ProjectPhoto[];
 };
 
-// The photo in the "Studio" section on the home page.
-export const ABOUT_PHOTO = "/work/ggs-iceland.jpg";
+export type ProjectRow = {
+  id: string;
+  slug: string;
+  title: string;
+  type: ProjectType;
+  story: string;
+  tags: string[];
+  youtube_id: string | null;
+  instagram_url: string | null;
+  cover: string | null;
+  position: number;
+  published: boolean;
+};
 
-// Every image in public/work/<slug>/ (see scripts/scan-work-photos.mjs).
-function folderPhotos(slug: string, altPrefix: string): ProjectPhoto[] {
-  const files: string[] = (workPhotos as Record<string, string[]>)[slug] ?? [];
-  return files.map((src, i) => ({ src, alt: `${altPrefix} — photo ${i + 1}` }));
+export type PhotoRow = {
+  id: string;
+  project_id: string;
+  path: string;
+  alt: string;
+  position: number;
+};
+
+export const PORTFOLIO_BUCKET = "portfolio";
+
+/** A stored image reference → something an <img>/<Image> can load. Rows hold
+ *  either a Storage object path ("chroma-car-care/abc.jpg"), a full URL
+ *  (YouTube thumbnails), or a site-relative path ("/work/…", legacy files). */
+export function photoUrl(ref: string, supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""): string {
+  if (/^https?:\/\//.test(ref) || ref.startsWith("/")) return ref;
+  const encoded = ref.split("/").map(encodeURIComponent).join("/");
+  return `${supabaseUrl}/storage/v1/object/public/${PORTFOLIO_BUCKET}/${encoded}`;
 }
 
-const ENTRIES: Project[] = [
-  {
-    slug: "yue-rou-chinese-fantasy-mv",
-    title: "Yue Rou's Chinese Fantasy Music Video Journey",
-    type: "video",
-    cover: "https://i.ytimg.com/vi/QsSV2IPbqhA/maxresdefault.jpg",
-    story:
-      "A wish-journey film for Make-A-Wish Singapore — following Yue Rou as her Chinese-fantasy music video comes to life, from first fitting to final frame.",
-    tags: ["Documentary", "Make-A-Wish Singapore"],
-    youtubeId: "QsSV2IPbqhA",
-    photos: [],
-  },
-  {
-    slug: "chroma-car-care",
-    title: "Chroma Car Care",
-    type: "photo",
-    story:
-      "Brand shoot for Chroma Car Care — paintwork gloss, product details, and the finishing touches that sell the shine.",
-    tags: ["Brand", "Automotive"],
-    photos: folderPhotos("chroma-car-care", "Chroma Car Care shoot"),
-  },
-  {
-    slug: "floraisons-pr-event",
-    title: "Floraisons.Co PR Event",
-    type: "photo",
-    story:
-      "Event coverage for Floraisons.Co's PR launch — the florals, the guests, and the in-between moments that made the room feel alive.",
-    tags: ["Event", "PR Launch"],
-    photos: folderPhotos("floraisons-pr-event", "Floraisons.Co PR event"),
-  },
-  {
-    slug: "school-orientation-shoot",
-    title: "School Orientation Shoot",
-    type: "photo",
-    story:
-      "Editorial studio portraits for a school orientation batch — colored gel lighting and a playful, uniform-inspired styling.",
-    tags: ["Editorial", "Studio"],
-    photos: folderPhotos("school-orientation-shoot", "School Orientation Shoot"),
-  },
-  {
-    slug: "design-your-dream-future",
-    title: "Design Your Dream Future",
-    type: "video",
-    cover: "https://i.ytimg.com/vi/ND4Ct0ticVE/maxresdefault.jpg",
-    story:
-      "Event coverage for a panel and workshop session on designing your future — the conversation, the crowd, and the moments in between.",
-    tags: ["Event", "Panel"],
-    youtubeId: "ND4Ct0ticVE",
-    instagramUrl: "https://www.instagram.com/reel/DV7jBB1EjIj/",
-    photos: [],
-  },
-];
-
-// A photo project's cover falls back to its first photo.
-export const PROJECTS: Project[] = ENTRIES.map((p) => ({ ...p, cover: p.cover ?? p.photos[0]?.src }));
-
-export function getProject(slug: string): Project | undefined {
-  return PROJECTS.find((p) => p.slug === slug);
+/** Accepts a bare 11-char YouTube ID or any common YouTube URL form. */
+export function parseYouTubeId(input: string): string | null {
+  const s = input.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
+  const m = s.match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
 }
 
-export function projectSlugs(): string[] {
-  return PROJECTS.map((p) => p.slug);
+export function youTubeThumbnail(id: string): string {
+  return `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
+}
+
+/** Rows (any order) → public Projects, sorted by position. Cover falls back
+ *  to the first photo, then the YouTube thumbnail. */
+export function rowsToProjects(projects: ProjectRow[], photos: PhotoRow[], supabaseUrl?: string): Project[] {
+  const byProject = new Map<string, PhotoRow[]>();
+  for (const ph of photos) {
+    const list = byProject.get(ph.project_id) ?? [];
+    list.push(ph);
+    byProject.set(ph.project_id, list);
+  }
+  return [...projects]
+    .sort((a, b) => a.position - b.position)
+    .map((p) => {
+      const gallery = (byProject.get(p.id) ?? [])
+        .sort((a, b) => a.position - b.position)
+        .map((ph, i) => ({ src: photoUrl(ph.path, supabaseUrl), alt: ph.alt || `${p.title} — photo ${i + 1}` }));
+      const cover = p.cover
+        ? photoUrl(p.cover, supabaseUrl)
+        : gallery[0]?.src ?? (p.youtube_id ? youTubeThumbnail(p.youtube_id) : undefined);
+      return {
+        slug: p.slug,
+        title: p.title,
+        type: p.type,
+        cover,
+        story: p.story,
+        tags: p.tags,
+        youtubeId: p.youtube_id ?? undefined,
+        instagramUrl: p.instagram_url ?? undefined,
+        photos: gallery,
+      };
+    });
 }

@@ -13,7 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Service } from './types';
-import { PROJECTS, ABOUT_PHOTO, type ProjectType } from './projects';
+import type { Project, ProjectType } from './projects';
 import ProjectCard from './ProjectCard';
 import HeroCanvas from './HeroCanvas';
 import HeroVideo from './HeroVideo';
@@ -214,10 +214,10 @@ const NavBar: React.FC = () => {
 
 // --- MAIN APP COMPONENT ---
 
-const Portfolio: React.FC = () => {
+const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ projects, aboutPhoto }) => {
   const [filter, setFilter] = useState<"all" | ProjectType>("all");
 
-  const filteredProjects = PROJECTS.filter(p => filter === "all" || p.type === filter);
+  const filteredProjects = projects.filter(p => filter === "all" || p.type === filter);
 
   return (
     <div className="min-h-dvh bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
@@ -407,7 +407,7 @@ const Portfolio: React.FC = () => {
 
           <ScrollReveal className="order-1 sm:order-2 relative group delay-200 max-w-xs sm:max-w-sm mx-auto sm:mx-0">
             <div className="aspect-2/3 bg-neutral-800 relative z-10 overflow-hidden">
-              <img src={ABOUT_PHOTO} alt="GGS Iceland Climate Action Event" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+              <img src={aboutPhoto} alt="GGS Iceland Climate Action Event" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
               <div className="absolute inset-0 bg-brand-orange mix-blend-multiply opacity-20 group-hover:opacity-0 transition-opacity"></div>
             </div>
 

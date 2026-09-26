@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProject, projectSlugs } from "@/components/portfolio/projects";
+import { getPortfolio, getProject } from "@/lib/portfolio/data";
 import ProjectDetail from "@/components/portfolio/ProjectDetail";
 
-export function generateStaticParams() {
-  return projectSlugs().map((slug) => ({ slug }));
+export const revalidate = 3600;
+
+// Pre-builds the current projects; ones added later render on first visit.
+export async function generateStaticParams() {
+  const { projects } = await getPortfolio();
+  return projects.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const project = getProject(slug);
+  const project = await getProject(slug);
   if (!project) return {};
   return {
     title: `${project.title} | Apex Cinematics`,
@@ -20,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const project = getProject(slug);
+  const project = await getProject(slug);
   if (!project) notFound();
   return <ProjectDetail project={project} />;
 }

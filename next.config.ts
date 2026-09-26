@@ -21,7 +21,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://vercel.live${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://vercel.live",
-  "img-src 'self' data: blob: https://vercel.live https://vercel.com https://i.ytimg.com",
+  "img-src 'self' data: blob: https://vercel.live https://vercel.com https://i.ytimg.com https://*.supabase.co",
   "media-src 'self'",
   "font-src 'self' https://vercel.live https://assets.vercel.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com",
@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "i.ytimg.com" },
+      // Portfolio photos uploaded from /invoices_login/portfolio.
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/portfolio/**" },
     ],
   },
   async headers() {
