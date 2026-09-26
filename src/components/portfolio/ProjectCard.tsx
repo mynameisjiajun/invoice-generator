@@ -19,7 +19,7 @@ export default function ProjectCard({ project, aspectClass = "aspect-video", wid
           alt={project.title}
           fill
           sizes={wide ? "(max-width: 768px) 100vw, 850px" : "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 420px"}
-          className={`object-cover ${wide ? "object-[center_30%]" : ""} opacity-80 transition-all duration-700 group-hover:opacity-100 group-hover:scale-105`}
+          className={`object-cover ${wide ? "object-[center_30%]" : ""} opacity-80 transition-[opacity,transform] duration-700 group-hover:opacity-100 group-hover:scale-105`}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-neutral-900 to-black">

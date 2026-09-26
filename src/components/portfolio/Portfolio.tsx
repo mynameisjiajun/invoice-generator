@@ -48,26 +48,33 @@ const SERVICES: Service[] = [
 
 // --- HELPER COMPONENTS ---
 
+// Fades content in the first time it scrolls into view, then stops watching
+// it. (Re-animating every time something re-entered the viewport kept the
+// page busy while scrolling.) Only opacity/transform animate — both are
+// compositor-only, so no layout or repaint work per frame.
 const ScrollReveal: React.FC<{ children: React.ReactNode; className?: string; delayMs?: number }> = ({ children, className = "", delayMs = 0 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const domRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => setIsVisible(entry.isIntersecting));
-    }, { threshold: 0.1 }); // Trigger when 10% visible
-
-    const currentRef = domRef.current;
-    if (currentRef) observer.observe(currentRef);
-    return () => { if (currentRef) observer.unobserve(currentRef); };
+    const el = domRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
     <div
       ref={domRef}
       style={{ transitionDelay: `${delayMs}ms` }}
-      className={`transition-all duration-1000 ease-out transform ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
+      className={`transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none ${
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 motion-reduce:opacity-100 motion-reduce:translate-y-0'
       } ${className}`}
     >
       {children}
@@ -139,7 +146,7 @@ const NavBar: React.FC = () => {
 
   return (
     <>
-      <nav className={`fixed top-0 w-full z-40 transition-all duration-300 border-b ${scrolled ? 'bg-black/90 backdrop-blur-md border-neutral-800 py-3' : 'bg-transparent border-transparent py-6'}`}>
+      <nav className={`fixed top-0 w-full z-40 transition-all duration-300 border-b ${scrolled ? 'bg-black/95 md:bg-black/90 md:backdrop-blur-md border-neutral-800 py-3' : 'bg-transparent border-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <a href="#home" className="text-3xl font-apex-display font-bold text-white tracking-tighter uppercase italic z-50">
             Apex<span className="text-brand-orange not-italic">Cinematics</span>
@@ -275,7 +282,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
               </ScrollReveal>
 
               <ScrollReveal className="delay-200">
-                <p className="max-w-xl text-lg md:text-xl text-neutral-200 font-light leading-relaxed border-l-2 border-brand-orange pl-6 backdrop-blur-sm bg-black/20 py-2">
+                <p className="max-w-xl text-lg md:text-xl text-neutral-200 font-light leading-relaxed border-l-2 border-brand-orange pl-6 bg-black/35 py-2">
                   Apex Cinematics is a Singapore-based studio covering events, documentaries, and social content — cinematic photo and video for everyone and anyone.
                 </p>
               </ScrollReveal>
@@ -285,7 +292,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                 <a href="#portfolio" className="px-8 py-4 bg-brand-orange text-white font-bold uppercase tracking-wider hover:bg-orange-600 transition-all text-center">
                   View Work
                 </a>
-                <a href="#contact" className="px-8 py-4 border border-white/20 backdrop-blur-md bg-black/30 text-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all text-center">
+                <a href="#contact" className="px-8 py-4 border border-white/20 bg-black/55 text-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all text-center">
                   Get In Touch
                 </a>
               </div>
