@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -8,10 +8,10 @@ import {
 } from "@/lib/portfolio/admin";
 import { parseYouTubeId, photoUrl, type PhotoRow, type ProjectRow } from "@/components/portfolio/projects";
 import { slugify } from "@/lib/slug";
-import { IconAdd, IconCheck, IconChevron, IconExternal, IconStar, IconTrash } from "@/components/icons";
+import { IconCheck, IconChevron, IconExternal, IconStar, IconTrash } from "@/components/icons";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import { refreshPublicSite } from "../actions";
-import { TypePicker } from "../ui";
+import { DropOverlay, PhotoDropZone, TypePicker, splitImages, useWindowFileDrag } from "../ui";
 
 type Draft = {
   title: string; type: ProjectRow["type"]; story: string; tags: string;
@@ -35,7 +35,6 @@ export default function ProjectEditorPage() {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [pendingDeletePhoto, setPendingDeletePhoto] = useState<PhotoRow | null>(null);
   const [pendingDeleteProject, setPendingDeleteProject] = useState(false);
-  const fileInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     Promise.all([getProjectRow(id), listPhotos(id)])
@@ -58,6 +57,31 @@ export default function ProjectEditorPage() {
     }
     setBusy(false);
   }
+
+  // Picked, dropped on the zone, or dropped anywhere on the page.
+  function onFiles(list: FileList) {
+    if (!project || busy) return;
+    const { images, skipped } = splitImages(list);
+    const note = skipped.length ? `Skipped ${skipped.length === 1 ? skipped[0] : `${skipped.length} files`} (not a photo).` : null;
+    if (images.length === 0) { setError(note ?? "No photos to upload"); return; }
+    const target = project;
+    const start = photos.length ? Math.max(...photos.map((x) => x.position)) + 1 : 0;
+    run(async () => {
+      try {
+        const added = await uploadPhotos(target, images, start, (done, total) =>
+          setUploadStatus(done < total ? `Uploading ${done + 1} of ${total}…` : null));
+        setPhotos((cur) => [...cur, ...added]);
+        if (note) setError(note);
+      } catch (e) {
+        // Keep whatever made it in before the failure.
+        setPhotos(await listPhotos(target.id));
+        throw e;
+      } finally {
+        setUploadStatus(null);
+      }
+    }, "Upload failed");
+  }
+  const draggingFiles = useWindowFileDrag(onFiles, !!project && !busy);
 
   if (!project || !draft) {
     return (
@@ -108,25 +132,6 @@ export default function ProjectEditorPage() {
       await updateProject(p.id, { published: !p.published });
       setProject({ ...p, published: !p.published });
     }, "Couldn't change visibility");
-  }
-
-  function onFiles(list: FileList | null) {
-    const files = Array.from(list ?? []);
-    if (files.length === 0) return;
-    const start = photos.length ? Math.max(...photos.map((x) => x.position)) + 1 : 0;
-    run(async () => {
-      try {
-        const added = await uploadPhotos(p, files, start, (done, total) =>
-          setUploadStatus(done < total ? `Uploading ${done + 1} of ${total}…` : null));
-        setPhotos((cur) => [...cur, ...added]);
-      } catch (e) {
-        // Keep whatever made it in before the failure.
-        setPhotos(await listPhotos(p.id));
-        throw e;
-      } finally {
-        setUploadStatus(null);
-      }
-    }, "Upload failed");
   }
 
   function movePhoto(index: number, delta: -1 | 1) {
@@ -202,14 +207,10 @@ export default function ProjectEditorPage() {
       {/* Photos */}
       <div className="section-label">Photos ({photos.length})</div>
       <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", marginBottom: 10 }}>
-        Tap ★ to choose the cover (otherwise it&apos;s the first photo). Arrows change the order.
+        Drag photos in to upload. Tap ★ to choose the cover (otherwise it&apos;s the first photo). Arrows change the order.
       </p>
-      <input ref={fileInput} type="file" accept="image/*" multiple hidden
-        onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
-      <button onClick={() => fileInput.current?.click()} disabled={busy}
-        className="btn btn-primary icon-btn" style={{ width: "100%", marginBottom: 12 }}>
-        <IconAdd size={15} /> {uploadStatus ?? "Add photos"}
-      </button>
+      <PhotoDropZone onFiles={onFiles} disabled={busy} status={uploadStatus} highlight={draggingFiles} />
+      {draggingFiles && <DropOverlay label={`Drop to add to “${p.title}”`} />}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8, marginBottom: 28 }}>
         {photos.map((ph, i) => {
           const isCover = coverPath === ph.path;

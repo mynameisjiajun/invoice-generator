@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@/lib/portfolio/admin";
 import { LEGACY_PROJECTS } from "@/components/portfolio/legacy-projects";
 import { photoUrl, youTubeThumbnail, type ProjectRow, type ProjectType } from "@/components/portfolio/projects";
-import { Thumb, TypePicker } from "./ui";
+import { PhotoDropZone, Thumb, TypePicker, splitImages } from "./ui";
 import { IconAdd, IconCheck, IconChevron, IconExternal } from "@/components/icons";
 import { refreshPublicSite } from "./actions";
 
@@ -45,7 +45,6 @@ export default function PortfolioAdminPage() {
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState<ProjectType>("photo");
-  const aboutInput = useRef<HTMLInputElement | null>(null);
 
   function apply(data: Loaded) {
     setProjects(data.rows);
@@ -105,8 +104,9 @@ export default function PortfolioAdminPage() {
     setBusy(false);
   }
 
-  async function onAboutFile(file: File | undefined) {
-    if (!file) return;
+  async function onAboutFiles(list: FileList) {
+    const file = splitImages(list).images[0];
+    if (!file) { setError("That isn't a photo — try a JPG or PNG"); return; }
     setBusy(true);
     setError(null);
     try {
@@ -224,12 +224,12 @@ export default function PortfolioAdminPage() {
       <div className="section-label">Studio section photo</div>
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, marginBottom: 24 }}>
         <Thumb src={about ? photoUrl(about) : undefined} alt="Studio section photo" tall />
-        <div style={{ flex: 1, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-          The tall photo beside “Based in Singapore”.
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 8 }}>
+            The tall photo beside “Based in Singapore”.
+          </div>
+          <PhotoDropZone onFiles={onAboutFiles} disabled={busy} multiple={false} />
         </div>
-        <input ref={aboutInput} type="file" accept="image/*" hidden
-          onChange={(e) => { onAboutFile(e.target.files?.[0]); e.target.value = ""; }} />
-        <button className="btn btn-secondary" disabled={busy} onClick={() => aboutInput.current?.click()}>Change</button>
       </div>
     </main>
   );
