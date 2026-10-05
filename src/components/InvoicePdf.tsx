@@ -9,7 +9,8 @@ import {
 } from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import { formatSgPhone, formatSgAddress } from "@/lib/phone";
-import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
+import { invoiceDocLabel, isPrintBusiness, type Business, type Invoice } from "@/lib/types";
+import { formatJobDate, parseHandover, printBreakdown, printSpecLine } from "@/lib/printRates";
 
 /* Montserrat (Proxima Nova-style geometric sans), served from public/fonts.
    This file is bundled for the browser (dynamically imported by
@@ -202,6 +203,7 @@ const s = StyleSheet.create({
   cellAmt: { flex: 1.5, textAlign: "right" },
   cellTot: { flex: 1.5, textAlign: "right" },
   cellText: { fontSize: 10.5, color: C.dark },
+  cellSub: { fontSize: 8.5, color: C.mid, marginTop: 2 },
   cellTextBold: { fontSize: 10.5, fontFamily: "Montserrat",
     fontWeight: 700, color: C.dark },
 
@@ -433,14 +435,33 @@ export default function InvoicePdf({
             )}
           </View>
           <View style={s.infoCard}>
-            <Text style={s.label}>Job Details</Text>
-            <Text style={s.infoName}>{invoice.job_event}</Text>
-            {invoice.job_date ? (
-              <Text style={s.infoDetail}>{invoice.job_date}</Text>
-            ) : null}
-            {invoice.job_location ? (
-              <Text style={s.infoDetail}>{invoice.job_location}</Text>
-            ) : null}
+            {isPrintBusiness(business) ? (() => {
+              const handover = parseHandover(invoice.job_location);
+              return (
+                <>
+                  <Text style={s.label}>Project</Text>
+                  {invoice.job_event ? <Text style={s.infoName}>{invoice.job_event}</Text> : null}
+                  <Text style={s.infoDetail}>
+                    {handover.mode === "delivery" ? "Delivery" : "Self-collection"}
+                  </Text>
+                  {handover.address ? <Text style={s.infoDetail}>{handover.address}</Text> : null}
+                  {invoice.job_date ? (
+                    <Text style={s.infoDetail}>Ready by {formatJobDate(invoice.job_date)}</Text>
+                  ) : null}
+                </>
+              );
+            })() : (
+              <>
+                <Text style={s.label}>Job Details</Text>
+                <Text style={s.infoName}>{invoice.job_event}</Text>
+                {invoice.job_date ? (
+                  <Text style={s.infoDetail}>{invoice.job_date}</Text>
+                ) : null}
+                {invoice.job_location ? (
+                  <Text style={s.infoDetail}>{invoice.job_location}</Text>
+                ) : null}
+              </>
+            )}
             <Text style={[s.label, { marginTop: 10 }]}>Payment Terms</Text>
             <Text style={s.infoDetail}>{business.payment_terms}</Text>
           </View>
@@ -459,7 +480,26 @@ export default function InvoicePdf({
               key={i}
               style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
             >
-              <Text style={[s.cellText, s.cellDesc]}>{li.description}</Text>
+              {li.print ? (() => {
+                // The breakdown only appears when the charged price is the
+                // rate-card price — an overridden price would make it not add up.
+                const calc = printBreakdown(li.print);
+                const spec = printSpecLine(li.print);
+                return (
+                  <View style={s.cellDesc}>
+                    <Text style={s.cellText}>{li.description}</Text>
+                    {spec ? <Text style={s.cellSub}>{spec}</Text> : null}
+                    {calc && calc.totalCents === li.unitPriceCents ? (
+                      <Text style={s.cellSub}>
+                        Material {formatSGD(calc.materialCents)} + Print time {formatSGD(calc.timeCents)}
+                        {li.print.multiColour ? " (incl. multi-colour +20%)" : ""}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })() : (
+                <Text style={[s.cellText, s.cellDesc]}>{li.description}</Text>
+              )}
               <Text style={[s.cellText, s.cellQty]}>{li.qty}</Text>
               <Text style={[s.cellText, s.cellAmt]}>
                 {formatSGD(li.unitPriceCents)}

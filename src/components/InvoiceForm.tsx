@@ -8,7 +8,9 @@ import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib
 import { plusDaysIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
-import type { Customer, Preset } from "@/lib/types";
+import { isPrintBusiness, type Customer, type Preset } from "@/lib/types";
+import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec } from "@/lib/printRates";
+import { PrintLineItem, PrintProjectFields } from "@/components/PrintInvoiceFields";
 import { IconClose } from "@/components/icons";
 import NumberInput from "@/components/NumberInput";
 import ConfirmSheet from "@/components/ConfirmSheet";
@@ -93,9 +95,15 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         const bizId = activeBusiness!.id;
         setFormBusinessId(bizId);
         // A prefilled invoice starts fresh rather than restoring an unrelated autosaved form.
-        setForm(prefill
+        const start = prefill
           ? { ...emptyForm(), businessId: bizId, customerId: prefill.customerId, jobEvent: prefill.jobEvent ?? "", jobDate: prefill.jobDate ?? "" }
-          : loadForm(bizId) ?? { ...emptyForm(), businessId: bizId });
+          : loadForm(bizId) ?? { ...emptyForm(), businessId: bizId };
+        // A print shop's blank starter line opens as a print card.
+        setForm(isPrintBusiness(activeBusiness) ? {
+          ...start,
+          lineItems: start.lineItems.map((li) =>
+            !li.print && !li.description.trim() && !li.unitPriceCents ? { ...li, print: emptyPrintSpec() } : li),
+        } : start);
       }
     })().catch((e) => {
       loadedRef.current = null; // let a retry re-attempt the failed load
@@ -135,6 +143,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
 
   const f = form;
   const formBusiness = businesses.find((b) => b.id === formBusinessId);
+  const isPrint = isPrintBusiness(formBusiness);
   // Functional updater: merges onto the latest state rather than the `f`
   // snapshot closed over at render time. persistDraft() below calls set()
   // twice across an await boundary (once after creating a new customer,
@@ -143,6 +152,17 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   // risking a duplicate customer being created if the user retries after a
   // failure (e.g. a finalize that errors after the draft save).
   const set = (patch: Partial<FormState>) => setForm((prev) => (prev ? { ...prev, ...patch } : prev));
+
+  // Fee lines are plain items (no print specs). Blank untouched lines are
+  // dropped first so a fee doesn't land after an empty starter card; the
+  // new line's price is focused so a blank fee can be typed straight in.
+  function addFee(item: { description: string; qty: number; unitPriceCents: number }) {
+    const kept = f.lineItems.filter((li) => li.description.trim() || li.unitPriceCents);
+    set({ lineItems: [...kept, item] });
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLInputElement>(`[aria-label="Unit price for line ${kept.length + 1}"]`)?.focus();
+    });
+  }
 
   async function persistDraft(): Promise<string> {
     if (!formBusinessId) throw new Error("No business selected");
@@ -260,8 +280,13 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
 
       {/* Job section */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="section-label">Job Details</div>
+        <div className="section-label">{isPrint ? "Project" : "Job Details"}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {isPrint ? (
+            <PrintProjectFields project={f.jobEvent} readyBy={f.jobDate} location={f.jobLocation}
+              customerAddress={f.newCustomer?.address ?? customers.find((c) => c.id === f.customerId)?.address ?? ""}
+              onChange={set} />
+          ) : (<>
           <div>
             <label className="input-label">Event name</label>
             <input className="input" placeholder="e.g. Jordan Birthday Party Shoot"
@@ -277,6 +302,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
             <input className="input" placeholder="e.g. Marina Bay Sands"
               value={f.jobLocation} onChange={(e) => set({ jobLocation: e.target.value })} />
           </div>
+          </>)}
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 1 }}>
               <label className="input-label">Invoice date</label>
@@ -304,7 +330,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
       {/* Line items */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div className="section-label" style={{ marginBottom: 0 }}>Line Items</div>
+          <div className="section-label" style={{ marginBottom: 0 }}>{isPrint ? "Prints" : "Line Items"}</div>
           {presets.length > 0 && (
             <select className="input" style={{ width: "auto", padding: "6px 32px 6px 10px", fontSize: "0.8rem" }} value=""
               onChange={(e) => {
@@ -322,14 +348,19 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {f.lineItems.map((li, i) => (
+          {f.lineItems.map((li, i) => isPrint && li.print ? (
+            <PrintLineItem key={i} item={li} index={i}
+              onChange={(item) => set({ lineItems: f.lineItems.map((x, j) => j === i ? item : x) })}
+              onRemove={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })} />
+          ) : (
             <div key={i} style={{
               background: "var(--bg-primary)",
               borderRadius: "var(--radius-md)",
               padding: 14,
               border: "1px solid var(--border-subtle)",
             }}>
-              <textarea className="input" rows={2} placeholder="Description (event, time, shoot type, location)"
+              <textarea className="input" rows={2}
+                placeholder={isPrint ? "Description" : "Description (event, time, shoot type, location)"}
                 style={{ marginBottom: 10, minHeight: 60 }}
                 value={li.description}
                 onChange={(e) => set({ lineItems: f.lineItems.map((x, j) => j === i ? { ...x, description: e.target.value } : x) })} />
@@ -363,10 +394,29 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           ))}
         </div>
 
+        {isPrint ? (
+          <>
+            <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }}
+              onClick={() => set({ lineItems: [...f.lineItems, { description: "", qty: 1, unitPriceCents: 0, print: emptyPrintSpec() }] })}>
+              + Add print
+            </button>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn btn-ghost" style={{ flex: 1, fontSize: "0.8rem" }}
+                onClick={() => addFee({ description: "Design / modelling", qty: 1, unitPriceCents: 0 })}>
+                + Design fee
+              </button>
+              <button className="btn btn-ghost" style={{ flex: 1, fontSize: "0.8rem" }}
+                onClick={() => addFee({ description: "Express (1–2 days), per build plate", qty: 1, unitPriceCents: EXPRESS_CENTS_PER_PLATE })}>
+                + Express
+              </button>
+            </div>
+          </>
+        ) : (
         <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }}
           onClick={() => set({ lineItems: [...f.lineItems, { description: "", qty: 1, unitPriceCents: 0 }] })}>
           + Add line item
         </button>
+        )}
       </div>
 
       {/* Discount */}

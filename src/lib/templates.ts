@@ -1,5 +1,6 @@
 import { formatSGD } from "@/lib/money";
-import type { Business, Invoice } from "@/lib/types";
+import { isPrintBusiness, type Business, type Invoice } from "@/lib/types";
+import { formatJobDate } from "./printRates";
 
 // The user's real default email copy — seeded here (not in the DB) so it can
 // evolve without a migration. Placeholders: {name} {first_name} {job} {job_date}
@@ -35,8 +36,8 @@ export function templateVars(inv: Invoice, biz: Business): Record<string, string
   return {
     name: name || "there",
     first_name: name.split(/\s+/)[0] || "there",
-    job: inv.job_event || "the shoot",
-    job_date: inv.job_date || "",
+    job: inv.job_event || (isPrintBusiness(biz) ? "your print order" : "the shoot"),
+    job_date: formatJobDate(inv.job_date || ""),
     invoice_number: inv.invoice_number ?? "",
     total: formatSGD(inv.total_cents),
     paynow: biz.paynow_number.trim(),

@@ -1,4 +1,8 @@
-export type LineItem = { description: string; qty: number; unitPriceCents: number };
+import type { PrintSpec } from "./printRates";
+
+/** `print` is set on 3D-print parts (JJ Gears & Prints); fees and every
+ *  photography line leave it off. */
+export type LineItem = { description: string; qty: number; unitPriceCents: number; print?: PrintSpec };
 export type DiscountType = "none" | "amount" | "percent";
 
 export function lineTotalCents(item: LineItem): number {

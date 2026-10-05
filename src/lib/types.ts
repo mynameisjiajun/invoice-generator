@@ -42,7 +42,16 @@ export type Business = {
   archived_at: string | null;
   email_template: string; whatsapp_template: string;
   logo_data_url: string | null;
+  /** "print" switches invoices to the 3D-print form and PDF. Optional
+   *  because rows read before migration 019 don't have it. */
+  kind?: BusinessKind;
 };
+
+export type BusinessKind = "photo" | "print";
+
+export function isPrintBusiness(b: Pick<Business, "kind"> | null | undefined): boolean {
+  return b?.kind === "print";
+}
 
 export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {
   if (inv.status !== "unpaid") return false;

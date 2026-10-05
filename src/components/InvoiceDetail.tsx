@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
+import { formatJobDate } from "@/lib/printRates";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
@@ -268,7 +269,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
         <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 2 }}>{invoice.customers?.name}</p>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{invoice.job_event}</p>
         <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>
-          {invoice.job_date} · {invoice.job_location}
+          {[formatJobDate(invoice.job_date), invoice.job_location].filter(Boolean).join(" · ")}
         </p>
         <div style={{
           marginTop: 16,
