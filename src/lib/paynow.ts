@@ -1,11 +1,37 @@
-function tlv(id: string, value: string): string {
-  return id + String(value.length).padStart(2, "0") + value;
+// PayNow QR payload (EMVCo merchant-presented mode / SGQR), ported from
+// https://github.com/xkjyeah/paynow-qr-generator — a known-good generator —
+// adjusted to SGQR / PayNow v1.2 for invoices: fixed amount, dynamic QR,
+// reference in 62/01 only.
+
+type QRDataValue = null | string | QRData;
+
+class QRData {
+  constructor(private components: Record<string, QRDataValue>) {}
+
+  toString(): string {
+    return Object.entries(this.components)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, comp]) => {
+        if (!/^[0-9]{2}$/.test(key)) throw new Error("Key should be a 2-digit numeric key code");
+        if (comp === null) return "";
+        const value = typeof comp === "string" ? comp : comp.toString();
+        if (value.length > 99) throw new Error("Encoded length should not exceed 99!");
+        return key + String(value.length).padStart(2, "0") + value;
+      })
+      .join("");
+  }
+
+  toStringWithCRC(): string {
+    const result = this.toString() + "6304";
+    return result + crc16ccitt(result);
+  }
 }
 
+/** CRC-16/CCITT-FALSE over the UTF-8 bytes of the input, as 4 uppercase hex digits. */
 export function crc16ccitt(input: string): string {
   let crc = 0xffff;
-  for (let i = 0; i < input.length; i++) {
-    crc ^= input.charCodeAt(i) << 8;
+  for (const byte of new TextEncoder().encode(input)) {
+    crc ^= byte << 8;
     for (let b = 0; b < 8; b++) {
       crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
     }
@@ -14,42 +40,45 @@ export function crc16ccitt(input: string): string {
 }
 
 /**
- * Reduce a stored PayNow mobile to the bare 8-digit local number:
- * "+65 9656 1716", "6596561716" and "96561716" all become "96561716".
- * Anything that doesn't look like an SG mobile is left as digits-only.
+ * Standardise a stored PayNow mobile the way the reference generator does:
+ * a bare 8-digit SG number gets "+65" prefixed. "+65 9656 1716",
+ * "6596561716" and "96561716" all become "+6596561716".
  */
 export function normaliseMobile(mobile: string): string {
   const digits = mobile.replace(/\D/g, "");
-  return /^65[89]\d{7}$/.test(digits) ? digits.slice(2) : digits;
+  if (/^[0-9]{8}$/.test(digits)) return "+65" + digits;
+  if (/^65[0-9]{8}$/.test(digits)) return "+" + digits;
+  return mobile.trim().startsWith("+") ? "+" + digits : digits;
 }
 
 export function paynowPayload(opts: {
   mobile: string;
   amountCents: number;
   reference: string;
-  merchantName?: string;
 }): string {
-  const amount = (opts.amountCents / 100).toFixed(2);
-  // PayNow's mobile proxy value must be digits only — no "+" and no spaces.
-  // It must also be the bare 8-digit local number: POSB/DBS rejects the QR
-  // when the 65 country code is prefixed, so strip it off.
-  const mobileDigits = normaliseMobile(opts.mobile);
-  const merchantAccountInfo =
-    tlv("00", "SG.PAYNOW") +
-    tlv("01", "0") +            // proxy type: mobile
-    tlv("02", mobileDigits) +   // proxy value
-    tlv("03", "0");             // amount not editable
-  const body =
-    tlv("00", "01") +           // payload format
-    tlv("01", "12") +           // dynamic QR
-    tlv("26", merchantAccountInfo) +
-    tlv("52", "0000") +         // MCC
-    tlv("53", "702") +          // SGD
-    tlv("54", amount) +
-    tlv("58", "SG") +
-    tlv("59", (opts.merchantName ?? "NA").slice(0, 25)) +
-    tlv("60", "Singapore") +
-    tlv("62", tlv("01", opts.reference.slice(0, 25))) + // bill/reference number
-    "6304";                     // CRC id+len, value appended below
-  return body + crc16ccitt(body);
+  // SGQR bill number: up to 25 printable ASCII characters.
+  const reference = opts.reference.replace(/[^\x20-\x7e]/g, "").slice(0, 25);
+  return new QRData({
+    "00": "01", // Payload format indicator
+    // 11 - static (same QR for many payments), 12 - dynamic (one QR per
+    // transaction). An invoice QR carries one fixed amount, so it's dynamic.
+    "01": "12",
+    "26": new QRData({
+      "00": "SG.PAYNOW",
+      "01": "0", // Proxy type: 0 - mobile, 2 - UEN
+      "02": normaliseMobile(opts.mobile),
+      "03": "0", // Amount is not editable — pay exactly the invoice total
+      // "05" (transaction reference) was removed in PayNow v1.2; the
+      // reference goes in 62/01 instead.
+    }),
+    "52": "0000", // Merchant category code
+    "53": "702", // ISO 4217 code for SGD
+    "54": (opts.amountCents / 100).toFixed(2), // Transaction amount
+    "58": "SG",
+    "59": "NA", // Merchant name -- doesn't matter because PayNow has its own lookup
+    "60": "Singapore", // City
+    // EMVCo forbids zero-length data objects, so leave 62 out entirely
+    // rather than emitting an empty "6200" when there's no reference.
+    "62": reference ? new QRData({ "01": reference }) : null, // Bill number
+  }).toStringWithCRC();
 }

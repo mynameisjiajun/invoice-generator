@@ -97,10 +97,44 @@ export type OutgoingMail = {
   attachment?: { filename: string; mimeType: string; content: Buffer };
 };
 
-/** Builds a multipart/mixed MIME message. Headers and boundaries use CRLF,
- *  which the RFC requires and Gmail enforces. */
+/** The plain-text body as minimal HTML, matching what Gmail's own composer
+ *  produces: escaped text with line breaks, in a `<div dir="ltr">`. */
+function bodyHtml(text: string): string {
+  const escaped = text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\r?\n/g, "<br>");
+  return `<div dir="ltr">${escaped}</div>`;
+}
+
+/** `filename`/`name` parameters for an attachment. ASCII names go in plain
+ *  quoted form; anything else also gets an RFC 2231 `filename*` so Apple Mail
+ *  and Outlook show the real name rather than failing to parse the header. */
+function filenameParams(filename: string): { name: string; disposition: string } {
+  const clean = filename.replace(/["\r\n]/g, "");
+  if (/^[\x20-\x7E]*$/.test(clean)) {
+    return { name: `name="${clean}"`, disposition: `filename="${clean}"` };
+  }
+  const ascii = clean.replace(/[^\x20-\x7E]/g, "_");
+  const encoded = encodeURIComponent(clean).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return {
+    name: `name="${encodeHeader(clean)}"`,
+    disposition: `filename="${ascii}"; filename*=UTF-8''${encoded}`,
+  };
+}
+
+const newBoundary = (tag: string) =>
+  `${tag}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
+/** Builds the MIME message. Headers and boundaries use CRLF, which the RFC
+ *  requires and Gmail enforces.
+ *
+ *  With an attachment, the layout mirrors what Gmail's web composer sends:
+ *  multipart/mixed { multipart/alternative { text/plain, text/html }, pdf }.
+ *  The HTML alternative matters: Apple Mail renders attachments on a
+ *  plain-text-only message *inline*, which for a PDF shows up as a grey box
+ *  with a "?" instead of the usual attachment card. */
 export function buildMime(mail: OutgoingMail, from: string): string {
-  const boundary = `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  const boundary = newBoundary("b");
   const fromHeader = mail.senderName ? `${encodeHeader(mail.senderName)} <${from}>` : from;
   const headers = [
     `From: ${fromHeader}`,
@@ -120,19 +154,32 @@ export function buildMime(mail: OutgoingMail, from: string): string {
   }
 
   const { filename, mimeType, content } = mail.attachment;
+  const alt = newBoundary("a");
+  const params = filenameParams(filename);
   return [
     ...headers,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
     `--${boundary}`,
+    `Content-Type: multipart/alternative; boundary="${alt}"`,
+    "",
+    `--${alt}`,
     'Content-Type: text/plain; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
     "",
     wrapBase64(Buffer.from(mail.body, "utf8").toString("base64")),
     "",
+    `--${alt}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    wrapBase64(Buffer.from(bodyHtml(mail.body), "utf8").toString("base64")),
+    "",
+    `--${alt}--`,
+    "",
     `--${boundary}`,
-    `Content-Type: ${mimeType}; name="${filename.replace(/"/g, "")}"`,
-    `Content-Disposition: attachment; filename="${filename.replace(/"/g, "")}"`,
+    `Content-Type: ${mimeType}; ${params.name}`,
+    `Content-Disposition: attachment; ${params.disposition}`,
     "Content-Transfer-Encoding: base64",
     "",
     wrapBase64(content.toString("base64")),

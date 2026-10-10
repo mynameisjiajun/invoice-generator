@@ -74,6 +74,30 @@ describe("buildMime", () => {
     expect(Buffer.from(lines.join(""), "base64")).toEqual(content);
   });
 
+  it("sends the body as text/plain + text/html alternatives, like Gmail's composer (Apple Mail attachment card)", () => {
+    const mime = buildMime(
+      { ...base, body: "Hi <Jane> & co,\nThanks.", attachment: { filename: "a.pdf", mimeType: "application/pdf", content: Buffer.from("x") } },
+      from,
+    );
+    const boundary = header(mime, "Content-Type")!.match(/boundary="([^"]+)"/)![1];
+    const bodyPart = mime.split(`--${boundary}`)[1];
+    const alt = bodyPart.match(/multipart\/alternative; boundary="([^"]+)"/)![1];
+    const [, plain, html, closing] = bodyPart.split(`--${alt}`);
+    expect(plain).toContain("Content-Type: text/plain");
+    expect(html).toContain("Content-Type: text/html");
+    expect(Buffer.from(html.split("\r\n\r\n")[1].trim(), "base64").toString("utf8"))
+      .toBe('<div dir="ltr">Hi &lt;Jane&gt; &amp; co,<br>Thanks.</div>');
+    expect(closing.startsWith("--")).toBe(true);
+  });
+
+  it("adds an RFC 2231 filename* for non-ASCII attachment names", () => {
+    const mime = buildMime(
+      { ...base, attachment: { filename: "Invoice for Zoë.pdf", mimeType: "application/pdf", content: Buffer.from("x") } },
+      from,
+    );
+    expect(mime).toContain(`Content-Disposition: attachment; filename="Invoice for Zo_.pdf"; filename*=UTF-8''Invoice%20for%20Zo%C3%AB.pdf`);
+  });
+
   it("escapes quotes in a filename so the header stays parseable", () => {
     const mime = buildMime(
       { ...base, attachment: { filename: 'in"voice.pdf', mimeType: "application/pdf", content: Buffer.from("x") } },

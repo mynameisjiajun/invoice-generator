@@ -89,7 +89,6 @@ async function main() {
     mobile: business.paynow_number,
     amountCents: invoice.total_cents,
     reference: invoice.invoice_number!,
-    merchantName: business.payee_name.toUpperCase(),
   });
   const qr = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 512 });
   let logo: string | null = null;

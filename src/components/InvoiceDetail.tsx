@@ -81,7 +81,6 @@ export default function InvoiceDetail({ id }: { id: string }) {
           mobile: st.paynow_number,
           amountCents: inv.total_cents,
           reference: inv.invoice_number ?? "",
-          merchantName: st.payee_name.toUpperCase(),
         }))
       : Promise.resolve(null);
     const qr = await qrPromise;
