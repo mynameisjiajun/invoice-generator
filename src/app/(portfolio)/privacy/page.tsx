@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 const UPDATED = "22 September 2026";
-const CONTACT = "chuajiajun2705@gmail.com";
+const CONTACT = "contact@apexcinematics.tech";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

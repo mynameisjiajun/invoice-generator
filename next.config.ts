@@ -63,11 +63,6 @@ const nextConfig: NextConfig = {
       { source: "/invoice-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
     ];
   },
-  async redirects() {
-    return [
-      { source: "/login", destination: "/invoices_login", permanent: true },
-    ];
-  },
 };
 
 export default nextConfig;

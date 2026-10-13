@@ -148,8 +148,8 @@ const NavBar: React.FC = () => {
     <>
       <nav className={`fixed top-0 w-full z-40 transition-all duration-300 border-b ${scrolled ? 'bg-black/95 md:bg-black/90 md:backdrop-blur-md border-neutral-800 py-3' : 'bg-transparent border-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <a href="#home" className="text-3xl font-apex-display font-bold text-white tracking-tighter uppercase italic z-50">
-            Apex<span className="text-brand-orange not-italic">Cinematics</span>
+          <a href="#home" className="block z-50" aria-label="Apex Cinematics, back to top">
+            <img src="/logo.png" alt="Apex Cinematics" width={800} height={198} className="h-9 md:h-10 w-auto" />
           </a>
 
           {/* Desktop Nav */}
@@ -459,22 +459,22 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
           <ScrollReveal delayMs={200}>
             <div className="bg-neutral-900/50 p-8 md:p-12 border border-neutral-800">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <a href="mailto:chuajiajun2705@gmail.com" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
+                <a href="mailto:contact@apexcinematics.tech" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
                   <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center text-white group-hover:bg-brand-orange transition-colors">
                     <Mail size={24} />
                   </div>
                   <div>
                     <div className="text-white font-apex-display font-bold uppercase tracking-wider">Email</div>
-                    <div className="text-neutral-500 text-sm mt-1 break-all">chuajiajun2705@gmail.com</div>
+                    <div className="text-neutral-500 text-sm mt-1 break-all">contact@apexcinematics.tech</div>
                   </div>
                 </a>
-                <a href="https://www.instagram.com/mynameisjiajun" target="_blank" rel="noopener noreferrer" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
+                <a href="https://www.instagram.com/apexcinematicssg" target="_blank" rel="noopener noreferrer" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
                   <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center text-white group-hover:bg-brand-orange transition-colors">
                     <Instagram size={24} />
                   </div>
                   <div>
                     <div className="text-white font-apex-display font-bold uppercase tracking-wider">Instagram</div>
-                    <div className="text-neutral-500 text-sm mt-1">@mynameisjiajun</div>
+                    <div className="text-neutral-500 text-sm mt-1">@ApexCinematicsSG</div>
                   </div>
                 </a>
                 <a href="https://t.me/mynameisjiajun" target="_blank" rel="noopener noreferrer" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
@@ -501,9 +501,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
       <footer className="py-12 bg-black border-t border-neutral-900">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-2xl font-apex-display font-bold text-white uppercase italic">
-            Apex<span className="text-brand-orange not-italic">Cinematics</span>
-          </div>
+          <img src="/logo.png" alt="Apex Cinematics" width={800} height={198} loading="lazy" className="h-8 w-auto" />
           <p className="text-neutral-600 text-xs font-mono uppercase tracking-widest">
             © 2026 Apex Cinematics SG. All rights reserved.
           </p>

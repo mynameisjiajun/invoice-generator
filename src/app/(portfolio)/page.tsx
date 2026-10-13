@@ -44,13 +44,13 @@ export default async function HomePage() {
     name: "Apex Cinematics",
     url: SITE,
     description: DESCRIPTION,
-    email: "chuajiajun2705@gmail.com",
+    email: "contact@apexcinematics.tech",
     image: projects.map((p) => p.cover).filter((c): c is string => !!c).slice(0, 3).map((c) => new URL(c, SITE).toString()),
     founder: { "@type": "Person", name: "Chua Jia Jun" },
     address: { "@type": "PostalAddress", addressLocality: "Singapore", addressCountry: "SG" },
     areaServed: { "@type": "Country", name: "Singapore" },
     knowsAbout: ["Event videography", "Event photography", "Documentary film", "Social media content"],
-    sameAs: ["https://www.instagram.com/mynameisjiajun"],
+    sameAs: ["https://www.instagram.com/apexcinematicssg"],
   };
 
   return (

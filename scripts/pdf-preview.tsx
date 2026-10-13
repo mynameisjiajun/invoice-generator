@@ -28,11 +28,11 @@ Font.register({
 
 const business: Business = {
   id: "preview-business",
-  name: "JJ Visuals",
+  name: "Apex Cinematics",
   slug: "photography",
   address: "Blk 296A Compassvale Crescent #10-293, S541296",
   phone: "+65 9656 1716",
-  email: "chuajiajun2705@gmail.com",
+  email: "contact@apexcinematics.tech",
   paynow_number: "+6596561716",
   payee_name: "Chua Jia Jun",
   bank_details: "Bank Name: DBS",

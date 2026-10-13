@@ -20,7 +20,7 @@ export async function submitEnquiry(_prev: EnquiryState, form: FormData): Promis
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const failed: EnquiryState = {
     status: "error",
-    message: "Your enquiry didn't go through. Please email chuajiajun2705@gmail.com instead.",
+    message: "Your enquiry didn't go through. Please email contact@apexcinematics.tech instead.",
   };
   if (!url || !key) return failed;
 

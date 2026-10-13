@@ -70,7 +70,7 @@ export default function LoginPage() {
             color: "var(--text-primary)",
             marginBottom: 6,
           }}>
-            JJ Visuals
+            Apex Cinematics
           </h1>
           <p className="section-label" style={{ display: "inline-flex", marginBottom: 0 }}>
             Sign in to manage your invoices

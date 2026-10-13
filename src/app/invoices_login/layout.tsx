@@ -29,8 +29,10 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JJ Visuals Invoices",
-  description: "Invoice generator for JJ Visuals",
+  title: "Apex Cinematics Admin",
+  description: "Apex Cinematics admin",
+  // Kept out of search results (robots.txt no longer names this path).
+  robots: { index: false, follow: false },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Invoices" },
   icons: {
