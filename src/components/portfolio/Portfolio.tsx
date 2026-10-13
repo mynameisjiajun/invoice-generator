@@ -7,7 +7,6 @@ import {
   Menu,
   X,
   Instagram,
-  Send,
   Mail,
   ArrowRight,
   Zap,
@@ -458,7 +457,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
           <ScrollReveal delayMs={200}>
             <div className="bg-neutral-900/50 p-8 md:p-12 border border-neutral-800">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <a href="mailto:contact@apexcinematics.tech" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
                   <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center text-white group-hover:bg-brand-orange transition-colors">
                     <Mail size={24} />
@@ -475,15 +474,6 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                   <div>
                     <div className="text-white font-apex-display font-bold uppercase tracking-wider">Instagram</div>
                     <div className="text-neutral-500 text-sm mt-1">@ApexCinematicsSG</div>
-                  </div>
-                </a>
-                <a href="https://t.me/mynameisjiajun" target="_blank" rel="noopener noreferrer" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
-                  <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center text-white group-hover:bg-brand-orange transition-colors">
-                    <Send size={24} />
-                  </div>
-                  <div>
-                    <div className="text-white font-apex-display font-bold uppercase tracking-wider">Telegram</div>
-                    <div className="text-neutral-500 text-sm mt-1">@mynameisjiajun</div>
                   </div>
                 </a>
               </div>
@@ -503,7 +493,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <img src="/logo.png" alt="Apex Cinematics" width={800} height={198} loading="lazy" className="h-8 w-auto" />
           <p className="text-neutral-600 text-xs font-mono uppercase tracking-widest">
-            © 2026 Apex Cinematics SG. All rights reserved.
+            © {new Date().getFullYear()} Apex Cinematics SG. All rights reserved.
           </p>
         </div>
       </footer>

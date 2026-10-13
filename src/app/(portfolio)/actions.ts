@@ -1,6 +1,6 @@
 "use server";
 import { after } from "next/server";
-import { gmailEnv, sendMail } from "@/lib/gmail";
+import { sendMail } from "@/lib/gmail";
 import { looksLikeBot, parseEnquiry } from "@/lib/enquiry";
 
 export type EnquiryState = { status: "idle" | "sent" | "error"; message?: string };
@@ -43,9 +43,9 @@ export async function submitEnquiry(_prev: EnquiryState, form: FormData): Promis
 
   after(async () => {
     try {
-      const to = gmailEnv().sender;
+      // Sent from the Gmail account, delivered to the business inbox.
       await sendMail({
-        to,
+        to: "contact@apexcinematics.tech",
         subject: `New enquiry: ${enquiry.name}${enquiry.shoot_type ? ` (${enquiry.shoot_type})` : ""}`,
         body: [
           `${enquiry.name} <${enquiry.email}>${enquiry.phone ? `, ${enquiry.phone}` : ""}`,

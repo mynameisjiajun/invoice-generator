@@ -8,6 +8,10 @@ const subscribe = (cb: () => void) => {
   return () => mq.removeEventListener("change", cb);
 };
 
+// Chrome/Android's Data Saver flag; undefined elsewhere (Safari), so it only ever opts out.
+const saveData = () =>
+  (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+
 // Low-opacity static-glitch texture behind the hero title. Native <video>
 // (self-hosted, media-src 'self') layered over HeroCanvas; the canvas stays
 // as the base so a failed load or reduced-motion user still gets atmosphere.
@@ -16,8 +20,8 @@ const subscribe = (cb: () => void) => {
 export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
-  // Server render and reduced-motion users get no video.
-  const enabled = useSyncExternalStore(subscribe, () => !window.matchMedia(REDUCED).matches, () => false);
+  // Server render, reduced-motion users and Data Saver phones get no video.
+  const enabled = useSyncExternalStore(subscribe, () => !window.matchMedia(REDUCED).matches && !saveData(), () => false);
 
   useEffect(() => {
     const video = videoRef.current;
