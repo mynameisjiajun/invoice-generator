@@ -45,6 +45,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Hide the Next.js "N" badge in local dev.
+  devIndicators: false,
   turbopack: {
     root: path.resolve(__dirname),
   },
