@@ -237,6 +237,9 @@ function leadLayout(count: number): { span: string; aspect: string } | null {
 const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ projects, aboutPhoto }) => {
   const [filter, setFilter] = useState<"all" | ProjectType>("all");
 
+  // The service a visitor asked to quote; preselected in the form.
+  const [shootType, setShootType] = useState("");
+
   const filteredProjects = projects.filter(p => filter === "all" || p.type === filter);
 
   return (
@@ -482,7 +485,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
               <div className="mt-12 pt-12 border-t border-neutral-800">
                 <h3 className="text-3xl md:text-4xl font-apex-display font-bold text-white uppercase mb-2">Or send the details</h3>
                 <p className="text-neutral-400 mb-8">A few lines is enough — date, type of shoot and a rough budget help me quote faster.</p>
-                <EnquiryForm />
+                <EnquiryForm shootType={shootType} onShootTypeChange={setShootType} />
               </div>
             </div>
           </ScrollReveal>

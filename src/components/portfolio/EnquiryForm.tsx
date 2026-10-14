@@ -11,7 +11,10 @@ const input =
   "focus:border-brand-orange focus:outline-none transition-colors";
 const label = "block text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2";
 
-export default function EnquiryForm() {
+export default function EnquiryForm({ shootType, onShootTypeChange }: {
+  shootType: string;
+  onShootTypeChange: (t: string) => void;
+}) {
   const [state, action, pending] = useActionState<EnquiryState, FormData>(submitEnquiry, { status: "idle" });
   // When the form was first shown — lets the server tell people from instant bot posts.
   const [started] = useState(() => String(Date.now()));
@@ -20,7 +23,7 @@ export default function EnquiryForm() {
     return (
       <div role="status" className="border-l-2 border-brand-orange pl-6 py-2">
         <p className="text-3xl font-apex-display font-bold text-white uppercase">Enquiry received</p>
-        <p className="mt-2 text-neutral-400">Thanks — I&apos;ll reply by email within a day.</p>
+        <p className="mt-2 text-neutral-400">Thanks — I&apos;ll reply by email within 24 hours.</p>
       </div>
     );
   }
@@ -41,26 +44,12 @@ export default function EnquiryForm() {
         <label htmlFor="enq-email" className={label}>Email</label>
         <input id="enq-email" name="email" type="email" required autoComplete="email" className={input} />
       </div>
-      <div>
-        <label htmlFor="enq-phone" className={label}>Phone / WhatsApp <span className="text-neutral-700">(optional)</span></label>
-        <input id="enq-phone" name="phone" type="tel" autoComplete="tel" placeholder="+65" className={input} />
-      </div>
-      <div>
-        <label htmlFor="enq-type" className={label}>Type of shoot</label>
-        <select id="enq-type" name="shoot_type" defaultValue="" className={input}>
+      <div className="sm:col-span-2">
+        <label htmlFor="enq-type" className={label}>What do you need?</label>
+        <select id="enq-type" name="shoot_type" value={shootType}
+          onChange={(e) => onShootTypeChange(e.target.value)} className={input}>
           <option value="">Choose one</option>
           {SHOOT_TYPES.map((t) => <option key={t}>{t}</option>)}
-        </select>
-      </div>
-      <div>
-        <label htmlFor="enq-date" className={label}>Date <span className="text-neutral-700">(if known)</span></label>
-        <input id="enq-date" name="shoot_date" type="date" className={`${input} [color-scheme:dark]`} />
-      </div>
-      <div>
-        <label htmlFor="enq-budget" className={label}>Budget</label>
-        <select id="enq-budget" name="budget" defaultValue="" className={input}>
-          <option value="">Choose one</option>
-          {BUDGETS.map((b) => <option key={b}>{b}</option>)}
         </select>
       </div>
       <div className="sm:col-span-2">
@@ -68,6 +57,32 @@ export default function EnquiryForm() {
         <textarea id="enq-message" name="message" required rows={5} className={input}
           placeholder="What's happening, where, and what you'd like to come away with." />
       </div>
+
+      {/* Nice-to-haves stay out of the way; collapsed fields still submit. */}
+      <details className="sm:col-span-2 group">
+        <summary className="cursor-pointer list-none text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-white transition-colors">
+          <span className="group-open:hidden">+ Add details</span>
+          <span className="hidden group-open:inline">− Hide details</span>
+          <span className="text-neutral-700"> (optional: phone, date, budget)</span>
+        </summary>
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <label htmlFor="enq-phone" className={label}>Phone</label>
+            <input id="enq-phone" name="phone" type="tel" autoComplete="tel" placeholder="+65" className={input} />
+          </div>
+          <div>
+            <label htmlFor="enq-date" className={label}>Date</label>
+            <input id="enq-date" name="shoot_date" type="date" className={`${input} [color-scheme:dark]`} />
+          </div>
+          <div>
+            <label htmlFor="enq-budget" className={label}>Budget</label>
+            <select id="enq-budget" name="budget" defaultValue="" className={input}>
+              <option value="">Choose one</option>
+              {BUDGETS.map((b) => <option key={b}>{b}</option>)}
+            </select>
+          </div>
+        </div>
+      </details>
 
       <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-4">
         <button type="submit" disabled={pending}
