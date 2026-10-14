@@ -52,8 +52,9 @@ export function normaliseMobile(mobile: string): string {
 }
 
 // Singapore UEN shapes: business (8 digits + letter), local company (9 digits
-// + letter), and other entities (T/S/R + 2 digits + 2 letters + 4 digits + letter).
-const UEN = /^(\d{8}[A-Z]|\d{9}[A-Z]|[TSR]\d{2}[A-Z]{2}\d{4}[A-Z])$/;
+// + letter), and other entities (T/S/R + 2 digits + 2 letters + 4 digits + letter),
+// optionally followed by the 3-character PayNow suffix a business can register.
+const UEN = /^(\d{8}[A-Z]|\d{9}[A-Z]|[TSR]\d{2}[A-Z]{2}\d{4}[A-Z])([A-Z0-9]{3})?$/;
 
 /** True when the stored PayNow value is a UEN rather than a mobile number. */
 export function isUen(value: string): boolean {

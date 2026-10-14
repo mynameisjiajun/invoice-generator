@@ -69,10 +69,10 @@ describe("normaliseMobile", () => {
 });
 
 describe("PayNow to a UEN", () => {
-  test.each(["53533808B", "53533808b", " 53533808B ", "201912345K", "T09LL0001B"])("%s is a UEN", (v) => {
+  test.each(["53533808B", "53533808b", " 53533808B ", "201912345K", "T09LL0001B", "53533808B001", "201912345KA01"])("%s is a UEN", (v) => {
     expect(isUen(v)).toBe(true);
   });
-  test.each(["96561716", "+65 9656 1716", "6596561716", ""])("%s is not a UEN", (v) => {
+  test.each(["96561716", "+65 9656 1716", "6596561716", "", "53533808B0011"])("%s is not a UEN", (v) => {
     expect(isUen(v)).toBe(false);
   });
 
