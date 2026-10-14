@@ -108,7 +108,7 @@ const NavBar: React.FC = () => {
 
   // Scrollspy: highlight the nav link for the section in view.
   useEffect(() => {
-    const ids = ['home', 'portfolio', 'rates', 'about', 'contact'];
+    const ids = ['home', 'portfolio', 'services', 'about', 'contact'];
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -141,7 +141,7 @@ const NavBar: React.FC = () => {
 
   const navLinks = [
     { name: 'Work', href: '#portfolio', id: 'portfolio' },
-    { name: 'Services', href: '#rates', id: 'rates' },
+    { name: 'Services', href: '#services', id: 'services' },
     { name: 'Studio', href: '#about', id: 'about' },
   ];
 
@@ -359,7 +359,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
       </section>
 
       {/* SERVICES SECTION */}
-      <section id="rates" className="py-24 bg-neutral-900 border-y border-neutral-800 scroll-mt-20">
+      <section id="services" className="py-24 bg-neutral-900 border-y border-neutral-800 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <ScrollReveal>
             <SectionHeader title="Capabilities" subtitle="Services" index="02" />

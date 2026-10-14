@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { submitEnquiry, type EnquiryState } from "@/app/(portfolio)/actions";
 import { BUDGETS, SHOOT_TYPES } from "@/lib/enquiry";
@@ -18,6 +18,21 @@ export default function EnquiryForm({ shootType, onShootTypeChange }: {
   const [state, action, pending] = useActionState<EnquiryState, FormData>(submitEnquiry, { status: "idle" });
   // When the form was first shown — lets the server tell people from instant bot posts.
   const [started] = useState(() => String(Date.now()));
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // If the browser blocks sending because of a field inside the collapsed
+  // "Add details" (e.g. a half-typed date), open it so they can see why.
+  // "invalid" doesn't bubble, so listen in the capture phase.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const reveal = (e: Event) => {
+      const details = (e.target as HTMLElement).closest("details");
+      if (details) details.open = true;
+    };
+    form.addEventListener("invalid", reveal, true);
+    return () => form.removeEventListener("invalid", reveal, true);
+  }, [state.status]);
 
   if (state.status === "sent") {
     return (
@@ -29,7 +44,7 @@ export default function EnquiryForm({ shootType, onShootTypeChange }: {
   }
 
   return (
-    <form action={action} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    <form ref={formRef} action={action} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <input type="hidden" name="started" value={started} />
       {/* Honeypot: hidden from people, irresistible to bots. */}
       <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
