@@ -17,6 +17,8 @@ import ProjectCard from './ProjectCard';
 import HeroCanvas from './HeroCanvas';
 import HeroVideo from './HeroVideo';
 import EnquiryForm from './EnquiryForm';
+import MobileQuoteBar from './MobileQuoteBar';
+import { FAQS, PROCESS_STEPS, SERVICE_SHOOT_TYPE } from './quote';
 
 
 // --- DATA ---
@@ -25,8 +27,8 @@ const SERVICES: Service[] = [
   {
     id: 's1',
     title: 'Event Coverage',
-    description: "Weddings, corporate, nightlife, community — if it matters to you, it's worth capturing properly. Full-day or hourly coverage with fast turnaround highlight edits.",
-    features: ['Full-day or hourly coverage', 'Highlight + full edits', 'Fast turnaround', 'Photo + video teams'],
+    description: "Corporate events, launches, conferences and celebrations — covered properly, with highlight edits your team can post and share.",
+    features: ['Full-day or hourly coverage', 'Highlight + full edits', 'Delivered within 14 days', 'Photo + video teams'],
     icon: 'video'
   },
   {
@@ -39,8 +41,8 @@ const SERVICES: Service[] = [
   {
     id: 's3',
     title: 'Social Media Content',
-    description: 'Reels and TikToks built to perform — planned, shot, and cut for the platform, delivered ready to post.',
-    features: ['Ready-to-post formats', 'Platform-native editing', 'Monthly packages', 'Trend-aware planning'],
+    description: 'Reels and TikToks built to perform — planned with you, shot and cut for the platform, delivered ready to post. One-off or monthly.',
+    features: ['Ready-to-post formats', 'Platform-native editing', 'One-off or monthly content', 'Trend-aware planning'],
     icon: 'aperture'
   }
 ];
@@ -168,7 +170,7 @@ const NavBar: React.FC = () => {
               </a>
             ))}
             <a href="#contact" className="px-6 py-2 bg-white text-black font-apex-display font-bold uppercase tracking-wider hover:bg-brand-orange hover:text-white transition-all skew-x-[-10deg]">
-              <span className="skew-x-[10deg] inline-block">Book Shoot</span>
+              <span className="skew-x-[10deg] inline-block">Get a Quote</span>
             </a>
           </div>
 
@@ -211,7 +213,7 @@ const NavBar: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="text-4xl font-apex-display font-bold text-brand-orange mt-8 border-b-2 border-brand-orange"
           >
-            Let&apos;s Talk
+            Get a Quote
           </a>
         </div>
       )}
@@ -245,6 +247,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
   return (
     <div className="min-h-dvh bg-brand-dark text-neutral-200 selection:bg-brand-orange selection:text-white font-apex-sans">
       <NavBar />
+      <MobileQuoteBar />
 
       {/* HERO SECTION */}
       <section id="home" className="relative min-h-dvh flex items-center justify-center overflow-hidden border-b border-white/5 pt-20 md:pt-0">
@@ -259,7 +262,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
           <div className="absolute bottom-0 left-0 right-0 h-5 bg-black z-20"></div>
           {/* Timecode chip — top-28 clears the fixed navbar (its tallest,
               unscrolled state is ~py-6 plus a 3xl logo, roughly 90px) so it
-              never overlaps nav links/Book Shoot regardless of scroll state. */}
+              never overlaps nav links/Get a Quote regardless of scroll state. */}
           <div className="absolute top-28 right-6 z-20 font-mono text-[10px] tracking-[0.3em] text-neutral-400 uppercase hidden md:flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
             REC • APX • SG
@@ -272,7 +275,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
               <ScrollReveal>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-[1px] w-12 bg-brand-orange"></div>
-                  <span className="text-brand-orange font-bold tracking-widest uppercase text-sm">Singapore Based</span>
+                  <span className="text-brand-orange font-bold tracking-widest uppercase text-sm">Corporate &amp; Social Videography · Singapore</span>
                 </div>
               </ScrollReveal>
 
@@ -285,17 +288,17 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
               <ScrollReveal className="delay-200">
                 <p className="max-w-xl text-lg md:text-xl text-neutral-200 font-light leading-relaxed border-l-2 border-brand-orange pl-6 bg-black/35 py-2">
-                  Apex Cinematics is a Singapore-based studio covering events, documentaries, and social content — cinematic photo and video for everyone and anyone.
+                  Video and photo for brands, events and social media in Singapore — from corporate events to monthly Reels, shot, edited and delivered fast.
                 </p>
               </ScrollReveal>
 
               {/* Calls to action sit directly under the intro they follow from. */}
               <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '500ms' }}>
-                <a href="#portfolio" className="px-8 py-4 bg-brand-orange text-white font-bold uppercase tracking-wider hover:bg-orange-600 transition-all text-center">
-                  View Work
+                <a href="#contact" className="px-8 py-4 bg-brand-orange text-white font-bold uppercase tracking-wider hover:bg-orange-600 transition-all text-center">
+                  Get a Quote
                 </a>
-                <a href="#contact" className="px-8 py-4 border border-white/20 bg-black/55 text-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all text-center">
-                  Get In Touch
+                <a href="#portfolio" className="px-8 py-4 border border-white/20 bg-black/55 text-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all text-center">
+                  View Work
                 </a>
               </div>
             </div>
@@ -389,13 +392,39 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                     ))}
                   </ul>
 
-                  <a href="#contact" className="mt-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-brand-orange hover:text-white transition-colors">
-                    Let&apos;s talk <ArrowRight size={14} />
+                  <a
+                    href="#contact"
+                    onClick={() => setShootType(SERVICE_SHOOT_TYPE[service.id as keyof typeof SERVICE_SHOOT_TYPE] ?? "")}
+                    className="mt-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-brand-orange hover:text-white transition-colors"
+                  >
+                    Get a quote for this <ArrowRight size={14} />
                   </a>
                 </div>
               </ScrollReveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* PROCESS SECTION */}
+      <section id="process" className="py-24 bg-brand-dark scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <ScrollReveal>
+            <SectionHeader title="How It Works" subtitle="Process" index="03" />
+          </ScrollReveal>
+          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {PROCESS_STEPS.map((step, i) => (
+              <li key={step.title}>
+                <ScrollReveal delayMs={i * 100}>
+                  <div className="border-t-2 border-brand-orange pt-6">
+                    <span className="font-mono text-xs text-neutral-500">0{i + 1}</span>
+                    <h3 className="mt-2 text-2xl font-apex-display font-bold text-white uppercase">{step.title}</h3>
+                    <p className="mt-3 text-neutral-400 text-sm leading-relaxed">{step.text}</p>
+                  </div>
+                </ScrollReveal>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
@@ -406,7 +435,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
           <ScrollReveal className="order-2 sm:order-1">
             <h3 className="text-brand-orange font-bold uppercase tracking-[0.2em] text-xs mb-6">The Studio</h3>
             <h2 className="text-5xl md:text-6xl font-apex-display font-bold text-white uppercase leading-none mb-8">
-              Based in Singapore. <br/> <span className="text-neutral-700">Shooting Everywhere.</span>
+              Based in Singapore. <br/> <span className="text-neutral-700">Shooting For Brands.</span>
             </h2>
 
             <div className="space-y-6 text-neutral-400 text-lg font-light">
@@ -448,13 +477,33 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
         </div>
       </section>
 
+      {/* FAQ SECTION */}
+      <section id="faq" className="py-24 bg-neutral-900 border-t border-neutral-800 scroll-mt-20">
+        <div className="max-w-4xl mx-auto px-6">
+          <ScrollReveal>
+            <SectionHeader title="Questions" subtitle="FAQ" index="04" />
+          </ScrollReveal>
+          <div className="divide-y divide-neutral-800 border-y border-neutral-800">
+            {FAQS.map((f) => (
+              <details key={f.q} className="group py-6">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg md:text-xl font-apex-display font-bold text-white uppercase tracking-wide">
+                  {f.q}
+                  <span aria-hidden className="text-brand-orange text-2xl transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-4 text-neutral-400 leading-relaxed">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CONTACT SECTION */}
       <section id="contact" className="py-24 bg-black border-t border-neutral-900 scroll-mt-20">
         <div className="max-w-6xl mx-auto px-6">
           <ScrollReveal>
             <div className="text-center mb-16">
               <h2 className="text-6xl md:text-8xl font-apex-display font-bold text-white uppercase mb-4">Start The Project</h2>
-              <p className="text-neutral-400 text-lg">Tell me what you&apos;re planning — I&apos;ll get back within a day.</p>
+              <p className="text-neutral-400 text-lg">Tell me what you need — I&apos;ll reply within 24 hours.</p>
             </div>
           </ScrollReveal>
 
@@ -480,11 +529,12 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                   </div>
                 </a>
               </div>
-              <p className="text-center text-neutral-500 text-sm mt-8 font-mono uppercase tracking-widest">Based in Singapore · Available for travel</p>
+              <p className="text-center text-neutral-500 text-sm mt-8 font-mono uppercase tracking-widest">Based in Singapore</p>
 
               <div className="mt-12 pt-12 border-t border-neutral-800">
                 <h3 className="text-3xl md:text-4xl font-apex-display font-bold text-white uppercase mb-2">Or send the details</h3>
-                <p className="text-neutral-400 mb-8">A few lines is enough — date, type of shoot and a rough budget help me quote faster.</p>
+                <p className="text-neutral-400 mb-2">A few lines is enough. Add a date or budget if you have one — it helps me quote faster.</p>
+                <p className="text-brand-orange text-sm font-bold uppercase tracking-widest mb-8">Reply within 24 hours · Free, no-obligation quote</p>
                 <EnquiryForm shootType={shootType} onShootTypeChange={setShootType} />
               </div>
             </div>
@@ -492,7 +542,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
         </div>
       </section>
 
-      <footer className="py-12 bg-black border-t border-neutral-900">
+      <footer className="pt-12 pb-28 md:pb-12 bg-black border-t border-neutral-900">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <img src="/logo.png" alt="Apex Cinematics" width={800} height={198} loading="lazy" className="h-8 w-auto" />
           <p className="text-neutral-600 text-xs font-mono uppercase tracking-widest">
