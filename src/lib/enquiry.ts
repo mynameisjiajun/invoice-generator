@@ -2,7 +2,7 @@
 // and tests use the same rules; the database repeats the size limits
 // (018_enquiries.sql) as the last line of defence.
 
-export const SHOOT_TYPES = ["Event", "Documentary", "Social media content", "Portraits or a photoshoot", "Something else"] as const;
+export const SHOOT_TYPES = ["Corporate event", "Social media content", "Documentary", "Other event", "Something else"] as const;
 export const BUDGETS = ["Under $500", "$500 to $1,000", "$1,000 to $2,500", "Over $2,500", "Not sure yet"] as const;
 
 export type EnquiryInput = {

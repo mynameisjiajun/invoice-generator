@@ -6,7 +6,7 @@ const form = (fields: Record<string, string>) => {
   for (const [k, v] of Object.entries(fields)) f.set(k, v);
   return f;
 };
-const valid = { name: " Sarah Tan ", email: "sarah@example.com", message: "Wedding at Sentosa", shoot_type: "Event", budget: "Not sure yet", shoot_date: "2026-12-12" };
+const valid = { name: " Sarah Tan ", email: "sarah@example.com", message: "Wedding at Sentosa", shoot_type: "Corporate event", budget: "Not sure yet", shoot_date: "2026-12-12" };
 
 describe("parseEnquiry", () => {
   it("accepts a complete enquiry and trims it", () => {
@@ -23,6 +23,16 @@ describe("parseEnquiry", () => {
   it("drops values that aren't one of the offered choices", () => {
     const r = parseEnquiry(form({ ...valid, shoot_type: "<script>", budget: "a million", shoot_date: "next week" }));
     expect(r.ok && r.value).toMatchObject({ shoot_type: "", budget: "", shoot_date: null });
+  });
+
+  it("offers the corporate/social choices and blanks retired ones", () => {
+    for (const t of ["Corporate event", "Social media content", "Documentary", "Other event", "Something else"]) {
+      const r = parseEnquiry(form({ ...valid, shoot_type: t }));
+      expect(r.ok && r.value.shoot_type).toBe(t);
+    }
+    // A page cached before this change still submits fine; the type is just dropped.
+    const old = parseEnquiry(form({ ...valid, shoot_type: "Portraits or a photoshoot" }));
+    expect(old).toMatchObject({ ok: true, value: { shoot_type: "" } });
   });
 });
 
