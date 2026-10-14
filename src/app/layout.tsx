@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://apexcinematics.tech"),
-  title: "Apex Cinematics | Videography & Photography, Singapore",
+  title: "Apex Cinematics | Singapore Videographer & Photographer",
   description:
     "Apex Cinematics is a Singapore-based studio covering events, documentaries, and social content — cinematic photo and video for everyone and anyone.",
   // Google Search Console ownership proof, which Google's OAuth consent

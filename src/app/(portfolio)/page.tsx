@@ -2,15 +2,17 @@ import type { Metadata } from "next";
 import Portfolio from "@/components/portfolio/Portfolio";
 import { getPortfolio } from "@/lib/portfolio/data";
 import { BUSINESS_PHONE, FAQS, faqJsonLd } from "@/components/portfolio/quote";
+import { SITE, websiteJsonLd } from "@/components/portfolio/seo";
 
 // Content is edited at /invoices_login/portfolio; saving there refreshes this
 // page immediately. The hourly revalidate is only a backstop.
 export const revalidate = 3600;
 
-const SITE = "https://apexcinematics.tech";
-const TITLE = "Apex Cinematics | Videography & Photography, Singapore";
+// "Videographer" + "Singapore" next to the name sets this apart from the
+// Apex Legends trailers that share the words "Apex" and "cinematics".
+const TITLE = "Apex Cinematics | Singapore Videographer & Photographer";
 const DESCRIPTION =
-  "Photo and film for events, stories and brands in Singapore. Event coverage, documentaries and social media content by Apex Cinematics.";
+  "Apex Cinematics is a Singapore videography and photography studio for corporate events, brand films and social media content. Free quote within 24 hours.";
 
 // Link previews (WhatsApp, Instagram, iMessage, LinkedIn…) use the lead
 // photo project's cover, so the preview changes along with the site.
@@ -43,7 +45,9 @@ export default async function HomePage() {
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
     name: "Apex Cinematics",
+    alternateName: "Apex Cinematics SG",
     url: SITE,
+    logo: `${SITE}/icons/icon-512.png`,
     description: DESCRIPTION,
     email: "contact@apexcinematics.tech",
     telephone: BUSINESS_PHONE.replace(/ /g, ""),
@@ -67,6 +71,11 @@ export default async function HomePage() {
         type="application/ld+json"
         // FAQ rich results; same "<" escaping as above.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(FAQS)).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        // Site name shown above the result; same "<" escaping as above.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()).replace(/</g, "\\u003c") }}
       />
       <Portfolio projects={projects} aboutPhoto={aboutPhoto} />
     </>
