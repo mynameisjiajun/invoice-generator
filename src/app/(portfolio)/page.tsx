@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Portfolio from "@/components/portfolio/Portfolio";
 import { getPortfolio } from "@/lib/portfolio/data";
+import { FAQS, faqJsonLd } from "@/components/portfolio/quote";
 
 // Content is edited at /invoices_login/portfolio; saving there refreshes this
 // page immediately. The hourly revalidate is only a backstop.
@@ -60,6 +61,11 @@ export default async function HomePage() {
         // Server-built JSON (fixed strings + project cover URLs). "<" is
         // escaped per the Next.js JSON-LD guide so no value can close the tag.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        // FAQ rich results; same "<" escaping as above.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(FAQS)).replace(/</g, "\\u003c") }}
       />
       <Portfolio projects={projects} aboutPhoto={aboutPhoto} />
     </>
