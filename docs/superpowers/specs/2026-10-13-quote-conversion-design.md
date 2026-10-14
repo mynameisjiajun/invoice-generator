@@ -25,7 +25,9 @@ preselected.
 
 All in `src/components/portfolio/` and `src/lib/enquiry.ts`.
 
-1. **Hero.** Keep "Capturing The Unseen". The intro paragraph becomes: "Video and
+1. **Hero.** Keep "Capturing The Unseen". The orange eyebrow line above it
+   changes from "Singapore Based" to "Corporate & Social Videography ·
+   Singapore" (search keywords near the top of the page). The intro paragraph becomes: "Video and
    photo for brands, events and social media in Singapore — from corporate
    events to monthly Reels, shot, edited and delivered fast." Buttons: **Get a
    Quote** (primary, orange, `#contact`) then **View Work** (outline). The nav
@@ -59,6 +61,8 @@ All in `src/components/portfolio/` and `src/lib/enquiry.ts`.
    - Reassurance line above the form: "Reply within 24 hours · Free,
      no-obligation quote". The success message says "within 24 hours".
    - Contact footer line drops "Available for travel" → "Based in Singapore".
+   - About headline "Based in Singapore. Shooting Everywhere." (implies travel)
+     → "Based in Singapore. Shooting For Brands."
 6. **Mobile quote bar.** `md:hidden`, fixed bottom, safe-area aware. Appears
    after the hero leaves the viewport; hides while `#contact` is in view
    (IntersectionObserver). One full-width "Get a Quote" button.
