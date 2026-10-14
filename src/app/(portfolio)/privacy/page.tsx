@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy — Apex Cinematics",
   description:
     "How Apex Cinematics handles client information and Google user data in its invoicing tool.",
+  alternates: { canonical: "https://apexcinematics.tech/privacy" },
 };
 
 const UPDATED = "22 September 2026";

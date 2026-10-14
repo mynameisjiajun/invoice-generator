@@ -57,6 +57,17 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/portfolio/**" },
     ],
   },
+  async redirects() {
+    return [
+      // One address for Google: www would otherwise index as a duplicate site.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.apexcinematics.tech" }],
+        destination: "https://apexcinematics.tech/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
