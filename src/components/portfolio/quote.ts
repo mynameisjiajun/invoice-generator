@@ -4,6 +4,13 @@ import { SHOOT_TYPES } from "@/lib/enquiry";
 
 export type ShootType = (typeof SHOOT_TYPES)[number];
 
+export const BUSINESS_PHONE = "+65 8905 5027";
+
+/** A WhatsApp chat with the business, opened with `text` already typed. */
+export function whatsappLink(text: string): string {
+  return `https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+}
+
 /** Which form choice each service card's "Get a quote for this" preselects. */
 export const SERVICE_SHOOT_TYPE: Record<"s1" | "s2" | "s3", ShootType> = {
   s1: "Corporate event",
@@ -33,7 +40,7 @@ export const FAQS = [
   },
   {
     q: "How do I get a quote?",
-    a: "Send the form below or email contact@apexcinematics.tech. I'll reply within 24 hours with a free, no-obligation quote.",
+    a: `Send the form below, WhatsApp ${BUSINESS_PHONE} or email contact@apexcinematics.tech. I'll reply within 24 hours with a free, no-obligation quote.`,
   },
   {
     q: "Do you do ongoing social content?",

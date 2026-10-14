@@ -8,6 +8,7 @@ import {
   X,
   Instagram,
   Mail,
+  MessageCircle,
   ArrowRight,
   Zap,
 } from 'lucide-react';
@@ -18,7 +19,7 @@ import HeroCanvas from './HeroCanvas';
 import HeroVideo from './HeroVideo';
 import EnquiryForm from './EnquiryForm';
 import MobileQuoteBar from './MobileQuoteBar';
-import { FAQS, PROCESS_STEPS, SERVICE_SHOOT_TYPE } from './quote';
+import { BUSINESS_PHONE, FAQS, PROCESS_STEPS, SERVICE_SHOOT_TYPE, whatsappLink } from './quote';
 
 
 // --- DATA ---
@@ -509,7 +510,7 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
 
           <ScrollReveal delayMs={200}>
             <div className="bg-neutral-900/50 p-8 md:p-12 border border-neutral-800">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <a href="mailto:contact@apexcinematics.tech" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
                   <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center text-white group-hover:bg-brand-orange transition-colors">
                     <Mail size={24} />
@@ -526,6 +527,15 @@ const Portfolio: React.FC<{ projects: Project[]; aboutPhoto: string }> = ({ proj
                   <div>
                     <div className="text-white font-apex-display font-bold uppercase tracking-wider">Instagram</div>
                     <div className="text-neutral-500 text-sm mt-1">@ApexCinematicsSG</div>
+                  </div>
+                </a>
+                <a href={whatsappLink("Hi Apex Cinematics, I'd like a quote for ")} target="_blank" rel="noopener noreferrer" className="group flex flex-col items-center gap-4 p-8 bg-black border border-neutral-800 hover:border-brand-orange hover:-translate-y-1 transition-all text-center">
+                  <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center text-white group-hover:bg-brand-orange transition-colors">
+                    <MessageCircle size={24} />
+                  </div>
+                  <div>
+                    <div className="text-white font-apex-display font-bold uppercase tracking-wider">WhatsApp</div>
+                    <div className="text-neutral-500 text-sm mt-1">{BUSINESS_PHONE}</div>
                   </div>
                 </a>
               </div>

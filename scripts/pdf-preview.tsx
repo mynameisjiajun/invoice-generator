@@ -31,7 +31,7 @@ const business: Business = {
   name: "Apex Cinematics",
   slug: "photography",
   address: "Blk 296A Compassvale Crescent #10-293, S541296",
-  phone: "+65 9656 1716",
+  phone: "+65 8905 5027",
   email: "contact@apexcinematics.tech",
   paynow_number: "+6596561716",
   payee_name: "Chua Jia Jun",

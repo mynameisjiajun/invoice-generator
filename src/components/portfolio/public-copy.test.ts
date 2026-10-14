@@ -3,8 +3,8 @@ import fs from "fs";
 import path from "path";
 
 // Words the owner never wants on the public site: no travel, no revision
-// counts, no packages/pricing hints, no Telegram/WhatsApp contact.
-const FORBIDDEN = /travel|revision|package|overseas|whatsapp|telegram|t\.me\/|#rates/i;
+// counts, no packages/pricing hints, no Telegram (WhatsApp is the business line).
+const FORBIDDEN = /travel|revision|package|overseas|telegram|t\.me\/|#rates/i;
 
 // Code comments may mention these freely; only shipped copy and markup count.
 const stripComments = (src: string) =>

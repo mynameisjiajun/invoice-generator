@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SHOOT_TYPES } from "@/lib/enquiry";
-import { FAQS, PROCESS_STEPS, SERVICE_SHOOT_TYPE, faqJsonLd, quoteBarVisible } from "./quote";
+import { BUSINESS_PHONE, FAQS, PROCESS_STEPS, SERVICE_SHOOT_TYPE, faqJsonLd, quoteBarVisible, whatsappLink } from "./quote";
 
 describe("SERVICE_SHOOT_TYPE", () => {
   it("maps every service card to an offered form choice", () => {
@@ -38,5 +38,12 @@ describe("quoteBarVisible", () => {
     expect(quoteBarVisible(false, false)).toBe(true);
     expect(quoteBarVisible(false, true)).toBe(false);
     expect(quoteBarVisible(true, true)).toBe(false);
+  });
+});
+
+describe("whatsappLink", () => {
+  it("opens a chat with the business number and a prefilled message", () => {
+    expect(BUSINESS_PHONE).toBe("+65 8905 5027");
+    expect(whatsappLink("Hi, I'd like a quote")).toBe("https://wa.me/6589055027?text=Hi%2C%20I'd%20like%20a%20quote");
   });
 });

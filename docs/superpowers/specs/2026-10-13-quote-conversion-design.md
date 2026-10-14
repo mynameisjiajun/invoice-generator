@@ -11,8 +11,9 @@ preselected.
 ## Constraints (from the owner)
 
 - No prices or packages anywhere.
-- Contact only via the enquiry form, email (contact@apexcinematics.tech) and
-  Instagram (@ApexCinematicsSG). No Telegram or WhatsApp.
+- Contact only via the enquiry form, email (contact@apexcinematics.tech),
+  Instagram (@ApexCinematicsSG) and WhatsApp +65 8905 5027 (added 2026-10-14).
+  No Telegram.
 - Never mention travel, and never state how many revisions are included.
   Remove the existing "Available for travel" line.
 - Facts to state: reply within 24 hours; edited files delivered within 14 days
