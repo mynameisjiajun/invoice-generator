@@ -21,7 +21,7 @@ const FIELDS: Array<{ key: keyof Business; label: string }> = [
   { key: "address", label: "Address" },
   { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
-  { key: "paynow_number", label: "PayNow number" },
+  { key: "paynow_number", label: "PayNow number or UEN" },
   { key: "payee_name", label: "Payee name (for cheques)" },
   { key: "bank_details", label: "Bank details" },
 ];

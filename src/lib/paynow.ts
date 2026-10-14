@@ -51,6 +51,20 @@ export function normaliseMobile(mobile: string): string {
   return mobile.trim().startsWith("+") ? "+" + digits : digits;
 }
 
+// Singapore UEN shapes: business (8 digits + letter), local company (9 digits
+// + letter), and other entities (T/S/R + 2 digits + 2 letters + 4 digits + letter).
+const UEN = /^(\d{8}[A-Z]|\d{9}[A-Z]|[TSR]\d{2}[A-Z]{2}\d{4}[A-Z])$/;
+
+/** True when the stored PayNow value is a UEN rather than a mobile number. */
+export function isUen(value: string): boolean {
+  return UEN.test(value.trim().toUpperCase());
+}
+
+/** How the PayNow destination reads on invoices and in messages. */
+export function paynowDisplay(value: string): string {
+  return isUen(value) ? `UEN ${value.trim().toUpperCase()}` : value.trim();
+}
+
 export function paynowPayload(opts: {
   mobile: string;
   amountCents: number;
@@ -65,8 +79,9 @@ export function paynowPayload(opts: {
     "01": "12",
     "26": new QRData({
       "00": "SG.PAYNOW",
-      "01": "0", // Proxy type: 0 - mobile, 2 - UEN
-      "02": normaliseMobile(opts.mobile),
+      // Proxy type: 0 - mobile, 2 - UEN. `mobile` holds whichever is stored.
+      "01": isUen(opts.mobile) ? "2" : "0",
+      "02": isUen(opts.mobile) ? opts.mobile.trim().toUpperCase() : normaliseMobile(opts.mobile),
       "03": "0", // Amount is not editable — pay exactly the invoice total
       // "05" (transaction reference) was removed in PayNow v1.2; the
       // reference goes in 62/01 instead.

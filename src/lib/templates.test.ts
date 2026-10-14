@@ -42,6 +42,9 @@ describe("templateVars", () => {
     expect(v.paynow).toBe("91234567");
     expect(v.payee_name).toBe("Chua Jia Jun");
   });
+  it("labels a UEN PayNow destination", () => {
+    expect(templateVars(inv, { ...biz, paynow_number: "53533808b" }).paynow).toBe("UEN 53533808B");
+  });
   it("falls back when customer/number missing", () => {
     const bare = { ...inv, invoice_number: null, customers: null } as Invoice;
     const v = templateVars(bare, biz);

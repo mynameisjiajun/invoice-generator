@@ -1,4 +1,5 @@
 import { formatSGD } from "@/lib/money";
+import { paynowDisplay } from "@/lib/paynow";
 import { isPrintBusiness, type Business, type Invoice } from "@/lib/types";
 import { formatJobDate } from "./printRates";
 
@@ -40,7 +41,7 @@ export function templateVars(inv: Invoice, biz: Business): Record<string, string
     job_date: formatJobDate(inv.job_date || ""),
     invoice_number: inv.invoice_number ?? "",
     total: formatSGD(inv.total_cents),
-    paynow: biz.paynow_number.trim(),
+    paynow: paynowDisplay(biz.paynow_number),
     payee_name: biz.payee_name || biz.name,
     business_name: biz.name,
   };

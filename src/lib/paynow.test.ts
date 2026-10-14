@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { crc16ccitt, normaliseMobile, paynowPayload } from "./paynow";
+import { crc16ccitt, isUen, normaliseMobile, paynowDisplay, paynowPayload } from "./paynow";
 
 describe("crc16ccitt", () => {
   test("known vector: '123456789' -> 29B1 (CRC-16/CCITT-FALSE)", () => {
@@ -65,5 +65,25 @@ describe("normaliseMobile", () => {
 
   test("leaves a foreign number alone apart from stripping punctuation", () => {
     expect(normaliseMobile("+1 415 555 0100")).toBe("+14155550100");
+  });
+});
+
+describe("PayNow to a UEN", () => {
+  test.each(["53533808B", "53533808b", " 53533808B ", "201912345K", "T09LL0001B"])("%s is a UEN", (v) => {
+    expect(isUen(v)).toBe(true);
+  });
+  test.each(["96561716", "+65 9656 1716", "6596561716", ""])("%s is not a UEN", (v) => {
+    expect(isUen(v)).toBe(false);
+  });
+
+  test("QR uses proxy type 2 with the UEN, uppercased", () => {
+    const p = paynowPayload({ mobile: " 53533808b ", amountCents: 100, reference: "A-1" });
+    expect(p).toContain("0009SG.PAYNOW" + "01012" + "020953533808B" + "03010");
+    expect(p.slice(-4)).toBe(crc16ccitt(p.slice(0, -4)));
+  });
+
+  test("display labels a UEN and leaves a mobile as typed", () => {
+    expect(paynowDisplay("53533808b")).toBe("UEN 53533808B");
+    expect(paynowDisplay(" +65 9656 1716 ")).toBe("+65 9656 1716");
   });
 });

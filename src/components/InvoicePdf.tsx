@@ -11,6 +11,7 @@ import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import { formatSgPhone, formatSgAddress } from "@/lib/phone";
 import { invoiceDocLabel, isPrintBusiness, type Business, type Invoice } from "@/lib/types";
 import { formatJobDate, parseHandover, printBreakdown, printSpecLine } from "@/lib/printRates";
+import { paynowDisplay } from "@/lib/paynow";
 
 /* Montserrat (Proxima Nova-style geometric sans), served from public/fonts.
    This file is bundled for the browser (dynamically imported by
@@ -567,7 +568,7 @@ export default function InvoicePdf({
               <Text style={s.paymentText}>
                 Scan the QR code to PayNow the exact amount,{"\n"}
                 or PayNow directly to{" "}
-                <Text style={s.paymentHighlight}>{business.paynow_number}</Text>
+                <Text style={s.paymentHighlight}>{paynowDisplay(business.paynow_number)}</Text>
               </Text>
             )}
             <Text style={[s.paymentText, { marginTop: 4 }]}>
