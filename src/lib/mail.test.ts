@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildMime } from "./gmail";
+import { buildMime } from "./mail";
 
 const base = { to: "jane@example.com", subject: "Invoice JJ-0042 from JJ Media", body: "Hi Jane,\n\nThanks." };
-const from = "chuajiajun2705@gmail.com";
+const from = "chuajiajun@apexcinematics.tech";
 
 /** Pulls a header value out of the message's header block. */
 function header(mime: string, name: string): string | undefined {
@@ -74,7 +74,7 @@ describe("buildMime", () => {
     expect(Buffer.from(lines.join(""), "base64")).toEqual(content);
   });
 
-  it("sends the body as text/plain + text/html alternatives, like Gmail's composer (Apple Mail attachment card)", () => {
+  it("sends the body as text/plain + text/html alternatives, so Apple Mail shows an attachment card", () => {
     const mime = buildMime(
       { ...base, body: "Hi <Jane> & co,\nThanks.", attachment: { filename: "a.pdf", mimeType: "application/pdf", content: Buffer.from("x") } },
       from,

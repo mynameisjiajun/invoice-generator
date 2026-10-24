@@ -1,9 +1,9 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { createDraft, GmailAuthError, GmailNotConfiguredError, sendMail } from "@/lib/gmail";
+import { createDraft, MailAuthError, MailNotConfiguredError, sendMail } from "@/lib/mail";
 import { emailMessage, emailSubject } from "@/lib/templates";
 import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
 
-// Emails an invoice from the owner's Gmail, with the PDF attached.
+// Emails an invoice from the business address (iCloud), with the PDF attached.
 //
 // The client sends only the invoice id and the rendered PDF — never the
 // recipient, subject or body. Those are derived here from the database, so a
@@ -79,20 +79,15 @@ export async function POST(request: Request) {
   };
 
   try {
-    const result = mode === "send" ? await sendMail(mail) : await createDraft(mail);
-    return Response.json({
-      ok: true,
-      mode,
-      id: result.id,
-      to,
-      // Gmail addresses a draft by its *message* id in the compose URL, but the
-      // drafts endpoint returns the draft id; #drafts is the reliable landing
-      // spot, and the new draft sits at the top of it.
-      url: mode === "draft" ? "https://mail.google.com/mail/u/0/#drafts" : null,
-    });
+    if (mode === "draft") {
+      const { id } = await createDraft(mail);
+      return Response.json({ ok: true, mode, id, to, savedToSent: false });
+    }
+    const { id, savedToSent } = await sendMail(mail);
+    return Response.json({ ok: true, mode, id, to, savedToSent });
   } catch (e) {
-    if (e instanceof GmailNotConfiguredError) return bad(e.message, 503);
-    if (e instanceof GmailAuthError) return bad(e.message, 502);
+    if (e instanceof MailNotConfiguredError) return bad(e.message, 503);
+    if (e instanceof MailAuthError) return bad(e.message, 502);
     return bad(e instanceof Error ? e.message : "Sending failed", 502);
   }
 }

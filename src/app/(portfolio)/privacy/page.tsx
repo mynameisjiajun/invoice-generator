@@ -1,26 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-// Required by Google before an OAuth app can leave "Testing" publishing
-// status (Google Auth Platform → Branding needs a reachable privacy policy
-// URL on an authorized domain). It sits in the (portfolio) route group so
-// it's public — `proxy.ts` only gates /invoices_login/*, so this stays
-// reachable without a session, which Google's crawler requires.
-//
-// The Gmail section exists because the invoice tool requests the
-// gmail.compose scope. Google's Limited Use disclosure is not boilerplate
-// here: it's the specific commitment that makes the scope defensible, and
-// it must stay true of the code (see src/lib/gmail.ts — send/draft only,
-// no read, no storage of message content).
+// Public privacy policy for the website and the invoicing tool. It sits in
+// the (portfolio) route group so it's public — `proxy.ts` only gates
+// /invoices_login/*. The Email section must stay true of the code (see
+// src/lib/mail.ts — it only sends and files copies, it never reads mail).
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Apex Cinematics",
   description:
-    "How Apex Cinematics handles client information and Google user data in its invoicing tool.",
+    "How Apex Cinematics handles client information in its website and invoicing tool.",
   alternates: { canonical: "https://apexcinematics.tech/privacy" },
 };
 
-const UPDATED = "22 September 2026";
+const UPDATED = "24 October 2026";
 const CONTACT = "contact@apexcinematics.tech";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -83,45 +76,20 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="Google user data (Gmail)">
+          <Section title="Email">
             <p>
-              The invoicing tool can send invoices from the business owner&apos;s own Gmail
-              account. To do this it requests a single Google OAuth scope:
-              <code className="mx-1 px-1.5 py-0.5 bg-brand-gray text-brand-orange text-sm rounded">
-                gmail.compose
-              </code>
-              which permits creating drafts and sending mail, and nothing else.
+              Invoices and receipts are emailed from the business&apos;s own address,
+              chuajiajun@apexcinematics.tech, which is hosted by Apple iCloud Mail. The tool
+              hands each message to iCloud for delivery and files a copy in the business&apos;s
+              own Sent Messages folder, exactly as any sent email would be stored.
             </p>
             <p>
               <strong className="text-neutral-200">
-                It cannot read your inbox, and it does not have permission to.
+                The tool never reads the mailbox.
               </strong>{" "}
-              No mailbox contents are ever requested, retrieved, analysed or stored. The only
-              Google data retained is an OAuth refresh token authorising the app to send as the
-              business owner, plus the owner&apos;s own email address. Both are held as encrypted
-              server-side environment variables and are never exposed to any browser.
-            </p>
-            <p>
-              Invoice emails themselves are composed by the tool and handed to Gmail for
-              delivery. They are stored in the owner&apos;s own Gmail account exactly as any sent
-              email would be.
-            </p>
-            <p className="border-l-2 border-brand-orange pl-4">
-              Apex Cinematics&apos; use and transfer of information received from Google APIs
-              adheres to the{" "}
-              <a
-                href="https://developers.google.com/terms/api-services-user-data-policy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-orange hover:text-white underline underline-offset-4 transition-colors"
-              >
-                Google API Services User Data Policy
-              </a>
-              , including the Limited Use requirements. Google user data is used solely to send
-              invoices on the owner&apos;s behalf. It is never used for advertising, never sold,
-              never transferred to third parties except as required to provide this feature or
-              to comply with law, and never used to train generalised AI or machine learning
-              models.
+              Its only stored credential is an app-specific password that lets it send as the
+              business. It is kept as an encrypted server-side environment variable and is never
+              exposed to any browser.
             </p>
           </Section>
 
@@ -131,7 +99,7 @@ export default function PrivacyPage() {
               {[
                 ["Supabase", "database and authentication, Singapore region"],
                 ["Vercel", "application hosting and delivery"],
-                ["Google (Gmail API)", "sending invoice emails, only as described above"],
+                ["Apple (iCloud Mail)", "sending invoice emails, only as described above"],
               ].map(([name, role]) => (
                 <li key={name} className="flex gap-3">
                   <span className="text-brand-orange mt-1">—</span>
@@ -163,16 +131,9 @@ export default function PrivacyPage() {
               ask for deletion, by emailing the address below.
             </p>
             <p>
-              The business owner can revoke the tool&apos;s Google access at any time from{" "}
-              <a
-                href="https://myaccount.google.com/permissions"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-orange hover:text-white underline underline-offset-4 transition-colors"
-              >
-                Google Account permissions
-              </a>
-              , which immediately and permanently ends the app&apos;s ability to send mail.
+              The business owner can revoke the tool&apos;s email access at any time by deleting
+              its app-specific password in the Apple Account settings, which immediately ends
+              the app&apos;s ability to send mail.
             </p>
           </Section>
 

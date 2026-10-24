@@ -1,13 +1,13 @@
 "use server";
 import { after } from "next/server";
-import { sendMail } from "@/lib/gmail";
+import { sendMail } from "@/lib/mail";
 import { looksLikeBot, parseEnquiry } from "@/lib/enquiry";
 
 export type EnquiryState = { status: "idle" | "sent" | "error"; message?: string };
 
 /** The website's enquiry form. Saves the enquiry for the admin inbox
  *  (/invoices_login/enquiries), then emails the owner a heads-up after the
- *  response has gone out, so the visitor never waits on Gmail. */
+ *  response has gone out, so the visitor never waits on iCloud. */
 export async function submitEnquiry(_prev: EnquiryState, form: FormData): Promise<EnquiryState> {
   // Pretend success to bots so they don't retry with tweaks.
   if (looksLikeBot(form)) return { status: "sent" };
@@ -43,7 +43,7 @@ export async function submitEnquiry(_prev: EnquiryState, form: FormData): Promis
 
   after(async () => {
     try {
-      // Sent from the Gmail account, delivered to the business inbox.
+      // Sent from the business address, delivered to the business inbox.
       await sendMail({
         to: "contact@apexcinematics.tech",
         subject: `New enquiry: ${enquiry.name}${enquiry.shoot_type ? ` (${enquiry.shoot_type})` : ""}`,

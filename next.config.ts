@@ -6,7 +6,7 @@ import type { NextConfig } from "next";
 // force dynamic rendering everywhere, see the framework's CSP guide). data:/
 // blob: img-src covers the PayNow QR data-URL and PDF blob previews;
 // worker-src blob: covers @react-pdf/renderer's worker; connect-src allows
-// only Supabase (the only network the client talks to — wa.me/Gmail/Telegram
+// only Supabase (the only network the client talks to — wa.me/mailto:/Telegram
 // links are top-level navigations via window.open, not subject to connect-src).
 // React's dev-mode debugging (HMR, reconstructing stack traces) needs the
 // 'unsafe-eval' CSP keyword; it is never needed in a production build.

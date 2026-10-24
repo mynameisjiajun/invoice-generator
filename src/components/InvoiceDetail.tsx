@@ -107,9 +107,9 @@ export default function InvoiceDetail({ id }: { id: string }) {
     setBusy(false);
   }
 
-  // One send action: native share sheet with the PDF attached — picking Gmail /
-  // WhatsApp there carries the attachment, which a mailto/compose URL never can.
-  // Some share targets drop the `text` when a file is present (iOS Gmail), so the
+  // One send action: native share sheet with the PDF attached — picking Mail /
+  // WhatsApp there carries the attachment, which a mailto: link never can.
+  // Some share targets drop the `text` when a file is present, so the
   // message is also copied to the clipboard before the sheet opens.
   async function sendInvoice(variant: "invoice" | "receipt" = "invoice") {
     const inv = invoice!; const biz = business!;
@@ -127,13 +127,13 @@ export default function InvoiceDetail({ id }: { id: string }) {
           listEvents(inv.id).then(setEvents).catch(() => {});
         }
       } else {
-        // Desktop fallback: download the PDF, then open a Gmail compose draft
+        // Desktop fallback: download the PDF, then open a mail compose window
         // pre-addressed and pre-bodied — user attaches the just-downloaded file.
         const url = URL.createObjectURL(blob);
         const a = Object.assign(document.createElement("a"), { href: url, download: filename });
         a.click();
         URL.revokeObjectURL(url);
-        openGmailCompose(text);
+        openMailCompose(text);
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") setError((e as Error).message);
@@ -141,7 +141,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     setBusy(false);
   }
 
-  // Sends (or drafts) the invoice through the owner's Gmail via /api/gmail/send.
+  // Sends (or drafts) the invoice from the business address via /api/mail/send.
   // The PDF is rendered here — that's where @react-pdf/renderer and the QR code
   // already live — and posted up as base64. Recipient, subject and body are
   // derived server-side from the invoice, so this call can't be redirected.
@@ -153,7 +153,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     try {
       const { blob } = await generatePdfBlob(variant);
       const pdfBase64 = await blobToBase64(blob);
-      const res = await fetch("/api/gmail/send", {
+      const res = await fetch("/api/mail/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invoiceId: inv.id, mode, variant, pdfBase64 }),
@@ -162,10 +162,11 @@ export default function InvoiceDetail({ id }: { id: string }) {
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Sending failed");
 
       if (mode === "draft") {
-        setNotice(`Draft ready in Gmail for ${json.to}.`);
-        window.open(json.url, "_blank");
+        setNotice(`Draft for ${json.to} saved to Drafts in Apple Mail.`);
       } else {
-        setNotice(`Sent to ${json.to}.`);
+        setNotice(json.savedToSent
+          ? `Sent to ${json.to}. A copy is in Sent Messages in Apple Mail.`
+          : `Sent to ${json.to}, but the copy couldn't be saved to Sent Messages.`);
         if (variant === "invoice" && inv.status !== "draft") {
           await markSent(inv.id, inv.business_id);
           setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
@@ -196,17 +197,16 @@ export default function InvoiceDetail({ id }: { id: string }) {
     }
   }
 
-  // Opens a pre-filled Gmail compose draft to the customer's email. Gmail's
-  // compose URL can't carry an attachment, so this is only the desktop
-  // fallback for sendInvoice — the mobile path uses the share sheet instead.
-  function openGmailCompose(body: string) {
+  // Opens a pre-filled compose window in the default mail app (Apple Mail) to
+  // the customer's email. A mailto: link can't carry an attachment, so this is
+  // only the fallback for sendInvoice — where it can, the share sheet is used.
+  function openMailCompose(body: string) {
     const inv = invoice!;
     const email = inv.customers?.email?.trim() ?? "";
     const subject = `Invoice ${inv.invoice_number ?? ""} from ${business!.name}`;
-    const url =
-      `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}` +
-      `&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, "_blank");
+    window.location.href =
+      `mailto:${encodeURIComponent(email)}` +
+      `?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   async function onTogglePaid() {
@@ -386,7 +386,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
       <ConfirmSheet
         open={confirmingEmail}
         title="Send this invoice now?"
-        message={`It will be emailed straight to ${invoice.customers?.email?.trim()} from your Gmail, with the PDF attached. An email can't be unsent.`}
+        message={`It will be emailed straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached. An email can't be unsent.`}
         confirmLabel="Send now"
         onConfirm={() => { setConfirmingEmail(false); emailInvoice("send"); }}
         onCancel={() => setConfirmingEmail(false)}
