@@ -31,12 +31,30 @@ Font.register({
 // Keep names/addresses whole — no hyphenation
 Font.registerHyphenationCallback((word) => [word]);
 
-/* ── colour palette ─────────────────────────────────────
-   Warm "darkroom / editorial" brand palette, matching the app's on-screen
-   design (paper, ink, rust safelight, light-meter gold) instead of the
-   generic cool navy this used to be. Key names are kept so the whole
-   stylesheet inherits the shift; `rust` and `sage` are new accents. */
-const C = {
+/* ── colour palettes ────────────────────────────────────
+   WARM ("darkroom / editorial"): used for print businesses (JJ Gears & Prints).
+   Warm near-black ink, paper tones, safelight rust, light-meter gold.
+   Key names are kept so the whole stylesheet inherits via `makeStyles`.
+
+   APEX (Apex Cinematics): charcoal-based palette echoing the logo —
+   "APEX" in orange #F65F0D, "CINEMATICS" in off-white #F4F4F4, on a
+   charcoal #191919 parallelogram. Same keys as WARM plus `danger`. */
+
+type Palette = {
+  dark: string;
+  mid: string;
+  light: string;
+  faint: string;
+  white: string;
+  highlight: string;
+  gold: string;
+  rust: string;
+  sage: string;
+  sageBg: string;
+  danger: string;
+};
+
+const WARM: Palette = {
   dark: "#221C15",     // warm near-black ink — structural (bars, table head, totals)
   mid: "#6E6153",      // warm secondary text
   light: "#A79A85",    // warm tertiary text / labels
@@ -47,10 +65,25 @@ const C = {
   rust: "#B8452E",     // safelight red — brand accent, used sparingly
   sage: "#4E7A5A",     // warm success green (receipts)
   sageBg: "#E7EEE4",
+  danger: "#D14343",
+};
+
+const APEX: Palette = {
+  dark: "#191919",     // charcoal — logo background, structural
+  mid: "#5A5A5A",      // secondary text
+  light: "#767676",    // tertiary text / labels (≥4:1 on white, off-white and charcoal)
+  faint: "#E4E4E4",    // hairline / borders
+  white: "#FFFFFF",
+  highlight: "#F4F4F4", // off-white — card / alt-row backgrounds (logo "CINEMATICS" tone)
+  gold: "#F65F0D",     // logo orange — money emphasis
+  rust: "#F65F0D",     // logo orange — brand accent
+  sage: "#2F7D4F",     // success green (receipts)
+  sageBg: "#E5F1EA",
+  danger: "#B42318",   // deep red, kept distinct from the brand orange
 };
 
 /* ── styles ─────────────────────────────────────────── */
-const s = StyleSheet.create({
+function makeStyles(C: Palette) { return StyleSheet.create({
   page: {
     padding: 0,
     fontSize: 10.5,
@@ -330,7 +363,12 @@ const s = StyleSheet.create({
     fontSize: 8,
     color: C.gold,
   },
-});
+}); }
+
+const SHEETS = {
+  warm: { C: WARM, s: makeStyles(WARM) },
+  apex: { C: APEX, s: makeStyles(APEX) },
+};
 
 export default function InvoicePdf({
   invoice,
@@ -345,6 +383,9 @@ export default function InvoicePdf({
   logo?: string | null;
   variant?: "invoice" | "receipt";
 }) {
+  const sheet = isPrintBusiness(business) ? SHEETS.warm : SHEETS.apex;
+  const s = sheet.s;
+  const C = sheet.C;
   const sub = invoice.subtotal_cents;
   const disc = discountCents(
     sub,
@@ -367,8 +408,11 @@ export default function InvoicePdf({
               <Image
                 src={logo}
                 style={{
-                  height: 88,
-                  width: 163,
+                  // Sized to the wide Apex wordmark (~3.6:1): a taller box
+                  // left empty space above the address and pushed the
+                  // payment cards under the footer bar.
+                  height: 56,
+                  width: 202,
                   objectFit: "contain",
                   objectPosition: "left center",
                   marginBottom: 8,
@@ -387,7 +431,7 @@ export default function InvoicePdf({
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: "#4E7A5A" } : {}]}>
+            <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: C.sage } : {}]}>
               <Text style={s.invoiceBadgeText}>{isReceipt ? "RECEIPT" : "INVOICE"}</Text>
             </View>
             <Text style={s.invoiceNumber}>
@@ -395,7 +439,7 @@ export default function InvoicePdf({
             </Text>
             <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
             {isReceipt && invoice.paid_date && (
-              <Text style={[s.invoiceMeta, { color: "#4E7A5A", fontWeight: 700 }]}>
+              <Text style={[s.invoiceMeta, { color: C.sage, fontWeight: 700 }]}>
                 Paid {invoice.paid_date}
               </Text>
             )}
@@ -528,15 +572,16 @@ export default function InvoicePdf({
                       ? ` (${invoice.discount_value}%)`
                       : ""}
                   </Text>
-                  <Text style={[s.totalValue, { color: "#D14343" }]}>
+                  <Text style={[s.totalValue, { color: C.danger }]}>
                     -{formatSGD(disc)}
                   </Text>
                 </View>
               </>
             )}
-            <View style={[s.totalRowFinal, isReceipt ? { backgroundColor: "#4E7A5A" } : {}]}>
+            <View style={[s.totalRowFinal, isReceipt ? { backgroundColor: C.sage } : {}]}>
               <Text style={s.totalLabelFinal}>{isReceipt ? "TOTAL PAID" : "TOTAL DUE"}</Text>
-              <Text style={s.totalValueFinal}>
+              {/* Apex orange clashes with the green paid bar; white reads cleanly. */}
+              <Text style={[s.totalValueFinal, isReceipt && sheet === SHEETS.apex ? { color: C.white } : {}]}>
                 {formatSGD(invoice.total_cents)}
               </Text>
             </View>
@@ -546,8 +591,8 @@ export default function InvoicePdf({
         {/* ── payment info + QR (invoice) / confirmation (receipt) ── */}
         {isReceipt ? (
           <View style={s.paymentSection}>
-            <View style={[s.paymentInfo, { backgroundColor: "#E7EEE4" }]}>
-              <Text style={[s.paymentLabel, { color: "#4E7A5A" }]}>Payment Received</Text>
+            <View style={[s.paymentInfo, { backgroundColor: C.sageBg }]}>
+              <Text style={[s.paymentLabel, { color: C.sage }]}>Payment Received</Text>
               <Text style={s.paymentText}>
                 Payment of{" "}
                 <Text style={s.paymentHighlight}>{formatSGD(invoice.total_cents)}</Text>
