@@ -151,3 +151,13 @@ describe("rental invoices", () => {
     expect(whatsappMessage(separate, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE_SEPARATE);
   });
 });
+
+describe("rental note placement", () => {
+  it("goes above the sign-off, not after the signature", () => {
+    const rentalBiz = { ...(biz as object), kind: "photo", email_template: "" } as Business;
+    const rental = { ...(inv as object), is_rental: true, rental_start: "2026-11-14T10:00", rental_end: "2026-11-17T10:00" } as Invoice;
+    const msg = emailMessage(rental, rentalBiz);
+    expect(msg.indexOf(RENTAL_MESSAGE_NOTE)).toBeLessThan(msg.lastIndexOf("Best,"));
+    expect(msg.trim().endsWith(templateVars(rental, rentalBiz).payee_name)).toBe(true);
+  });
+});

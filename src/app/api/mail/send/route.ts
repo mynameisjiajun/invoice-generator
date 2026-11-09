@@ -1,7 +1,8 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createDraft, MailAuthError, MailNotConfiguredError, sendMail } from "@/lib/mail";
 import { emailMessage, emailSubject } from "@/lib/templates";
-import { invoiceDocLabel, type Business, type Invoice } from "@/lib/types";
+import { invoiceDocLabel, isPrintBusiness, type Business, type Invoice } from "@/lib/types";
+import { invoiceEmailHtml } from "@/lib/emailHtml";
 
 // Emails an invoice from the business address (iCloud), with the PDF attached.
 //
@@ -70,10 +71,14 @@ export async function POST(request: Request) {
   if (!to) return bad("This client has no email address saved — add one in Clients first.");
 
   const label = invoiceDocLabel(invoice, variant);
+  const message = emailMessage(invoice, business);
   const mail = {
     to,
     subject: variant === "receipt" ? label : emailSubject(invoice, business),
-    body: emailMessage(invoice, business),
+    body: message,
+    // Branded layout for Apex; other businesses keep the plain message so
+    // they don't go out under the Apex logo.
+    html: isPrintBusiness(business) ? undefined : invoiceEmailHtml({ body: message, invoice, business, variant }),
     senderName: business.payee_name || business.name,
     attachment: { filename: `${label}.pdf`, mimeType: "application/pdf", content: pdf },
   };

@@ -22,9 +22,18 @@ function rentalDateRange(inv: Invoice): string {
   return start === end ? formatJobDate(start) : `${formatJobDate(start)} to ${formatJobDate(end)}`;
 }
 
+const SIGN_OFF = /^(best|regards|kind regards|warm(est)? regards|thanks|thank you|cheers|sincerely)\b[^\n]*(\n[^\n]*){0,2}$/i;
+
 function withRentalNote(inv: Invoice, message: string): string {
   if (!isRentalInvoice(inv)) return message;
   const note = attachesRentalTerms(inv) ? RENTAL_MESSAGE_NOTE : RENTAL_MESSAGE_NOTE_SEPARATE;
+  // Slot the note in above the sign-off ("Best,\nName") rather than after
+  // the signature, when the message ends with one.
+  const paras = message.split(/\n\s*\n/);
+  const last = paras[paras.length - 1] ?? "";
+  if (paras.length > 1 && SIGN_OFF.test(last.trim())) {
+    return [...paras.slice(0, -1), note, last].join("\n\n");
+  }
   return `${message}\n\n${note}`;
 }
 

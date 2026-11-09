@@ -63,6 +63,9 @@ export type OutgoingMail = {
   to: string;
   subject: string;
   body: string;
+  /** Designed HTML version of `body`; without it the HTML part is just the
+   *  plain text with line breaks. */
+  html?: string;
   senderName?: string;
   attachment?: { filename: string; mimeType: string; content: Buffer };
 };
@@ -147,7 +150,7 @@ export function buildMime(mail: OutgoingMail, from: string): string {
     'Content-Type: text/html; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
     "",
-    wrapBase64(Buffer.from(bodyHtml(mail.body), "utf8").toString("base64")),
+    wrapBase64(Buffer.from(mail.html ?? bodyHtml(mail.body), "utf8").toString("base64")),
     "",
     `--${alt}--`,
     "",
