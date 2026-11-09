@@ -27,9 +27,12 @@ export function RentalModeChips({ isRental, onChange }: {
 /** Rental card fields. They reuse the invoice's job fields where they mean
  *  the same thing (project → job_event, collection & return → job_location)
  *  and add the rental period (rental_start / rental_end, datetime-local). */
-export function RentalDetailsFields({ project, start, end, location, onChange }: {
+export function RentalDetailsFields({ project, start, end, location, attachTerms, onChange, onAttachTermsChange }: {
   project: string; start: string; end: string; location: string;
+  /** Whether the rental T&C pages go on the end of the invoice PDF. */
+  attachTerms: boolean;
   onChange: (patch: { jobEvent?: string; rentalStart?: string; rentalEnd?: string; jobLocation?: string }) => void;
+  onAttachTermsChange: (attach: boolean) => void;
 }) {
   const days = rentalDays(start, end);
   const problem = rentalPeriodError(start, end);
@@ -63,6 +66,18 @@ export function RentalDetailsFields({ project, start, end, location, onChange }:
         <label className="input-label">Collection & return</label>
         <input className="input" placeholder="e.g. Self-collect & return at our studio"
           value={location} onChange={(e) => onChange({ jobLocation: e.target.value })} />
+      </div>
+      <div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+          <input type="checkbox" checked={attachTerms}
+            onChange={(e) => onAttachTermsChange(e.target.checked)} />
+          Attach the rental T&amp;C to the invoice PDF
+        </label>
+        <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+          {attachTerms
+            ? "The T&C and a signature page with this invoice number follow the invoice."
+            : "Untick only if you've sent the T&C separately. The invoice still says the rental is subject to them."}
+        </p>
       </div>
     </>
   );

@@ -36,6 +36,9 @@ export type Invoice = {
   is_rental?: boolean;
   rental_start?: string;         // "YYYY-MM-DDTHH:mm" (local) or ""
   rental_end?: string;           // "YYYY-MM-DDTHH:mm" (local) or ""
+  /** Attach the rental T&C to the PDF (migration 021). false = the T&C
+   *  were sent separately; undefined (older rows) counts as attached. */
+  rental_terms?: boolean;
   customers?: Customer | null;   // joined
 };
 
@@ -60,6 +63,11 @@ export function isPrintBusiness(b: Pick<Business, "kind"> | null | undefined): b
 
 export function isRentalInvoice(inv: Pick<Invoice, "is_rental"> | null | undefined): boolean {
   return inv?.is_rental === true;
+}
+
+/** A rental invoice whose PDF carries the T&C pages. */
+export function attachesRentalTerms(inv: Pick<Invoice, "is_rental" | "rental_terms"> | null | undefined): boolean {
+  return isRentalInvoice(inv) && inv?.rental_terms !== false;
 }
 
 export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {

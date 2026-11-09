@@ -1,5 +1,5 @@
 // Dev-only: render a sample invoice PDF to inspect the design.
-// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt]
+// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms]
 // PREVIEW_LOGO=/path/to/logo.png overrides public/logo.png.
 import React from "react";
 import path from "path";
@@ -114,7 +114,9 @@ async function main() {
   const out = process.argv[2] ?? "/tmp/invoice-preview.pdf";
   const mode = process.argv[3] ?? "invoice";
   const isRental = mode.startsWith("rental");
-  const base = isRental ? rentalInvoice : invoice;
+  const base = mode === "rental-noterms"
+    ? { ...rentalInvoice, rental_terms: false }
+    : isRental ? rentalInvoice : invoice;
   const payload = paynowPayload({
     mobile: business.paynow_number,
     amountCents: base.total_cents,

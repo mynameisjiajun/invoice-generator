@@ -83,3 +83,16 @@ describe("syncRentalDays", () => {
     expect(out[2]).toBe(lines[2]);
   });
 });
+
+import { attachesRentalTerms } from "./types";
+
+describe("attachesRentalTerms", () => {
+  it("attaches by default, including rows from before migration 021", () => {
+    expect(attachesRentalTerms({ is_rental: true })).toBe(true);
+    expect(attachesRentalTerms({ is_rental: true, rental_terms: true })).toBe(true);
+  });
+  it("leaves them off when sent separately, and never for non-rentals", () => {
+    expect(attachesRentalTerms({ is_rental: true, rental_terms: false })).toBe(false);
+    expect(attachesRentalTerms({ is_rental: false })).toBe(false);
+  });
+});

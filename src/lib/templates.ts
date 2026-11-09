@@ -1,6 +1,6 @@
 import { formatSGD } from "@/lib/money";
 import { paynowDisplay } from "@/lib/paynow";
-import { isPrintBusiness, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
+import { attachesRentalTerms, isPrintBusiness, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
 import { formatJobDate } from "./printRates";
 
 /** Added to every message for an equipment-rental invoice, whatever the
@@ -8,6 +8,11 @@ import { formatJobDate } from "./printRates";
 export const RENTAL_MESSAGE_NOTE =
   "As this is an equipment rental, the Equipment Rental Terms & Conditions are attached after the invoice. " +
   "Please read them, then sign and send back the acknowledgement page (a photo is fine) before collection.";
+
+/** For a rental whose T&C were sent separately rather than attached. */
+export const RENTAL_MESSAGE_NOTE_SEPARATE =
+  "As this is an equipment rental, it is subject to our Equipment Rental Terms & Conditions, sent separately. " +
+  "Please make sure the signed acknowledgement is back with us before collection.";
 
 /** "14 Nov 2026 to 17 Nov 2026" for a rental period, "" if incomplete. */
 function rentalDateRange(inv: Invoice): string {
@@ -18,7 +23,9 @@ function rentalDateRange(inv: Invoice): string {
 }
 
 function withRentalNote(inv: Invoice, message: string): string {
-  return isRentalInvoice(inv) ? `${message}\n\n${RENTAL_MESSAGE_NOTE}` : message;
+  if (!isRentalInvoice(inv)) return message;
+  const note = attachesRentalTerms(inv) ? RENTAL_MESSAGE_NOTE : RENTAL_MESSAGE_NOTE_SEPARATE;
+  return `${message}\n\n${note}`;
 }
 
 // The user's real default email copy — seeded here (not in the DB) so it can

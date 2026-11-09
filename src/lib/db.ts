@@ -113,7 +113,7 @@ export async function listInvoicesForCustomer(customerId: number): Promise<Invoi
 export type DraftInput = Pick<Invoice,
   "issue_date" | "due_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
   "line_items" | "discount_type" | "discount_value" |
-  "is_rental" | "rental_start" | "rental_end"> & { id?: string };
+  "is_rental" | "rental_start" | "rental_end" | "rental_terms"> & { id?: string };
 
 /** businessId is required when creating a new draft (draft.id is unset);
  *  ignored when updating an existing one, since an invoice's business

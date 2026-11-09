@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   renderTemplate, templateVars, emailMessage, emailSubject, tidyMessage,
-  DEFAULT_EMAIL_TEMPLATE, RENTAL_MESSAGE_NOTE, whatsappMessage,
+  DEFAULT_EMAIL_TEMPLATE, RENTAL_MESSAGE_NOTE, RENTAL_MESSAGE_NOTE_SEPARATE, whatsappMessage,
 } from "./templates";
 import type { Business, Invoice } from "./types";
 
@@ -142,5 +142,12 @@ describe("rental invoices", () => {
     expect(emailMessage(rental, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE);
     expect(whatsappMessage(rental, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE);
     expect(emailMessage({ ...rental, is_rental: false } as Invoice, rentalBiz)).not.toContain(RENTAL_MESSAGE_NOTE);
+  });
+
+  it("says the T&C were sent separately when they're not attached", () => {
+    const separate = { ...rental, rental_terms: false } as Invoice;
+    expect(emailMessage(separate, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE_SEPARATE);
+    expect(emailMessage(separate, rentalBiz)).not.toContain(RENTAL_MESSAGE_NOTE);
+    expect(whatsappMessage(separate, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE_SEPARATE);
   });
 });

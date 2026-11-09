@@ -29,6 +29,8 @@ export type FormState = {
   isRental?: boolean;
   rentalStart?: string;
   rentalEnd?: string;
+  /** Attach the rental T&C to the PDF; undefined = yes. */
+  rentalTerms?: boolean;
 };
 
 const KEY = "jjv.invoice.form.v1";
@@ -51,6 +53,7 @@ export function emptyForm(): FormState {
     isRental: false,
     rentalStart: "",
     rentalEnd: "",
+    rentalTerms: true,
   };
 }
 

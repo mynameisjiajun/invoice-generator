@@ -90,6 +90,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           jobLocation: inv.job_location, lineItems: inv.line_items,
           discountType: inv.discount_type, discountValue: inv.discount_value,
           isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
+          rentalTerms: inv.rental_terms !== false,
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
@@ -101,6 +102,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           discountValue: inv.discount_value,
           // A duplicated rental keeps its gear list and period, ready to re-date.
           isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
+          rentalTerms: inv.rental_terms !== false,
         });
       } else {
         const bizId = activeBusiness!.id;
@@ -233,6 +235,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         is_rental: isRental,
         rental_start: isRental ? f.rentalStart ?? "" : "",
         rental_end: isRental ? f.rentalEnd ?? "" : "",
+        rental_terms: f.rentalTerms !== false,
       } : {}),
     }, formBusinessId);
     if (!f.invoiceId) set({ invoiceId: inv.id });
@@ -339,7 +342,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
               onChange={set} />
           ) : isRental ? (
             <RentalDetailsFields project={f.jobEvent} start={f.rentalStart ?? ""} end={f.rentalEnd ?? ""}
-              location={f.jobLocation} onChange={setRentalDetails} />
+              location={f.jobLocation} attachTerms={f.rentalTerms !== false}
+              onChange={setRentalDetails} onAttachTermsChange={(on) => set({ rentalTerms: on })} />
           ) : (<>
           <div>
             <label className="input-label">Event name</label>

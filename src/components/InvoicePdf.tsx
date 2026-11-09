@@ -9,7 +9,9 @@ import {
 } from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import { formatSgPhone, formatSgAddress } from "@/lib/phone";
-import { invoiceDocLabel, isPrintBusiness, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
+import {
+  attachesRentalTerms, invoiceDocLabel, isPrintBusiness, isRentalInvoice, type Business, type Invoice,
+} from "@/lib/types";
 import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
 import {
   RENTAL_ACK, RENTAL_TERMS, RENTAL_TERMS_INTRO, RENTAL_TERMS_SUBTITLE, RENTAL_TERMS_TITLE,
@@ -573,6 +575,9 @@ export default function InvoicePdf({
   // on the invoice, not the receipt — the rental T&C appended after it.
   const isRental = !isPrintBusiness(business) && isRentalInvoice(invoice);
   const period = isRental ? rentalDays(invoice.rental_start, invoice.rental_end) : null;
+  // The owner can leave the T&C off when they were sent separately; the
+  // invoice still states the rental is subject to them.
+  const attachTerms = isRental && attachesRentalTerms(invoice);
 
   return (
     <Document title={invoiceDocLabel(invoice, variant)}>
@@ -850,11 +855,19 @@ export default function InvoicePdf({
             {business.bank_details && <Text style={s.paymentText}>{business.bank_details}</Text>}
             {isRental ? (
               <View style={s.termsNotice}>
-                <Text style={s.termsNoticeText}>
-                  This rental is subject to the attached{" "}
-                  <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
-                  , which form part of this invoice. Please sign the acknowledgement on the last page before collection.
-                </Text>
+                {attachTerms ? (
+                  <Text style={s.termsNoticeText}>
+                    This rental is subject to the attached{" "}
+                    <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
+                    , which form part of this invoice. Please sign the acknowledgement on the last page before collection.
+                  </Text>
+                ) : (
+                  <Text style={s.termsNoticeText}>
+                    This rental is subject to the Apex Cinematics{" "}
+                    <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
+                    {" "}provided separately, which form part of this invoice.
+                  </Text>
+                )}
               </View>
             ) : null}
           </View>
@@ -879,7 +892,7 @@ export default function InvoicePdf({
           </View>
         </View>
       </Page>
-      {isRental && !isReceipt ? (
+      {attachTerms && !isReceipt ? (
         <RentalTermsPage s={s} invoiceNumber={invoice.invoice_number ?? "DRAFT"} />
       ) : null}
     </Document>
