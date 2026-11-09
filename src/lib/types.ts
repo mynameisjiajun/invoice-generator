@@ -1,5 +1,6 @@
 import type { DiscountType, LineItem } from "./money";
 import { plusDaysIso, todayLocalIso } from "./date";
+import type { ContractSettings } from "./shootTerms";
 
 export type Customer = {
   id: number; business_id: string; name: string; company: string; phone: string;
@@ -52,6 +53,8 @@ export type Invoice = {
   /** On a quote: the invoice it was converted into. */
   converted_invoice_id?: string | null;
   payments?: Payment[];          // joined
+  /** Shoot agreement settings (migration 024); null/absent = none attached. */
+  contract?: ContractSettings | null;
   customers?: Customer | null;   // joined
 };
 
@@ -96,9 +99,15 @@ export function attachesRentalTerms(inv: Pick<Invoice, "is_rental" | "rental_ter
   return isRentalInvoice(inv) && inv?.rental_terms !== false;
 }
 
-/** A finalized rental still waiting on the renter's signed acknowledgement. */
-export function awaitingRentalSignature(inv: Pick<Invoice, "is_rental" | "status" | "rental_signed_at">): boolean {
-  return inv.is_rental === true && inv.status !== "draft" && !inv.rental_signed_at;
+/** Rentals and invoices with a shoot contract need the client's signed
+ *  acknowledgement back (tracked in rental_signed_at for both). */
+export function needsSignature(inv: Pick<Invoice, "is_rental" | "contract">): boolean {
+  return inv.is_rental === true || !!inv.contract;
+}
+
+/** A finalized invoice still waiting on the client's signed terms. */
+export function awaitingRentalSignature(inv: Pick<Invoice, "is_rental" | "contract" | "status" | "rental_signed_at" | "doc_type">): boolean {
+  return needsSignature(inv) && inv.doc_type !== "quote" && inv.status !== "draft" && !inv.rental_signed_at;
 }
 
 export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {

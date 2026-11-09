@@ -56,13 +56,23 @@ function insertNotes(message: string, notes: (string | null)[]): string {
   return [message, ...add].join("\n\n");
 }
 
+export const CONTRACT_MESSAGE_NOTE =
+  "The Shoot Agreement is attached after the invoice. Please read it, then sign and send back the last page (a photo is fine) to confirm your booking.";
+export const CONTRACT_QUOTE_NOTE =
+  "Our Shoot Agreement is attached after the quote, so you can see the terms that will apply.";
+
+function contractNote(inv: Invoice): string | null {
+  if (!inv.contract || isRentalInvoice(inv)) return null;
+  return isQuote(inv) ? CONTRACT_QUOTE_NOTE : CONTRACT_MESSAGE_NOTE;
+}
+
 function rentalNote(inv: Invoice): string | null {
   if (!isRentalInvoice(inv)) return null;
   return attachesRentalTerms(inv) ? RENTAL_MESSAGE_NOTE : RENTAL_MESSAGE_NOTE_SEPARATE;
 }
 
 function withRentalNote(inv: Invoice, message: string): string {
-  return insertNotes(message, [depositMessageNote(inv), rentalNote(inv)]);
+  return insertNotes(message, [depositMessageNote(inv), rentalNote(inv), contractNote(inv)]);
 }
 
 // The user's real default email copy — seeded here (not in the DB) so it can
@@ -268,5 +278,5 @@ function quoteMessage(template: string, inv: Invoice, biz: Business): string {
         : "",
     valid_line: inv.due_date ? ` This quote is valid until ${formatJobDate(inv.due_date)}.` : "",
   };
-  return insertNotes(tidyMessage(renderTemplate(template, vars)), [rentalNote(inv)]);
+  return insertNotes(tidyMessage(renderTemplate(template, vars)), [rentalNote(inv), contractNote(inv)]);
 }

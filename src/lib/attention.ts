@@ -38,7 +38,7 @@ export function attentionItems(invoices: Invoice[], quotes: Invoice[], today: st
       if (awaitingRentalSignature(inv)) {
         items.push({
           key: `sign:${inv.id}`, href: detailHref(inv), tone: "info",
-          title: `${n} rental T&C not signed`, detail: who(inv),
+          title: `${n} ${inv.is_rental ? "rental T&C" : "contract"} not signed`, detail: who(inv),
         });
       }
       continue;
@@ -62,7 +62,7 @@ export function attentionItems(invoices: Invoice[], quotes: Invoice[], today: st
     if (awaitingRentalSignature(inv)) {
       items.push({
         key: `sign:${inv.id}`, href: detailHref(inv), tone: "info",
-        title: `${n} rental T&C not signed`, detail: who(inv),
+        title: `${n} ${inv.is_rental ? "rental T&C" : "contract"} not signed`, detail: who(inv),
       });
     }
   }

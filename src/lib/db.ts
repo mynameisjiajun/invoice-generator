@@ -138,7 +138,7 @@ export type DraftInput = Pick<Invoice,
   "issue_date" | "due_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
   "line_items" | "discount_type" | "discount_value" |
   "is_rental" | "rental_start" | "rental_end" | "rental_terms" |
-  "doc_type" | "deposit_percent"> & { id?: string };
+  "doc_type" | "deposit_percent" | "contract"> & { id?: string };
 
 /** businessId is required when creating a new draft (draft.id is unset);
  *  ignored when updating an existing one, since an invoice's business
@@ -190,6 +190,7 @@ export async function convertQuote(quoteId: string): Promise<string> {
     line_items: q.line_items,
     discount_type: q.discount_type, discount_value: q.discount_value,
     deposit_percent: q.deposit_percent ?? 0,
+    ...(q.contract ? { contract: q.contract } : {}),
     ...(q.is_rental ? {
       is_rental: true, rental_start: q.rental_start ?? "", rental_end: q.rental_end ?? "",
       rental_terms: q.rental_terms !== false,

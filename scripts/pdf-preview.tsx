@@ -1,5 +1,5 @@
 // Dev-only: render a sample invoice PDF to inspect the design.
-// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms|quote|deposit|deposit-paid|deposit-receipt]
+// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms|quote|deposit|deposit-paid|deposit-receipt|full-upfront|contract|contract-strict]
 // PREVIEW_LOGO=/path/to/logo.png overrides public/logo.png.
 import React from "react";
 import path from "path";
@@ -10,6 +10,7 @@ import { paynowPayload } from "../src/lib/paynow";
 import type { Business, Invoice } from "../src/lib/types";
 import { subtotalCents } from "../src/lib/money";
 import { dueNowCents } from "../src/lib/payments";
+import { presetContract } from "../src/lib/shootTerms";
 
 // InvoicePdf.tsx registers Montserrat with browser paths (/fonts/...) since
 // it's bundled for the client; that registration already ran when the
@@ -123,6 +124,8 @@ async function main() {
     : mode === "quote" ? { ...invoice, doc_type: "quote", invoice_number: "Q-7", due_date: "2026-07-18", deposit_percent: 50 }
     : mode === "deposit" ? { ...invoice, deposit_percent: 50 }
     : mode === "full-upfront" ? { ...invoice, deposit_percent: 100 }
+    : mode === "contract" ? { ...invoice, deposit_percent: 50, contract: presetContract("standard") }
+    : mode === "contract-strict" ? { ...invoice, deposit_percent: 50, contract: presetContract("strict") }
     : mode === "deposit-paid" || mode === "deposit-receipt" ? { ...invoice, deposit_percent: 50, payments: [depositPay] }
     : invoice;
   const payload = paynowPayload({

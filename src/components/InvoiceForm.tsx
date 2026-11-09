@@ -8,6 +8,7 @@ import {
   clearForm, defaultDueDays, emptyForm, loadForm, storeForm, type FormState,
 } from "@/lib/formStorage";
 import DepositField from "@/components/DepositField";
+import ContractField from "@/components/ContractField";
 import type { DocType } from "@/lib/types";
 import { plusDaysIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
@@ -59,6 +60,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
   // Whether the invoice being edited was saved as a rental — so switching it
   // back to a shoot still writes is_rental = false.
   const [loadedRental, setLoadedRental] = useState(false);
+  // Same idea for the contract column (migration 024).
+  const [loadedContract, setLoadedContract] = useState(false);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // Which draft/duplicate id (or "new") has already been loaded — see the
@@ -87,6 +90,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
         setLoadedStatus(inv.status);
         setLoadedNumber(inv.invoice_number);
         setLoadedRental(inv.is_rental === true);
+        setLoadedContract(!!inv.contract);
         setForm({
           invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
           dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, defaultDueDays(inv.doc_type)),
@@ -99,6 +103,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
           rentalTerms: inv.rental_terms !== false,
           docType: inv.doc_type ?? "invoice", depositPercent: inv.deposit_percent ?? 0,
+          contract: inv.contract ?? null,
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
@@ -112,6 +117,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
           rentalTerms: inv.rental_terms !== false,
           depositPercent: inv.deposit_percent ?? 0,
+          contract: inv.contract ?? null,
         });
       } else {
         const bizId = activeBusiness!.id;
@@ -174,6 +180,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
   const showDeposit = !isPrint && !isRental;
   const depositPercent = showDeposit ? f.depositPercent ?? 0 : 0;
   const depositNow = Math.round((totals.total * depositPercent) / 100);
+  const contract = showDeposit ? f.contract ?? null : null;
   const dueDays = defaultDueDays(docType);
   const periodDays = rentalDays(f.rentalStart, f.rentalEnd);
 
@@ -260,6 +267,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       discount_type: f.discountType, discount_value: f.discountValue,
       doc_type: docType,
       deposit_percent: depositPercent,
+      // Only written when a contract is (or was) attached, so invoices keep
+      // saving on a database without migration 024.
+      ...(contract || loadedContract ? { contract } : {}),
       // Rental columns are only written when they matter, so ordinary
       // invoices keep saving even on a database without migration 020.
       ...(isRental || loadedRental ? {
@@ -552,6 +562,10 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       {showDeposit && (
         <DepositField percent={depositPercent} totalCents={totals.total}
           onChange={(p) => set({ depositPercent: p })} />
+      )}
+      {showDeposit && (
+        <ContractField contract={contract} depositPercent={depositPercent}
+          onChange={(c) => set({ contract: c })} />
       )}
 
       {/* Totals */}

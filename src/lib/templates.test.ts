@@ -252,3 +252,17 @@ describe("full payment before the shoot", () => {
     expect(q).not.toContain("deposit");
   });
 });
+
+import { CONTRACT_MESSAGE_NOTE, CONTRACT_QUOTE_NOTE } from "./templates";
+import { presetContract } from "./shootTerms";
+
+describe("shoot contract in messages", () => {
+  const c = { ...(inv as object), job_event: "Wedding", total_cents: 300000, invoice_number: "A-50", status: "unpaid", payments: [], deposit_percent: 50, contract: presetContract("standard") } as unknown as Invoice;
+  it("invoice asks for the signed agreement; quote just points to it", () => {
+    const msg = emailMessage(c, { ...biz, email_template: "" } as Business);
+    expect(msg).toContain(CONTRACT_MESSAGE_NOTE);
+    expect(msg.indexOf(CONTRACT_MESSAGE_NOTE)).toBeLessThan(msg.lastIndexOf("Best,"));
+    expect(emailMessage({ ...c, doc_type: "quote", invoice_number: "Q-2", due_date: null } as Invoice, biz)).toContain(CONTRACT_QUOTE_NOTE);
+    expect(emailMessage({ ...c, contract: null } as Invoice, biz)).not.toContain("Shoot Agreement");
+  });
+});

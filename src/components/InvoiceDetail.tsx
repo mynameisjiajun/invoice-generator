@@ -13,7 +13,9 @@ import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
 import { emailMessage, receiptEmailMessage, receiptWhatsappMessage, whatsappMessage } from "@/lib/templates";
-import { invoiceDocLabel, isOverdue, isQuote, type Business, type Invoice, type InvoiceEvent } from "@/lib/types";
+import {
+  invoiceDocLabel, isOverdue, isQuote, needsSignature, type Business, type Invoice, type InvoiceEvent,
+} from "@/lib/types";
 import { dueNowCents, paidCents, paymentState } from "@/lib/payments";
 import PaymentsCard from "@/components/PaymentsCard";
 import FocusFrame from "@/components/FocusFrame";
@@ -101,6 +103,28 @@ export default function InvoiceDetail({ id }: { id: string }) {
     ).toBlob();
     const filename = `${invoiceDocLabel(inv, variant)}.pdf`;
     return { blob, filename };
+  }
+
+  // The terms on their own (rental T&C or shoot agreement), with this
+  // invoice's number on the signature page — e.g. to resend for signing.
+  async function downloadTerms() {
+    const inv = invoice!;
+    setBusy(true);
+    try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const { TermsOnlyPdf, rentalTermsDoc, shootTermsDoc } = await import("@/components/InvoicePdf");
+      const doc = inv.is_rental ? rentalTermsDoc() : shootTermsDoc(inv.contract!, Number(inv.deposit_percent ?? 0));
+      const blob = await pdf(<TermsOnlyPdf doc={doc} invoiceNumber={inv.invoice_number ?? "DRAFT"} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), {
+        href: url, download: `${doc.title} ${inv.invoice_number ?? "Draft"}.pdf`,
+      });
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
   }
 
   async function downloadPdf(variant: "invoice" | "receipt" = "invoice") {
@@ -330,21 +354,6 @@ export default function InvoiceDetail({ id }: { id: string }) {
               {invoice.job_location ? (
                 <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>{invoice.job_location}</p>
               ) : null}
-              {invoice.status !== "draft" && !quote && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-                  {invoice.rental_signed_at ? (
-                    <span className="badge badge-paid">
-                      T&amp;C signed {new Date(invoice.rental_signed_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
-                    </span>
-                  ) : (
-                    <span className="badge badge-unpaid">T&amp;C not signed yet</span>
-                  )}
-                  <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.78rem" }}
-                    onClick={onToggleSigned}>
-                    {invoice.rental_signed_at ? "Undo" : "Mark T&C signed"}
-                  </button>
-                </div>
-              )}
             </>
           );
         })() : (
@@ -420,6 +429,37 @@ export default function InvoiceDetail({ id }: { id: string }) {
           </button>
         )}
       </div>
+      {(invoice.contract || invoice.is_rental) && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="section-label">{invoice.is_rental ? "Rental T&C" : "Shoot contract"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {needsSignature(invoice) && !quote && invoice.status !== "draft" && (<>
+              {invoice.rental_signed_at ? (
+                <span className="badge badge-paid">
+                  Signed {new Date(invoice.rental_signed_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+                </span>
+              ) : (
+                <span className="badge badge-unpaid">Not signed yet</span>
+              )}
+              <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.78rem" }}
+                onClick={onToggleSigned}>
+                {invoice.rental_signed_at ? "Undo" : "Mark signed"}
+              </button>
+            </>)}
+            <button className="btn btn-ghost icon-btn" style={{ marginLeft: "auto", padding: "4px 10px", fontSize: "0.78rem" }}
+              onClick={downloadTerms} disabled={busy}>
+              <IconDownload size={14} /> Download T&amp;C only
+            </button>
+          </div>
+          {invoice.contract && (
+            <p style={{ margin: "8px 0 0", fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+              {invoice.contract.preset === "strict" ? "Strict" : invoice.contract.preset === "standard" ? "Standard" : "Custom"} terms
+              {" · "}{invoice.contract.on.length} optional clauses on. Change them with Edit.
+            </p>
+          )}
+        </div>
+      )}
+
       {!quote && invoice.status !== "draft" && (
         <PaymentsCard invoice={invoice}
           onChange={(fresh, recorded) => {

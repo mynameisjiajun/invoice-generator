@@ -1,5 +1,6 @@
 import type { DiscountType, LineItem } from "./money";
 import type { DocType } from "./types";
+import type { ContractSettings } from "./shootTerms";
 import { plusDaysIso, todayLocalIso } from "./date";
 
 export type FormState = {
@@ -37,6 +38,8 @@ export type FormState = {
   docType?: DocType;
   /** Deposit asked upfront on shoot invoices, in percent (0 = none). */
   depositPercent?: number;
+  /** Shoot agreement clauses for this client; null = no contract. */
+  contract?: ContractSettings | null;
 };
 
 /** Default due date: invoices are due in 30 days; quotes are valid 14. */

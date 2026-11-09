@@ -11,6 +11,7 @@ import { invoicePrefix, slugify } from "@/lib/slug";
 import { formatSGD } from "@/lib/money";
 import { DEFAULT_EMAIL_TEMPLATE, DEFAULT_WHATSAPP_TEMPLATE } from "@/lib/templates";
 import type { Business, Preset } from "@/lib/types";
+import TermsDownloads from "@/components/TermsDownloads";
 import { IconAdd, IconCheck, IconDownload, IconSignOut, IconTrash } from "@/components/icons";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import { fileToLogoDataUrl } from "@/lib/logoImage";
@@ -369,6 +370,8 @@ export default function SettingsPage() {
           {saved && <IconCheck size={15} />} {saved ? "Saved" : "Save Messages"}
         </button>
       </div>
+
+      <TermsDownloads />
 
       {/* Service presets */}
       <div className="card">

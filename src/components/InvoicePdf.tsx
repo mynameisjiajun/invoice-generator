@@ -15,8 +15,9 @@ import {
 import { balanceCents, depositCents, depositOutstanding, dueNowCents, isFullUpfront, paidCents } from "@/lib/payments";
 import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
 import {
-  RENTAL_ACK, RENTAL_TERMS, RENTAL_TERMS_INTRO, RENTAL_TERMS_SUBTITLE, RENTAL_TERMS_TITLE,
+  RENTAL_ACK, RENTAL_TERMS, RENTAL_TERMS_INTRO, RENTAL_TERMS_SUBTITLE, RENTAL_TERMS_TITLE, type Section,
 } from "@/lib/rentalTerms";
+import { buildShootTerms, SHOOT_TERMS_SUBTITLE, SHOOT_TERMS_TITLE, type ContractSettings } from "@/lib/shootTerms";
 import { formatJobDate, parseHandover, printBreakdown, printSpecLine } from "@/lib/printRates";
 import { paynowDisplay } from "@/lib/paynow";
 
@@ -579,6 +580,11 @@ export default function InvoicePdf({
   // The owner can leave the T&C off when they were sent separately; the
   // invoice still states the rental is subject to them.
   const attachTerms = isRental && attachesRentalTerms(invoice);
+  // Shoot agreement: switched on per invoice/quote (never rentals or print).
+  const contract = !isPrintBusiness(business) && !isRental ? invoice.contract ?? null : null;
+  const termsDoc: TermsDoc | null = attachTerms
+    ? rentalTermsDoc()
+    : contract ? shootTermsDoc(contract, Number(invoice.deposit_percent ?? 0)) : null;
   const isQuoteDoc = isQuote(invoice);
   const docWord = isQuoteDoc ? "quote" : "invoice";
   // Deposits and part payments (shoot invoices).
@@ -604,7 +610,7 @@ export default function InvoicePdf({
   const received = receiptLines.reduce((t, l) => t + l.cents, 0);
   // Rentals and deposit invoices carry extra rows; tighter spacing keeps a
   // typical one on a single page.
-  const tight = isRental || splitTotals || fullUpfront;
+  const tight = isRental || splitTotals || fullUpfront || !!contract;
 
   return (
     <Document title={invoiceDocLabel(invoice, variant)}>
@@ -675,7 +681,7 @@ export default function InvoicePdf({
 
         {/* ── bill-to + job info cards ── */}
         <View style={[s.infoRow, tight ? { paddingTop: 12, paddingBottom: 10 } : {}]}>
-          <View style={s.infoCard}>
+          <View style={[s.infoCard, tight ? { padding: 12 } : {}]}>
             <Text style={s.label}>Bill To</Text>
             <Text style={s.infoName}>{invoice.customers?.name}</Text>
             {invoice.customers?.company ? (
@@ -699,7 +705,7 @@ export default function InvoicePdf({
               <Text style={[s.infoDetail, { fontStyle: "italic" }]}>No contact details on file</Text>
             )}
           </View>
-          <View style={s.infoCard}>
+          <View style={[s.infoCard, tight ? { padding: 12 } : {}]}>
             {isPrintBusiness(business) ? (() => {
               const handover = parseHandover(invoice.job_location);
               return (
@@ -765,6 +771,11 @@ export default function InvoicePdf({
                     ? `${invoice.deposit_percent}% deposit to confirm the booking, balance on delivery`
                     : business.payment_terms}
             </Text>
+            {contract ? (
+              <Text style={[s.infoDetail, { marginTop: 4, color: C.dark }]}>
+                Subject to the attached <Text style={{ fontWeight: 700 }}>Shoot Agreement</Text>.
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -782,7 +793,7 @@ export default function InvoicePdf({
             <View
               key={i}
               wrap={false}
-              style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}, isRental ? { paddingVertical: 6 } : {}]}
+              style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}, tight ? { paddingVertical: 6 } : {}]}
             >
               {li.print ? (() => {
                 // The breakdown only appears when the charged price is the
@@ -1016,24 +1027,65 @@ export default function InvoicePdf({
           </View>
         </View>
       </Page>
-      {attachTerms && !isReceipt ? (
-        <RentalTermsPage s={s} invoiceNumber={invoice.invoice_number ?? "DRAFT"} />
+      {termsDoc && !isReceipt ? (
+        <TermsPage s={s} doc={termsDoc} invoiceNumber={invoice.invoice_number ?? "DRAFT"} />
       ) : null}
     </Document>
   );
 }
 
-/* ── Equipment Rental T&C, appended to rental invoices ─────────────────
-   Flows over as many pages as it needs. The Renter Acknowledgement is kept
-   whole and carries the invoice number pre-filled — that is what ties a
-   signed copy to this invoice (T&C clause 1.2). Name, contact, signature
-   and date are left blank for the renter. */
-function RentalTermsPage({
+/* ── Terms pages: rental T&C or shoot agreement ─────────────────────────
+   Appended to invoices/quotes, or printed on their own (TermsOnlyPdf).
+   Flows over as many pages as it needs. The acknowledgement is kept whole
+   and carries the invoice number pre-filled — that is what ties a signed
+   copy to its invoice. Name, details, signature and date are left blank.
+   With no invoice number (a blank copy), the number is a blank line too. */
+export type TermsDoc = {
+  title: string;
+  subtitle: string;
+  intro: string;
+  sections: Section[];
+  ack: { title: string; intro: string; points: string[] };
+  /** Short footer label, e.g. "EQUIPMENT RENTAL T&C". */
+  footerLabel: string;
+  /** Second field beside "Full name" on the signature block. */
+  detailField: string;
+};
+
+export function rentalTermsDoc(): TermsDoc {
+  return {
+    title: RENTAL_TERMS_TITLE, subtitle: RENTAL_TERMS_SUBTITLE, intro: RENTAL_TERMS_INTRO,
+    sections: RENTAL_TERMS, ack: RENTAL_ACK,
+    footerLabel: "EQUIPMENT RENTAL T&C", detailField: "Contact number",
+  };
+}
+
+export function shootTermsDoc(contract: ContractSettings, depositPercent: number | null): TermsDoc {
+  const t = buildShootTerms(contract, depositPercent);
+  return {
+    title: SHOOT_TERMS_TITLE, subtitle: SHOOT_TERMS_SUBTITLE, intro: t.intro,
+    sections: t.sections, ack: t.ack,
+    footerLabel: "SHOOT AGREEMENT", detailField: "Company (if any)",
+  };
+}
+
+/** The terms on their own, e.g. to send before there's an invoice. */
+export function TermsOnlyPdf({ doc, invoiceNumber = null }: { doc: TermsDoc; invoiceNumber?: string | null }) {
+  return (
+    <Document title={`Apex Cinematics ${doc.title}${invoiceNumber ? ` ${invoiceNumber}` : ""}`}>
+      <TermsPage s={SHEETS.apex.s} doc={doc} invoiceNumber={invoiceNumber} />
+    </Document>
+  );
+}
+
+function TermsPage({
   s,
+  doc,
   invoiceNumber,
 }: {
   s: ReturnType<typeof makeStyles>;
-  invoiceNumber: string;
+  doc: TermsDoc;
+  invoiceNumber: string | null;
 }) {
   return (
     <Page size="A4" style={s.page}>
@@ -1045,20 +1097,22 @@ function RentalTermsPage({
       <View style={s.tcHeader}>
         <View>
           <Text style={s.tcEyebrow}>Apex Cinematics</Text>
-          <Text style={s.tcTitle}>{RENTAL_TERMS_TITLE}</Text>
-          <Text style={s.tcSubtitle}>{RENTAL_TERMS_SUBTITLE}</Text>
+          <Text style={s.tcTitle}>{doc.title}</Text>
+          <Text style={s.tcSubtitle}>{doc.subtitle}</Text>
         </View>
-        <View>
-          <Text style={[s.label, { textAlign: "right", marginBottom: 2 }]}>For Invoice No.</Text>
-          <Text style={s.tcRefNumber}>{invoiceNumber}</Text>
-        </View>
+        {invoiceNumber ? (
+          <View>
+            <Text style={[s.label, { textAlign: "right", marginBottom: 2 }]}>For Invoice No.</Text>
+            <Text style={s.tcRefNumber}>{invoiceNumber}</Text>
+          </View>
+        ) : null}
       </View>
       <View style={s.divider} />
 
       <View style={s.tcBody}>
-        <Text style={s.tcIntro}>{RENTAL_TERMS_INTRO}</Text>
+        <Text style={s.tcIntro}>{doc.intro}</Text>
 
-        {RENTAL_TERMS.map((sec) => {
+        {doc.sections.map((sec) => {
           const clause = (c: (typeof sec.clauses)[number], i: number) => (
             // Clauses are a few lines at most: keep each whole so a number is
             // never stranded at a page foot with its text on the next page.
@@ -1102,9 +1156,9 @@ function RentalTermsPage({
         })}
 
         <View style={s.ack} wrap={false}>
-          <Text style={s.ackTitle}>{RENTAL_ACK.title}</Text>
-          <Text style={s.tcText}>{RENTAL_ACK.intro}</Text>
-          {RENTAL_ACK.points.map((pt, i) => (
+          <Text style={s.ackTitle}>{doc.ack.title}</Text>
+          <Text style={s.tcText}>{doc.ack.intro}</Text>
+          {doc.ack.points.map((pt, i) => (
             <View key={i} style={s.ackPoint}>
               <Text style={s.ackBullet}>•</Text>
               <View style={s.tcFill}><Text style={s.tcText}>{pt}</Text></View>
@@ -1114,9 +1168,11 @@ function RentalTermsPage({
           <View style={s.ackFields}>
             <View style={s.ackField}>
               <Text style={s.label}>Invoice No.</Text>
-              <View style={s.ackPrefilled}>
-                <Text style={s.ackPrefilledText}>{invoiceNumber}</Text>
-              </View>
+              {invoiceNumber ? (
+                <View style={s.ackPrefilled}>
+                  <Text style={s.ackPrefilledText}>{invoiceNumber}</Text>
+                </View>
+              ) : <View style={s.ackLine} />}
             </View>
             <View style={s.ackField}>
               <Text style={s.label}>Date</Text>
@@ -1129,7 +1185,7 @@ function RentalTermsPage({
               <View style={s.ackLine} />
             </View>
             <View style={s.ackField}>
-              <Text style={s.label}>Contact number</Text>
+              <Text style={s.label}>{doc.detailField}</Text>
               <View style={s.ackLine} />
             </View>
           </View>
@@ -1144,10 +1200,12 @@ function RentalTermsPage({
 
       <View style={s.footer} fixed>
         <View style={s.footerBar}>
-          <Text style={s.footerText}>EQUIPMENT RENTAL T&amp;C</Text>
+          <Text style={s.footerText}>{doc.footerLabel}</Text>
           <Text style={s.footerDot}>·</Text>
-          <Text style={s.footerText}>INVOICE {invoiceNumber}</Text>
-          <Text style={s.footerDot}>·</Text>
+          {invoiceNumber ? (<>
+            <Text style={s.footerText}>INVOICE {invoiceNumber}</Text>
+            <Text style={s.footerDot}>·</Text>
+          </>) : null}
           <Text
             style={s.footerText}
             render={({ pageNumber, totalPages }) => `PAGE ${pageNumber} OF ${totalPages}`}
