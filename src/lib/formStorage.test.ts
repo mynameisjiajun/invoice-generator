@@ -31,7 +31,8 @@ describe("formStorage", () => {
   });
 
   test("emptyForm defaults issueDate to today", () => {
-    expect(emptyForm().issueDate).toBe(new Date().toISOString().slice(0, 10));
+    // Local date, not UTC: in Singapore toISOString() is "yesterday" before 8am.
+    expect(emptyForm().issueDate).toBe(todayLocalIso());
   });
 });
 

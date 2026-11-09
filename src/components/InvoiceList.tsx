@@ -199,9 +199,10 @@ export default function InvoiceList() {
                     {inv.invoice_number ?? "Draft"}
                   </span>
                   {badge(inv)}
+                  {inv.is_rental ? <span className="badge badge-draft">Rental</span> : null}
                 </div>
                 <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-                  {inv.customers?.name ?? "—"} · {inv.job_event || "No event"}
+                  {inv.customers?.name ?? "—"} · {inv.job_event || (inv.is_rental ? "Equipment rental" : "No event")}
                 </div>
                 <div style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", marginTop: 2 }}>
                   {inv.issue_date}

@@ -1,5 +1,6 @@
 // Dev-only: render a sample invoice PDF to inspect the design.
-// Run: npx tsx scripts/pdf-preview.tsx <output.pdf>
+// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt]
+// PREVIEW_LOGO=/path/to/logo.png overrides public/logo.png.
 import React from "react";
 import path from "path";
 import { renderToFile, Font } from "@react-pdf/renderer";
@@ -7,6 +8,7 @@ import QRCode from "qrcode";
 import InvoicePdf from "../src/components/InvoicePdf";
 import { paynowPayload } from "../src/lib/paynow";
 import type { Business, Invoice } from "../src/lib/types";
+import { subtotalCents } from "../src/lib/money";
 
 // InvoicePdf.tsx registers Montserrat with browser paths (/fonts/...) since
 // it's bundled for the client; that registration already ran when the
@@ -83,24 +85,53 @@ const invoice: Invoice = {
   },
 };
 
+// Equipment rental sample (Apex Cinematics): per item, per day.
+const rentalLines: Invoice["line_items"] = [
+  { description: "Sony FX3 Cinema Line body", qty: 1, unitPriceCents: 8000, rental: { days: 3, replacementCents: 550000 } },
+  { description: "Sony FE 24-70mm f/2.8 GM II", qty: 1, unitPriceCents: 4500, rental: { days: 3, replacementCents: 320000 } },
+  { description: "Aputure 300d II light kit", qty: 2, unitPriceCents: 3500, rental: { days: 3, replacementCents: 110000 } },
+  { description: "V-mount battery 150Wh", qty: 4, unitPriceCents: 800, rental: { days: 3, replacementCents: 28000 } },
+  { description: "Delivery & collection", qty: 1, unitPriceCents: 4000 },
+];
+const rentalSub = subtotalCents(rentalLines);
+const rentalInvoice: Invoice = {
+  ...invoice,
+  invoice_number: "A-31",
+  is_rental: true,
+  rental_start: "2026-11-14T10:00",
+  rental_end: "2026-11-17T10:00",
+  job_event: "Short film — Night Market",
+  job_date: "",
+  job_location: "Self-collect & return: Blk 296A Compassvale Crescent #10-293, S541296",
+  line_items: rentalLines,
+  discount_type: "none",
+  discount_value: 0,
+  subtotal_cents: rentalSub,
+  total_cents: rentalSub,
+};
+
 async function main() {
   const out = process.argv[2] ?? "/tmp/invoice-preview.pdf";
+  const mode = process.argv[3] ?? "invoice";
+  const isRental = mode.startsWith("rental");
+  const base = isRental ? rentalInvoice : invoice;
   const payload = paynowPayload({
     mobile: business.paynow_number,
-    amountCents: invoice.total_cents,
-    reference: invoice.invoice_number!,
+    amountCents: base.total_cents,
+    reference: base.invoice_number!,
   });
   const qr = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 512 });
   let logo: string | null = null;
-  const logoPath = decodeURIComponent(new URL("../public/logo.png", import.meta.url).pathname);
+  const logoPath = process.env.PREVIEW_LOGO
+    ?? decodeURIComponent(new URL("../public/logo.png", import.meta.url).pathname);
   const fs = await import("fs");
   if (fs.existsSync(logoPath)) {
     logo = `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
   }
-  const variant = (process.argv[3] as "invoice" | "receipt") ?? "invoice";
+  const variant: "invoice" | "receipt" = mode.endsWith("receipt") ? "receipt" : "invoice";
   const inv = variant === "receipt"
-    ? { ...invoice, status: "paid" as const, paid_date: "2026-07-04" }
-    : invoice;
+    ? { ...base, status: "paid" as const, paid_date: "2026-07-04" }
+    : base;
   await renderToFile(<InvoicePdf invoice={inv} business={business} qr={qr} logo={logo} variant={variant} />, out);
   console.log("wrote", out, logo ? "(with logo)" : "(no logo yet)");
 }

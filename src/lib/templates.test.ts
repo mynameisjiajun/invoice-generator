@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   renderTemplate, templateVars, emailMessage, emailSubject, tidyMessage,
-  DEFAULT_EMAIL_TEMPLATE,
+  DEFAULT_EMAIL_TEMPLATE, RENTAL_MESSAGE_NOTE, whatsappMessage,
 } from "./templates";
 import type { Business, Invoice } from "./types";
 
@@ -119,5 +119,28 @@ describe("emailSubject", () => {
   it("falls back to a generic job name when job_event is blank", () => {
     const bare = { ...inv, job_event: "" } as Invoice;
     expect(emailSubject(bare, biz)).toBe("Invoice for the shoot");
+  });
+});
+
+describe("rental invoices", () => {
+  const rentalBiz = { ...(biz as object), kind: "photo" } as Business;
+  const rental = {
+    ...(inv as object),
+    job_event: "",
+    is_rental: true,
+    rental_start: "2026-11-14T10:00",
+    rental_end: "2026-11-17T10:00",
+  } as Invoice;
+
+  it("names the rental and its dates when there's no project name", () => {
+    const v = templateVars(rental, rentalBiz);
+    expect(v.job).toBe("your equipment rental");
+    expect(v.job_date).toBe("14 Nov 2026 to 17 Nov 2026");
+  });
+
+  it("appends the T&C note to email and WhatsApp, only for rentals", () => {
+    expect(emailMessage(rental, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE);
+    expect(whatsappMessage(rental, rentalBiz)).toContain(RENTAL_MESSAGE_NOTE);
+    expect(emailMessage({ ...rental, is_rental: false } as Invoice, rentalBiz)).not.toContain(RENTAL_MESSAGE_NOTE);
   });
 });

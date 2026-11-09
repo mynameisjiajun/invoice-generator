@@ -1,7 +1,25 @@
 import { formatSGD } from "@/lib/money";
 import { paynowDisplay } from "@/lib/paynow";
-import { isPrintBusiness, type Business, type Invoice } from "@/lib/types";
+import { isPrintBusiness, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
 import { formatJobDate } from "./printRates";
+
+/** Added to every message for an equipment-rental invoice, whatever the
+ *  business's own template says: the T&C only bind once acknowledged. */
+export const RENTAL_MESSAGE_NOTE =
+  "As this is an equipment rental, the Equipment Rental Terms & Conditions are attached after the invoice. " +
+  "Please read them, then sign and send back the acknowledgement page (a photo is fine) before collection.";
+
+/** "14 Nov 2026 to 17 Nov 2026" for a rental period, "" if incomplete. */
+function rentalDateRange(inv: Invoice): string {
+  const start = (inv.rental_start ?? "").slice(0, 10);
+  const end = (inv.rental_end ?? "").slice(0, 10);
+  if (!start || !end) return "";
+  return start === end ? formatJobDate(start) : `${formatJobDate(start)} to ${formatJobDate(end)}`;
+}
+
+function withRentalNote(inv: Invoice, message: string): string {
+  return isRentalInvoice(inv) ? `${message}\n\n${RENTAL_MESSAGE_NOTE}` : message;
+}
 
 // The user's real default email copy — seeded here (not in the DB) so it can
 // evolve without a migration. Placeholders: {name} {first_name} {job} {job_date}
@@ -34,11 +52,12 @@ export function renderTemplate(template: string, vars: Record<string, string>): 
 
 export function templateVars(inv: Invoice, biz: Business): Record<string, string> {
   const name = inv.customers?.name?.trim() ?? "";
+  const rental = isRentalInvoice(inv) && !isPrintBusiness(biz);
   return {
     name: name || "there",
     first_name: name.split(/\s+/)[0] || "there",
-    job: inv.job_event || (isPrintBusiness(biz) ? "your print order" : "the shoot"),
-    job_date: formatJobDate(inv.job_date || ""),
+    job: inv.job_event || (isPrintBusiness(biz) ? "your print order" : rental ? "your equipment rental" : "the shoot"),
+    job_date: rental ? rentalDateRange(inv) : formatJobDate(inv.job_date || ""),
     invoice_number: inv.invoice_number ?? "",
     total: formatSGD(inv.total_cents),
     paynow: paynowDisplay(biz.paynow_number),
@@ -68,7 +87,7 @@ export function tidyMessage(text: string): string {
 
 export function emailMessage(inv: Invoice, biz: Business): string {
   const t = biz.email_template.trim() || DEFAULT_EMAIL_TEMPLATE;
-  return tidyMessage(renderTemplate(t, templateVars(inv, biz)));
+  return withRentalNote(inv, tidyMessage(renderTemplate(t, templateVars(inv, biz))));
 }
 
 /** Subject line for the invoice email. Not stored in the DB (no migration):
@@ -81,5 +100,5 @@ export function emailSubject(inv: Invoice, biz: Business): string {
 
 export function whatsappMessage(inv: Invoice, biz: Business): string {
   const t = biz.whatsapp_template.trim() || DEFAULT_WHATSAPP_TEMPLATE;
-  return tidyMessage(renderTemplate(t, templateVars(inv, biz)));
+  return withRentalNote(inv, tidyMessage(renderTemplate(t, templateVars(inv, biz))));
 }

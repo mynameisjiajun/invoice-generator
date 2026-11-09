@@ -24,6 +24,11 @@ export type FormState = {
   lineItems: LineItem[];
   discountType: DiscountType;
   discountValue: number;
+  /** Equipment rental (photo businesses): rental period as datetime-local
+   *  strings. Optional so forms autosaved before rentals existed still load. */
+  isRental?: boolean;
+  rentalStart?: string;
+  rentalEnd?: string;
 };
 
 const KEY = "jjv.invoice.form.v1";
@@ -43,6 +48,9 @@ export function emptyForm(): FormState {
     lineItems: [{ description: "", qty: 1, unitPriceCents: 0 }],
     discountType: "none",
     discountValue: 0,
+    isRental: false,
+    rentalStart: "",
+    rentalEnd: "",
   };
 }
 

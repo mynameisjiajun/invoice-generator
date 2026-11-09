@@ -11,6 +11,10 @@ import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money
 import { isPrintBusiness, type Customer, type Preset } from "@/lib/types";
 import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec } from "@/lib/printRates";
 import { PrintLineItem, PrintProjectFields } from "@/components/PrintInvoiceFields";
+import { RentalDetailsFields, RentalLineItem, RentalModeChips } from "@/components/RentalInvoiceFields";
+import {
+  fromRentalLines, newRentalLine, rentalDays, rentalPeriodError, syncRentalDays, toRentalLines,
+} from "@/lib/rental";
 import { IconClose } from "@/components/icons";
 import NumberInput from "@/components/NumberInput";
 import ConfirmSheet from "@/components/ConfirmSheet";
@@ -45,6 +49,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   const [error, setError] = useState<string | null>(null);
   const [loadedStatus, setLoadedStatus] = useState<"draft" | "unpaid" | "paid">("draft");
   const [loadedNumber, setLoadedNumber] = useState<string | null>(null);
+  // Whether the invoice being edited was saved as a rental — so switching it
+  // back to a shoot still writes is_rental = false.
+  const [loadedRental, setLoadedRental] = useState(false);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // Which draft/duplicate id (or "new") has already been loaded — see the
@@ -72,6 +79,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         setFormBusinessId(inv.business_id);
         setLoadedStatus(inv.status);
         setLoadedNumber(inv.invoice_number);
+        setLoadedRental(inv.is_rental === true);
         setForm({
           invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
           dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, 30),
@@ -81,6 +89,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           newCustomer: null, jobEvent: inv.job_event, jobDate: inv.job_date,
           jobLocation: inv.job_location, lineItems: inv.line_items,
           discountType: inv.discount_type, discountValue: inv.discount_value,
+          isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
@@ -90,6 +99,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           jobDate: inv.job_date, jobLocation: inv.job_location,
           lineItems: inv.line_items, discountType: inv.discount_type,
           discountValue: inv.discount_value,
+          // A duplicated rental keeps its gear list and period, ready to re-date.
+          isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
         });
       } else {
         const bizId = activeBusiness!.id;
@@ -144,6 +155,32 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   const f = form;
   const formBusiness = businesses.find((b) => b.id === formBusinessId);
   const isPrint = isPrintBusiness(formBusiness);
+  // Equipment rental is a photo-business option (Apex Cinematics).
+  const isRental = !isPrint && f.isRental === true;
+  const periodDays = rentalDays(f.rentalStart, f.rentalEnd);
+
+  function setRental(on: boolean) {
+    if (on) {
+      set({
+        isRental: true,
+        lineItems: toRentalLines(f.lineItems, periodDays ?? 1),
+        jobLocation: f.jobLocation.trim()
+          ? f.jobLocation
+          : formBusiness?.address ? `Self-collect & return: ${formBusiness.address}` : "",
+      });
+    } else {
+      set({ isRental: false, lineItems: fromRentalLines(f.lineItems) });
+    }
+  }
+
+  // A new collection/return time re-counts the days on every item still on
+  // the old count; items whose days were changed by hand keep theirs.
+  function setRentalDetails(patch: { jobEvent?: string; rentalStart?: string; rentalEnd?: string; jobLocation?: string }) {
+    const start = patch.rentalStart ?? f.rentalStart ?? "";
+    const end = patch.rentalEnd ?? f.rentalEnd ?? "";
+    const next = rentalDays(start, end);
+    set(next === null ? patch : { ...patch, lineItems: syncRentalDays(f.lineItems, periodDays ?? 1, next) });
+  }
   // Functional updater: merges onto the latest state rather than the `f`
   // snapshot closed over at render time. persistDraft() below calls set()
   // twice across an await boundary (once after creating a new customer,
@@ -164,8 +201,14 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
     });
   }
 
-  async function persistDraft(): Promise<string> {
+  /** `complete`: finalizing or editing a finalized invoice, where a rental
+   *  must have its full period; a draft may be saved half-filled. */
+  async function persistDraft(complete = false): Promise<string> {
     if (!formBusinessId) throw new Error("No business selected");
+    if (isRental) {
+      const problem = rentalPeriodError(f.rentalStart ?? "", f.rentalEnd ?? "", complete);
+      if (problem) throw new Error(problem);
+    }
     // Saving drops lines with no description (see the filter below) — a
     // priced line with a blank description would otherwise be counted in
     // the on-screen total but silently vanish from what's actually saved.
@@ -184,6 +227,13 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
       job_event: f.jobEvent, job_date: f.jobDate, job_location: f.jobLocation,
       line_items: f.lineItems.filter((li) => li.description.trim() !== ""),
       discount_type: f.discountType, discount_value: f.discountValue,
+      // Rental columns are only written when they matter, so ordinary
+      // invoices keep saving even on a database without migration 020.
+      ...(isRental || loadedRental ? {
+        is_rental: isRental,
+        rental_start: isRental ? f.rentalStart ?? "" : "",
+        rental_end: isRental ? f.rentalEnd ?? "" : "",
+      } : {}),
     }, formBusinessId);
     if (!f.invoiceId) set({ invoiceId: inv.id });
     return inv.id;
@@ -207,7 +257,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
     setConfirmingFinalize(false);
     setBusy("final"); setError(null);
     try {
-      const id = await persistDraft();
+      const id = await persistDraft(true);
       // persistDraft() throws before this point if formBusinessId is null.
       await finalizeInvoice(id, formBusinessId!);
       clearForm();
@@ -221,7 +271,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   async function onSaveChanges() {
     setBusy("final"); setError(null);
     try {
-      const id = await persistDraft();
+      const id = await persistDraft(true);
       router.push(`/invoices_login/invoices/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save changes");
@@ -280,12 +330,16 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
 
       {/* Job section */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="section-label">{isPrint ? "Project" : "Job Details"}</div>
+        <div className="section-label">{isPrint ? "Project" : isRental ? "Rental" : "Job Details"}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {!isPrint && <RentalModeChips isRental={isRental} onChange={setRental} />}
           {isPrint ? (
             <PrintProjectFields project={f.jobEvent} readyBy={f.jobDate} location={f.jobLocation}
               customerAddress={f.newCustomer?.address ?? customers.find((c) => c.id === f.customerId)?.address ?? ""}
               onChange={set} />
+          ) : isRental ? (
+            <RentalDetailsFields project={f.jobEvent} start={f.rentalStart ?? ""} end={f.rentalEnd ?? ""}
+              location={f.jobLocation} onChange={setRentalDetails} />
           ) : (<>
           <div>
             <label className="input-label">Event name</label>
@@ -330,7 +384,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
       {/* Line items */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div className="section-label" style={{ marginBottom: 0 }}>{isPrint ? "Prints" : "Line Items"}</div>
+          <div className="section-label" style={{ marginBottom: 0 }}>{isPrint ? "Prints" : isRental ? "Equipment" : "Line Items"}</div>
           {presets.length > 0 && (
             <select className="input" style={{ width: "auto", padding: "6px 32px 6px 10px", fontSize: "0.8rem" }} value=""
               onChange={(e) => {
@@ -338,7 +392,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
                 if (p) set({
                   lineItems: [...f.lineItems.filter((li) => li.description || li.unitPriceCents),
                     { description: `${p.name}${p.description ? `\n${p.description}` : ""}`,
-                      qty: p.default_qty, unitPriceCents: p.unit_price_cents }],
+                      qty: p.default_qty, unitPriceCents: p.unit_price_cents,
+                      // In a rental the preset's price is that item's day rate.
+                      ...(isRental ? { rental: { days: periodDays ?? 1 } } : {}) }],
                 });
               }}>
               <option value="">+ Add preset</option>
@@ -350,6 +406,10 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {f.lineItems.map((li, i) => isPrint && li.print ? (
             <PrintLineItem key={i} item={li} index={i}
+              onChange={(item) => set({ lineItems: f.lineItems.map((x, j) => j === i ? item : x) })}
+              onRemove={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })} />
+          ) : isRental && li.rental ? (
+            <RentalLineItem key={i} item={li} index={i}
               onChange={(item) => set({ lineItems: f.lineItems.map((x, j) => j === i ? item : x) })}
               onRemove={() => set({ lineItems: f.lineItems.filter((_, j) => j !== i) })} />
           ) : (
@@ -410,6 +470,17 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
                 + Express
               </button>
             </div>
+          </>
+        ) : isRental ? (
+          <>
+            <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }}
+              onClick={() => set({ lineItems: [...f.lineItems, newRentalLine(periodDays ?? 1)] })}>
+              + Add item
+            </button>
+            <button className="btn btn-ghost" style={{ marginTop: 8, width: "100%", fontSize: "0.8rem" }}
+              onClick={() => addFee({ description: "Delivery & collection", qty: 1, unitPriceCents: 0 })}>
+              + Delivery or other fee
+            </button>
           </>
         ) : (
         <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }}

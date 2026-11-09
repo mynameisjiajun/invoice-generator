@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { formatJobDate } from "@/lib/printRates";
+import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
@@ -266,10 +267,32 @@ export default function InvoiceDetail({ id }: { id: string }) {
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="section-label">Customer</div>
         <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 2 }}>{invoice.customers?.name}</p>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{invoice.job_event}</p>
-        <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>
-          {[formatJobDate(invoice.job_date), invoice.job_location].filter(Boolean).join(" · ")}
-        </p>
+        {invoice.is_rental ? (() => {
+          const days = rentalDays(invoice.rental_start, invoice.rental_end);
+          return (
+            <>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                <span className="badge badge-draft" style={{ marginRight: 6 }}>Rental</span>
+                {invoice.job_event || "Equipment rental"}
+              </p>
+              <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 4 }}>
+                {invoice.rental_start && invoice.rental_end
+                  ? `${formatRentalDateTime(invoice.rental_start)} → ${formatRentalDateTime(invoice.rental_end)}${days ? ` · ${daysLabel(days)}` : ""}`
+                  : "Rental period not set"}
+              </p>
+              {invoice.job_location ? (
+                <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>{invoice.job_location}</p>
+              ) : null}
+            </>
+          );
+        })() : (
+          <>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{invoice.job_event}</p>
+            <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>
+              {[formatJobDate(invoice.job_date), invoice.job_location].filter(Boolean).join(" · ")}
+            </p>
+          </>
+        )}
         <div style={{
           marginTop: 16,
           paddingTop: 16,

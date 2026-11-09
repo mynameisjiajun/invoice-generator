@@ -31,6 +31,11 @@ export type Invoice = {
   total_cents: number;
   paid_date: string | null;
   sent_at: string | null;
+  /** Equipment rental (migration 020). Optional because rows read before
+   *  the migration don't have them. Rental invoices carry the rental T&C. */
+  is_rental?: boolean;
+  rental_start?: string;         // "YYYY-MM-DDTHH:mm" (local) or ""
+  rental_end?: string;           // "YYYY-MM-DDTHH:mm" (local) or ""
   customers?: Customer | null;   // joined
 };
 
@@ -51,6 +56,10 @@ export type BusinessKind = "photo" | "print";
 
 export function isPrintBusiness(b: Pick<Business, "kind"> | null | undefined): boolean {
   return b?.kind === "print";
+}
+
+export function isRentalInvoice(inv: Pick<Invoice, "is_rental"> | null | undefined): boolean {
+  return inv?.is_rental === true;
 }
 
 export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {

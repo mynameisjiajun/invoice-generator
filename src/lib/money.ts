@@ -1,12 +1,21 @@
 import type { PrintSpec } from "./printRates";
 
-/** `print` is set on 3D-print parts (JJ Gears & Prints); fees and every
- *  photography line leave it off. */
-export type LineItem = { description: string; qty: number; unitPriceCents: number; print?: PrintSpec };
+/** Equipment-rental line (Apex Cinematics): `unitPriceCents` is the day rate
+ *  per unit and `qty` is the number of units. `replacementCents` is the
+ *  Replacement Value the rental T&C refers to; 0/absent means "not stated". */
+export type RentalSpec = { days: number; replacementCents?: number };
+
+/** `print` is set on 3D-print parts (JJ Gears & Prints); `rental` on
+ *  equipment-rental lines; fees and every photography line leave both off. */
+export type LineItem = {
+  description: string; qty: number; unitPriceCents: number;
+  print?: PrintSpec; rental?: RentalSpec;
+};
 export type DiscountType = "none" | "amount" | "percent";
 
 export function lineTotalCents(item: LineItem): number {
-  return Math.round(item.qty * item.unitPriceCents);
+  const days = item.rental ? item.rental.days : 1;
+  return Math.round(item.qty * days * item.unitPriceCents);
 }
 
 export function subtotalCents(items: LineItem[]): number {

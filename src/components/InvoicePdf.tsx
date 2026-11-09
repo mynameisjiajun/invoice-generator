@@ -9,7 +9,11 @@ import {
 } from "@react-pdf/renderer";
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import { formatSgPhone, formatSgAddress } from "@/lib/phone";
-import { invoiceDocLabel, isPrintBusiness, type Business, type Invoice } from "@/lib/types";
+import { invoiceDocLabel, isPrintBusiness, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
+import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
+import {
+  RENTAL_ACK, RENTAL_TERMS, RENTAL_TERMS_INTRO, RENTAL_TERMS_SUBTITLE, RENTAL_TERMS_TITLE,
+} from "@/lib/rentalTerms";
 import { formatJobDate, parseHandover, printBreakdown, printSpecLine } from "@/lib/printRates";
 import { paynowDisplay } from "@/lib/paynow";
 
@@ -86,6 +90,11 @@ const APEX: Palette = {
 function makeStyles(C: Palette) { return StyleSheet.create({
   page: {
     padding: 0,
+    // Top bars and footer are `fixed` overlays; this padding keeps flowing
+    // content clear of them on every page (header padding is reduced to
+    // match, so a one-page invoice lays out exactly as before).
+    paddingTop: 36,
+    paddingBottom: 44,
     fontSize: 10.5,
     fontFamily: "Montserrat",
     color: C.dark,
@@ -93,6 +102,12 @@ function makeStyles(C: Palette) { return StyleSheet.create({
   },
 
   /* ── top accent bars: ink with a thin rust "safelight" line ── */
+  topBars: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+  },
   topBar: {
     height: 5,
     backgroundColor: C.dark,
@@ -108,7 +123,7 @@ function makeStyles(C: Palette) { return StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     paddingHorizontal: 48,
-    paddingTop: 36,
+    paddingTop: 7,
     paddingBottom: 28,
   },
   businessName: {
@@ -339,6 +354,167 @@ function makeStyles(C: Palette) { return StyleSheet.create({
     textAlign: "center",
   },
 
+  /* ── rental (Apex Cinematics equipment rental) ── */
+  rentalRow: { flexDirection: "row" },
+  rentalKey: {
+    width: 50,
+    fontSize: 9.5,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: C.dark,
+    lineHeight: 1.5,
+  },
+  termsNotice: {
+    marginTop: 10,
+    paddingLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: C.rust,
+  },
+  termsNoticeText: { fontSize: 8, color: C.mid, lineHeight: 1.45 },
+
+  /* ── rental T&C pages ── */
+  tcHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    paddingHorizontal: 48,
+    paddingTop: 7,
+    paddingBottom: 12,
+  },
+  tcEyebrow: {
+    fontSize: 7,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: C.rust,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  tcTitle: {
+    fontSize: 17,
+    fontFamily: "Montserrat",
+    fontWeight: 800,
+    color: C.dark,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  tcSubtitle: {
+    fontSize: 9.5,
+    color: C.mid,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  tcRefNumber: {
+    fontSize: 13,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: C.rust,
+    textAlign: "right",
+  },
+  tcBody: { paddingHorizontal: 48, paddingTop: 10 },
+  tcIntro: { fontSize: 8.5, color: C.mid, lineHeight: 1.5, marginBottom: 4 },
+  tcSectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 5,
+    paddingBottom: 3,
+    borderBottomWidth: 1,
+    borderColor: C.faint,
+  },
+  tcSectionNum: {
+    fontSize: 10,
+    fontFamily: "Montserrat",
+    fontWeight: 800,
+    color: C.rust,
+  },
+  tcSectionTitle: {
+    fontSize: 8.5,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: C.dark,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  tcClause: { flexDirection: "row", marginBottom: 3.5 },
+  tcNum: {
+    width: 26,
+    fontSize: 8.5,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: C.dark,
+    lineHeight: 1.45,
+  },
+  // No `flex` here: inside a column a flex basis of 0 collapses wrapped text
+  // to zero height and the next line draws over it. Rows that need the text
+  // to take the remaining width wrap it in `tcFill` instead.
+  tcText: { fontSize: 8.5, color: C.dark, lineHeight: 1.45 },
+  tcFill: { flexGrow: 1, flexShrink: 1, flexBasis: "auto", width: 0 },
+  tcLead: { fontFamily: "Montserrat", fontWeight: 700 },
+  tcSubRow: { flexDirection: "row", marginTop: 2 },
+  tcSubNum: { width: 18, fontSize: 8.5, color: C.dark, lineHeight: 1.45 },
+  tcCallout: {
+    backgroundColor: C.highlight,
+    borderLeftWidth: 3,
+    borderLeftColor: C.rust,
+    borderRadius: 3,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginBottom: 6,
+  },
+  tcCalloutHead: {
+    fontSize: 7.5,
+    fontFamily: "Montserrat",
+    fontWeight: 800,
+    color: C.rust,
+    letterSpacing: 1.2,
+    marginBottom: 3,
+  },
+  tcCalloutText: {
+    fontSize: 8.5,
+    fontFamily: "Montserrat",
+    fontWeight: 600,
+    color: C.dark,
+    lineHeight: 1.45,
+  },
+  ack: {
+    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: C.dark,
+    borderRadius: 6,
+    padding: 16,
+  },
+  ackTitle: {
+    fontSize: 11,
+    fontFamily: "Montserrat",
+    fontWeight: 800,
+    color: C.dark,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  ackPoint: { flexDirection: "row", marginTop: 3 },
+  ackBullet: { width: 12, fontSize: 8.5, color: C.rust, lineHeight: 1.45 },
+  ackFields: { flexDirection: "row", gap: 24, marginTop: 16 },
+  ackField: { flex: 1 },
+  ackLine: { height: 22, borderBottomWidth: 1, borderColor: C.dark },
+  ackSignLine: { height: 46, borderBottomWidth: 1, borderColor: C.dark },
+  ackPrefilled: {
+    height: 22,
+    borderBottomWidth: 1,
+    borderColor: C.dark,
+    justifyContent: "flex-end",
+    paddingBottom: 3,
+  },
+  ackPrefilledText: {
+    fontSize: 12,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: C.rust,
+  },
+
   /* ── footer ── */
   footer: {
     position: "absolute",
@@ -393,16 +569,23 @@ export default function InvoicePdf({
     invoice.discount_value,
   );
   const isReceipt = variant === "receipt";
+  // Equipment rental (Apex): rental details card, per-day columns, and —
+  // on the invoice, not the receipt — the rental T&C appended after it.
+  const isRental = !isPrintBusiness(business) && isRentalInvoice(invoice);
+  const period = isRental ? rentalDays(invoice.rental_start, invoice.rental_end) : null;
 
   return (
     <Document title={invoiceDocLabel(invoice, variant)}>
       <Page size="A4" style={s.page}>
-        {/* ── top accent bars ── */}
-        <View style={s.topBar} />
-        <View style={s.topBarAccent} />
+        {/* ── top accent bars (on every page the invoice runs to) ── */}
+        <View style={s.topBars} fixed>
+          <View style={s.topBar} />
+          <View style={s.topBarAccent} />
+        </View>
 
         {/* ── header ── */}
-        <View style={s.header}>
+        {/* Rentals run tighter so a typical gear list + payment card still fit on page 1. */}
+        <View style={[s.header, isRental ? { paddingBottom: 14 } : {}]}>
           <View>
             {logo ? (
               <Image
@@ -454,7 +637,7 @@ export default function InvoicePdf({
         <View style={s.divider} />
 
         {/* ── bill-to + job info cards ── */}
-        <View style={s.infoRow}>
+        <View style={[s.infoRow, isRental ? { paddingTop: 12, paddingBottom: 10 } : {}]}>
           <View style={s.infoCard}>
             <Text style={s.label}>Bill To</Text>
             <Text style={s.infoName}>{invoice.customers?.name}</Text>
@@ -495,7 +678,33 @@ export default function InvoicePdf({
                   ) : null}
                 </>
               );
-            })() : (
+            })() : isRental ? (
+              <>
+                <Text style={s.label}>Rental Details</Text>
+                <Text style={s.infoName}>{invoice.job_event || "Equipment Rental"}</Text>
+                {invoice.rental_start ? (
+                  <View style={s.rentalRow}>
+                    <Text style={s.rentalKey}>Collect</Text>
+                    <Text style={s.infoDetail}>{formatRentalDateTime(invoice.rental_start)}</Text>
+                  </View>
+                ) : null}
+                {invoice.rental_end ? (
+                  <View style={s.rentalRow}>
+                    <Text style={s.rentalKey}>Return</Text>
+                    <Text style={s.infoDetail}>{formatRentalDateTime(invoice.rental_end)}</Text>
+                  </View>
+                ) : null}
+                {period ? (
+                  <View style={s.rentalRow}>
+                    <Text style={s.rentalKey}>Period</Text>
+                    <Text style={s.infoDetail}>{daysLabel(period)}</Text>
+                  </View>
+                ) : null}
+                {invoice.job_location ? (
+                  <Text style={[s.infoDetail, { marginTop: 2 }]}>{invoice.job_location}</Text>
+                ) : null}
+              </>
+            ) : (
               <>
                 <Text style={s.label}>Job Details</Text>
                 <Text style={s.infoName}>{invoice.job_event}</Text>
@@ -515,15 +724,18 @@ export default function InvoicePdf({
         {/* ── line items table ── */}
         <View style={s.tableContainer}>
           <View style={s.tableHead}>
-            <Text style={[s.tableHeadText, s.cellDesc]}>Description</Text>
+            <Text style={[s.tableHeadText, s.cellDesc, isRental ? { flex: 3.6 } : {}]}>{isRental ? "Item" : "Description"}</Text>
             <Text style={[s.tableHeadText, s.cellQty]}>Qty</Text>
-            <Text style={[s.tableHeadText, s.cellAmt]}>Unit Price</Text>
+            {isRental ? <Text style={[s.tableHeadText, s.cellQty]}>Days</Text> : null}
+            <Text style={[s.tableHeadText, s.cellAmt]}>{isRental ? "Day Rate" : "Unit Price"}</Text>
+            {isRental ? <Text style={[s.tableHeadText, s.cellAmt, { flex: 1.9 }]}>Repl. Value</Text> : null}
             <Text style={[s.tableHeadText, s.cellTot]}>Amount</Text>
           </View>
           {invoice.line_items.map((li, i) => (
             <View
               key={i}
-              style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
+              wrap={false}
+              style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}, isRental ? { paddingVertical: 6 } : {}]}
             >
               {li.print ? (() => {
                 // The breakdown only appears when the charged price is the
@@ -543,12 +755,21 @@ export default function InvoicePdf({
                   </View>
                 );
               })() : (
-                <Text style={[s.cellText, s.cellDesc]}>{li.description}</Text>
+                <Text style={[s.cellText, s.cellDesc, isRental ? { flex: 3.6 } : {}]}>{li.description}</Text>
               )}
               <Text style={[s.cellText, s.cellQty]}>{li.qty}</Text>
+              {isRental ? (
+                <Text style={[s.cellText, s.cellQty]}>{li.rental ? li.rental.days : "—"}</Text>
+              ) : null}
               <Text style={[s.cellText, s.cellAmt]}>
                 {formatSGD(li.unitPriceCents)}
               </Text>
+              {isRental ? (
+                // Not charged — the T&C's Replacement Value, so muted.
+                <Text style={[s.cellText, s.cellAmt, { flex: 1.9, color: C.light }]}>
+                  {li.rental?.replacementCents ? formatSGD(li.rental.replacementCents) : "—"}
+                </Text>
+              ) : null}
               <Text style={[s.cellTextBold, s.cellTot]}>
                 {formatSGD(lineTotalCents(li))}
               </Text>
@@ -557,7 +778,7 @@ export default function InvoicePdf({
         </View>
 
         {/* ── totals ── */}
-        <View style={s.totalsContainer}>
+        <View style={s.totalsContainer} wrap={false}>
           <View style={s.totalsBox}>
             {disc > 0 && (
               <>
@@ -590,7 +811,7 @@ export default function InvoicePdf({
 
         {/* ── payment info + QR (invoice) / confirmation (receipt) ── */}
         {isReceipt ? (
-          <View style={s.paymentSection}>
+          <View style={s.paymentSection} wrap={false}>
             <View style={[s.paymentInfo, { backgroundColor: C.sageBg }]}>
               <Text style={[s.paymentLabel, { color: C.sage }]}>Payment Received</Text>
               <Text style={s.paymentText}>
@@ -606,7 +827,7 @@ export default function InvoicePdf({
             </View>
           </View>
         ) : (
-        <View style={s.paymentSection}>
+        <View style={[s.paymentSection, isRental ? { marginTop: 12 } : {}]} wrap={false}>
           <View style={s.paymentInfo}>
             <Text style={s.paymentLabel}>Payment Information</Text>
             {business.paynow_number && (
@@ -627,9 +848,18 @@ export default function InvoicePdf({
               </Text>
             )}
             {business.bank_details && <Text style={s.paymentText}>{business.bank_details}</Text>}
+            {isRental ? (
+              <View style={s.termsNotice}>
+                <Text style={s.termsNoticeText}>
+                  This rental is subject to the attached{" "}
+                  <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
+                  , which form part of this invoice. Please sign the acknowledgement on the last page before collection.
+                </Text>
+              </View>
+            ) : null}
           </View>
           {qr && (
-            <View style={s.qrContainer}>
+            <View style={[s.qrContainer, isRental ? { padding: 10 } : {}]}>
               <Image style={s.qr} src={qr} />
               <Text style={s.qrCaption}>PAYNOW</Text>
               <Text style={s.qrAmount}>{formatSGD(invoice.total_cents)}</Text>
@@ -649,6 +879,144 @@ export default function InvoicePdf({
           </View>
         </View>
       </Page>
+      {isRental && !isReceipt ? (
+        <RentalTermsPage s={s} invoiceNumber={invoice.invoice_number ?? "DRAFT"} />
+      ) : null}
     </Document>
+  );
+}
+
+/* ── Equipment Rental T&C, appended to rental invoices ─────────────────
+   Flows over as many pages as it needs. The Renter Acknowledgement is kept
+   whole and carries the invoice number pre-filled — that is what ties a
+   signed copy to this invoice (T&C clause 1.2). Name, contact, signature
+   and date are left blank for the renter. */
+function RentalTermsPage({
+  s,
+  invoiceNumber,
+}: {
+  s: ReturnType<typeof makeStyles>;
+  invoiceNumber: string;
+}) {
+  return (
+    <Page size="A4" style={s.page}>
+      <View style={s.topBars} fixed>
+        <View style={s.topBar} />
+        <View style={s.topBarAccent} />
+      </View>
+
+      <View style={s.tcHeader}>
+        <View>
+          <Text style={s.tcEyebrow}>Apex Cinematics</Text>
+          <Text style={s.tcTitle}>{RENTAL_TERMS_TITLE}</Text>
+          <Text style={s.tcSubtitle}>{RENTAL_TERMS_SUBTITLE}</Text>
+        </View>
+        <View>
+          <Text style={[s.label, { textAlign: "right", marginBottom: 2 }]}>For Invoice No.</Text>
+          <Text style={s.tcRefNumber}>{invoiceNumber}</Text>
+        </View>
+      </View>
+      <View style={s.divider} />
+
+      <View style={s.tcBody}>
+        <Text style={s.tcIntro}>{RENTAL_TERMS_INTRO}</Text>
+
+        {RENTAL_TERMS.map((sec) => {
+          const clause = (c: (typeof sec.clauses)[number], i: number) => (
+            // Clauses are a few lines at most: keep each whole so a number is
+            // never stranded at a page foot with its text on the next page.
+            <View key={i} style={s.tcClause} wrap={false}>
+              <Text style={s.tcNum}>{sec.n}.{i + 1}</Text>
+              <View style={s.tcFill}>
+                <Text style={s.tcText}>
+                  {c.lead ? <Text style={s.tcLead}>{c.lead} </Text> : null}
+                  {c.text}
+                </Text>
+                {c.sub?.map((item, j) => (
+                  <View key={j} style={s.tcSubRow}>
+                    <Text style={s.tcSubNum}>({String.fromCharCode(97 + j)})</Text>
+                    <View style={s.tcFill}><Text style={s.tcText}>{item}</Text></View>
+                  </View>
+                ))}
+                {c.after ? <Text style={[s.tcText, { marginTop: 2 }]}>{c.after}</Text> : null}
+              </View>
+            </View>
+          );
+          return (
+            <View key={sec.n}>
+              {/* Heading, any callout and the first clause move as one block,
+                  so a heading is never left alone at the foot of a page. */}
+              <View wrap={false}>
+                <View style={s.tcSectionHead}>
+                  <Text style={s.tcSectionNum}>{String(sec.n).padStart(2, "0")}</Text>
+                  <Text style={s.tcSectionTitle}>{sec.title}</Text>
+                </View>
+                {sec.callout ? (
+                  <View style={s.tcCallout}>
+                    {sec.callout.heading ? <Text style={s.tcCalloutHead}>{sec.callout.heading}</Text> : null}
+                    <Text style={s.tcCalloutText}>{sec.callout.text}</Text>
+                  </View>
+                ) : null}
+                {clause(sec.clauses[0], 0)}
+              </View>
+              {sec.clauses.slice(1).map((c, i) => clause(c, i + 1))}
+            </View>
+          );
+        })}
+
+        <View style={s.ack} wrap={false}>
+          <Text style={s.ackTitle}>{RENTAL_ACK.title}</Text>
+          <Text style={s.tcText}>{RENTAL_ACK.intro}</Text>
+          {RENTAL_ACK.points.map((pt, i) => (
+            <View key={i} style={s.ackPoint}>
+              <Text style={s.ackBullet}>•</Text>
+              <View style={s.tcFill}><Text style={s.tcText}>{pt}</Text></View>
+            </View>
+          ))}
+
+          <View style={s.ackFields}>
+            <View style={s.ackField}>
+              <Text style={s.label}>Invoice No.</Text>
+              <View style={s.ackPrefilled}>
+                <Text style={s.ackPrefilledText}>{invoiceNumber}</Text>
+              </View>
+            </View>
+            <View style={s.ackField}>
+              <Text style={s.label}>Date</Text>
+              <View style={s.ackLine} />
+            </View>
+          </View>
+          <View style={s.ackFields}>
+            <View style={s.ackField}>
+              <Text style={s.label}>Full name</Text>
+              <View style={s.ackLine} />
+            </View>
+            <View style={s.ackField}>
+              <Text style={s.label}>Contact number</Text>
+              <View style={s.ackLine} />
+            </View>
+          </View>
+          <View style={s.ackFields}>
+            <View style={s.ackField}>
+              <Text style={s.label}>Signature</Text>
+              <View style={s.ackSignLine} />
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={s.footer} fixed>
+        <View style={s.footerBar}>
+          <Text style={s.footerText}>EQUIPMENT RENTAL T&amp;C</Text>
+          <Text style={s.footerDot}>·</Text>
+          <Text style={s.footerText}>INVOICE {invoiceNumber}</Text>
+          <Text style={s.footerDot}>·</Text>
+          <Text
+            style={s.footerText}
+            render={({ pageNumber, totalPages }) => `PAGE ${pageNumber} OF ${totalPages}`}
+          />
+        </View>
+      </View>
+    </Page>
   );
 }
