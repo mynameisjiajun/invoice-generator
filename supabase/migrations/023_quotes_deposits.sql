@@ -46,7 +46,7 @@ create or replace function finalize_quote(q_id uuid)
 returns text
 language plpgsql
 security invoker
-as $$
+as $fn$
 declare
   num text;
   biz_id uuid;
@@ -85,4 +85,4 @@ begin
 
   return num;
 end;
-$$;
+$fn$;
