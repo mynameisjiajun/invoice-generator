@@ -156,3 +156,43 @@ export function whatsappMessage(inv: Invoice, biz: Business): string {
   const t = biz.whatsapp_template.trim() || DEFAULT_WHATSAPP_TEMPLATE;
   return withRentalNote(inv, tidyMessage(renderTemplate(t, templateVars(inv, biz))));
 }
+
+// ── Receipts ───────────────────────────────────────────────────────────
+// Sent once an invoice is paid. Built-in wording (the Settings templates
+// are invoice copy: "Attached is the invoice… payable via PayNow").
+
+export const RECEIPT_EMAIL_TEMPLATE = [
+  "Hello {first_name},",
+  "",
+  "Thank you for your payment! Attached is your receipt for {job}.",
+  "",
+  "We've received {total} for invoice {invoice_number}{paid_on}, so nothing further is due.",
+  "",
+  "Thanks again, and do let me know if you need anything else!",
+  "",
+  "Best,",
+  "{payee_name}",
+].join("\n");
+
+export const RECEIPT_WHATSAPP_TEMPLATE =
+  "Hi {first_name}! Thank you for your payment of {total} for invoice {invoice_number}{paid_on}. " +
+  "Here's your receipt for {job}. Thanks again!";
+
+function receiptVars(inv: Invoice, biz: Business): Record<string, string> {
+  return {
+    ...templateVars(inv, biz),
+    paid_on: inv.paid_date ? ` on ${formatJobDate(inv.paid_date)}` : "",
+  };
+}
+
+export function receiptEmailMessage(inv: Invoice, biz: Business): string {
+  return tidyMessage(renderTemplate(RECEIPT_EMAIL_TEMPLATE, receiptVars(inv, biz)));
+}
+
+export function receiptWhatsappMessage(inv: Invoice, biz: Business): string {
+  return tidyMessage(renderTemplate(RECEIPT_WHATSAPP_TEMPLATE, receiptVars(inv, biz)));
+}
+
+export function receiptSubject(inv: Invoice, biz: Business): string {
+  return renderTemplate("Receipt for {job}", templateVars(inv, biz)).replace(/\s+/g, " ").trim();
+}

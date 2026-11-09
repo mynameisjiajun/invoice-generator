@@ -9,7 +9,7 @@ import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
 import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
-import { emailMessage, whatsappMessage } from "@/lib/templates";
+import { emailMessage, receiptEmailMessage, receiptWhatsappMessage, whatsappMessage } from "@/lib/templates";
 import { invoiceDocLabel, isOverdue, type Business, type Invoice, type InvoiceEvent } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
@@ -45,6 +45,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [offerReceipt, setOfferReceipt] = useState(false);
   const [confirmingEmail, setConfirmingEmail] = useState(false);
+  const [confirmingReceiptEmail, setConfirmingReceiptEmail] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -118,7 +119,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
     try {
       const { blob, filename } = await generatePdfBlob(variant);
       const file = new File([blob], filename, { type: "application/pdf" });
-      const text = emailMessage(inv, biz);
+      const text = variant === "receipt" ? receiptEmailMessage(inv, biz) : emailMessage(inv, biz);
       try { await navigator.clipboard.writeText(text); } catch { /* non-fatal */ }
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text, title: filename.replace(".pdf", "") });
@@ -165,9 +166,10 @@ export default function InvoiceDetail({ id }: { id: string }) {
       if (mode === "draft") {
         setNotice(`Draft for ${json.to} saved to Drafts in Apple Mail.`);
       } else {
+        const what = variant === "receipt" ? "Receipt sent" : "Sent";
         setNotice(json.savedToSent
-          ? `Sent to ${json.to}. A copy is in Sent Messages in Apple Mail.`
-          : `Sent to ${json.to}, but the copy couldn't be saved to Sent Messages.`);
+          ? `${what} to ${json.to}. A copy is in Sent Messages in Apple Mail.`
+          : `${what} to ${json.to}, but the copy couldn't be saved to Sent Messages.`);
         if (variant === "invoice" && inv.status !== "draft") {
           await markSent(inv.id, inv.business_id);
           setInvoice({ ...inv, sent_at: inv.sent_at ?? new Date().toISOString() });
@@ -184,7 +186,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
   function openWhatsApp() {
     const inv = invoice!;
-    const msg = whatsappMessage(inv, business!);
+    // Once paid, WhatsApp sends the thank-you/receipt wording instead.
+    const msg = inv.status === "paid" ? receiptWhatsappMessage(inv, business!) : whatsappMessage(inv, business!);
     const base = whatsapp.e164 ? `https://wa.me/${whatsapp.e164}` : "https://wa.me/";
     if (whatsapp.e164 && !whatsapp.isMobile) {
       if (!confirm(`${inv.customers?.phone} looks like a landline, not a mobile — WhatsApp may not open a chat for it. Try anyway?`)) return;
@@ -367,13 +370,28 @@ export default function InvoiceDetail({ id }: { id: string }) {
             {!whatsapp.isMobile && <IconWarning size={13} />}
           </button>
         )}
-        {invoice.status === "paid" && (
-          <button onClick={() => sendInvoice("receipt")} disabled={busy}
-            className="btn btn-secondary icon-btn" style={{ flex: 1, minWidth: 150 }}>
-            <IconReceipt /> Receipt PDF
-          </button>
-        )}
       </div>
+      {invoice.status === "paid" && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="section-label">Receipt</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {invoice.customers?.email?.trim() && (
+              <button onClick={() => setConfirmingReceiptEmail(true)} disabled={busy}
+                className="btn btn-secondary icon-btn" style={{ flex: 1, minWidth: 140 }}>
+                <IconSend /> Email receipt
+              </button>
+            )}
+            <button onClick={() => sendInvoice("receipt")} disabled={busy}
+              className="btn btn-ghost icon-btn" style={{ flex: 1, minWidth: 140 }}>
+              <IconReceipt /> Share receipt
+            </button>
+            <button onClick={() => downloadPdf("receipt")} disabled={busy}
+              className="btn btn-ghost icon-btn" style={{ flex: 1, minWidth: 140 }}>
+              <IconDownload /> Download
+            </button>
+          </div>
+        </div>
+      )}
       {invoice.sent_at && (
         <p style={{ color: "var(--text-tertiary)", fontSize: 13, marginTop: -8, marginBottom: 16 }}>
           Sent {new Date(invoice.sent_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
@@ -443,10 +461,25 @@ export default function InvoiceDetail({ id }: { id: string }) {
       <ConfirmSheet
         open={offerReceipt}
         title="Send receipt?"
-        message={`Send a receipt to ${invoice.customers?.name?.trim().split(/\s+/)[0] ?? "the customer"} now?`}
-        confirmLabel="Send receipt"
-        onConfirm={() => { setOfferReceipt(false); sendInvoice("receipt"); }}
+        message={invoice.customers?.email?.trim()
+          ? `Email a receipt to ${invoice.customers.email.trim()} now, from chuajiajun@apexcinematics.tech?`
+          : `Send a receipt to ${invoice.customers?.name?.trim().split(/\s+/)[0] ?? "the customer"} now?`}
+        confirmLabel={invoice.customers?.email?.trim() ? "Email receipt" : "Send receipt"}
+        onConfirm={() => {
+          setOfferReceipt(false);
+          if (invoice.customers?.email?.trim()) emailInvoice("send", "receipt");
+          else sendInvoice("receipt");
+        }}
         onCancel={() => setOfferReceipt(false)}
+      />
+
+      <ConfirmSheet
+        open={confirmingReceiptEmail}
+        title="Email the receipt now?"
+        message={`The receipt will be emailed straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached.`}
+        confirmLabel="Send receipt"
+        onConfirm={() => { setConfirmingReceiptEmail(false); emailInvoice("send", "receipt"); }}
+        onCancel={() => setConfirmingReceiptEmail(false)}
       />
     </main>
   );

@@ -1,6 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createDraft, MailAuthError, MailNotConfiguredError, sendMail } from "@/lib/mail";
-import { emailMessage, emailSubject } from "@/lib/templates";
+import { emailMessage, emailSubject, receiptEmailMessage, receiptSubject } from "@/lib/templates";
 import { invoiceDocLabel, isPrintBusiness, type Business, type Invoice } from "@/lib/types";
 import { invoiceEmailHtml } from "@/lib/emailHtml";
 
@@ -71,10 +71,12 @@ export async function POST(request: Request) {
   if (!to) return bad("This client has no email address saved — add one in Clients first.");
 
   const label = invoiceDocLabel(invoice, variant);
-  const message = emailMessage(invoice, business);
+  const isReceipt = variant === "receipt";
+  if (isReceipt && invoice.status !== "paid") return bad("A receipt can only be sent for a paid invoice");
+  const message = isReceipt ? receiptEmailMessage(invoice, business) : emailMessage(invoice, business);
   const mail = {
     to,
-    subject: variant === "receipt" ? label : emailSubject(invoice, business),
+    subject: isReceipt ? receiptSubject(invoice, business) : emailSubject(invoice, business),
     body: message,
     // Branded layout for Apex; other businesses keep the plain message so
     // they don't go out under the Apex logo.

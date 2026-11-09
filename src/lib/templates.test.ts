@@ -186,3 +186,20 @@ describe("rental wording", () => {
     expect(emailMessage({ ...r, is_rental: false } as Invoice, rb)).toBe("Custom your equipment rental".replace("your equipment rental", "the shoot"));
   });
 });
+
+import { receiptEmailMessage, receiptSubject, receiptWhatsappMessage } from "./templates";
+
+describe("receipts", () => {
+  const paid = { ...(inv as object), status: "paid", paid_date: "2026-11-09", invoice_number: "A-31", job_event: "Brand film", total_cents: 72100 } as Invoice;
+  it("thanks the client and says nothing is due, without invoice payment wording", () => {
+    const msg = receiptEmailMessage(paid, biz);
+    expect(msg).toContain("Thank you for your payment!");
+    expect(msg).toContain("We've received $721.00 for invoice A-31 on 9 Nov 2026");
+    expect(msg).not.toContain("PayNow");
+    expect(receiptSubject(paid, biz)).toBe("Receipt for Brand film");
+    expect(receiptWhatsappMessage(paid, biz)).toContain("Thank you for your payment of $721.00");
+  });
+  it("reads cleanly without a paid date", () => {
+    expect(receiptEmailMessage({ ...paid, paid_date: null } as Invoice, biz)).toContain("for invoice A-31, so nothing");
+  });
+});
