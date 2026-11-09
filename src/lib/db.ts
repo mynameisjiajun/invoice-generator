@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
 import { subtotalCents, totalCents } from "@/lib/money";
-import { todayLocalIso } from "@/lib/date";
+import { plusDaysIso, todayLocalIso } from "@/lib/date";
+import { paidCents } from "@/lib/payments";
 import type {
-  Business, Customer, Invoice, InvoiceEvent, InvoiceEventKind, Preset,
+  Business, Customer, DocType, Invoice, InvoiceEvent, InvoiceEventKind, Payment, Preset,
 } from "@/lib/types";
 
 const db = () => createClient();
@@ -96,28 +97,48 @@ export async function deletePreset(id: string): Promise<void> {
   ok(await db().from("presets").delete().eq("id", id).select());
 }
 
-const INVOICE_SELECT = "*, customers(*)";
+// payments(*) needs migration 023. Payments sort oldest first for receipts.
+const INVOICE_SELECT = "*, customers(*), payments(*)";
 
-/** Omit businessId to list invoices across every business (used by the
- *  Stats "All businesses" view). */
-export async function listInvoices(businessId?: string): Promise<Invoice[]> {
+function sortPayments(inv: Invoice): Invoice {
+  if (inv.payments?.length) {
+    inv.payments = [...inv.payments].sort((a, b) =>
+      a.paid_on.localeCompare(b.paid_on) || a.created_at.localeCompare(b.created_at));
+  }
+  return inv;
+}
+
+async function listDocs(docType: DocType | null, businessId?: string): Promise<Invoice[]> {
   let q = db().from("invoices").select(INVOICE_SELECT).order("created_at", { ascending: false });
   if (businessId) q = q.eq("business_id", businessId);
-  return ok(await q);
+  if (docType) q = q.eq("doc_type", docType);
+  return ok<Invoice[]>(await q).map(sortPayments);
+}
+
+/** Invoices only (never quotes). Omit businessId to list across every
+ *  business (used by the Stats "All businesses" view). */
+export async function listInvoices(businessId?: string): Promise<Invoice[]> {
+  return listDocs("invoice", businessId);
+}
+
+export async function listQuotes(businessId: string): Promise<Invoice[]> {
+  return listDocs("quote", businessId);
 }
 export async function getInvoice(id: string): Promise<Invoice> {
-  return ok(await db().from("invoices").select(INVOICE_SELECT).eq("id", id).single());
+  return sortPayments(ok(await db().from("invoices").select(INVOICE_SELECT).eq("id", id).single()));
 }
 
 export async function listInvoicesForCustomer(customerId: number): Promise<Invoice[]> {
-  return ok(await db().from("invoices").select(INVOICE_SELECT)
-    .eq("customer_id", customerId).order("created_at", { ascending: false }));
+  return ok<Invoice[]>(await db().from("invoices").select(INVOICE_SELECT)
+    .eq("customer_id", customerId).eq("doc_type", "invoice")
+    .order("created_at", { ascending: false })).map(sortPayments);
 }
 
 export type DraftInput = Pick<Invoice,
   "issue_date" | "due_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
   "line_items" | "discount_type" | "discount_value" |
-  "is_rental" | "rental_start" | "rental_end" | "rental_terms"> & { id?: string };
+  "is_rental" | "rental_start" | "rental_end" | "rental_terms" |
+  "doc_type" | "deposit_percent"> & { id?: string };
 
 /** businessId is required when creating a new draft (draft.id is unset);
  *  ignored when updating an existing one, since an invoice's business
@@ -145,6 +166,72 @@ async function logEvent(invoiceId: string, businessId: string, kind: InvoiceEven
 export async function listEvents(invoiceId: string): Promise<InvoiceEvent[]> {
   return ok(await db().from("invoice_events").select("*")
     .eq("invoice_id", invoiceId).order("created_at"));
+}
+
+/** Issues a draft quote: assigns its Q-number. */
+export async function finalizeQuote(id: string): Promise<string> {
+  return ok(await db().rpc("finalize_quote", { q_id: id }));
+}
+
+/** Turns a quote into an invoice draft carrying the same client, job, items,
+ *  discount, deposit and rental details, and marks the quote accepted.
+ *  Converting again returns the invoice made the first time. */
+export async function convertQuote(quoteId: string): Promise<string> {
+  const q = await getInvoice(quoteId);
+  if (q.converted_invoice_id) return q.converted_invoice_id;
+  const today = todayLocalIso();
+  const collection = (q.rental_start ?? "").slice(0, 10);
+  const draft = await saveInvoiceDraft({
+    doc_type: "invoice",
+    issue_date: today,
+    due_date: q.is_rental && /^\d{4}-\d{2}-\d{2}$/.test(collection) ? collection : plusDaysIso(today, 30),
+    customer_id: q.customer_id,
+    job_event: q.job_event, job_date: q.job_date, job_location: q.job_location,
+    line_items: q.line_items,
+    discount_type: q.discount_type, discount_value: q.discount_value,
+    deposit_percent: q.deposit_percent ?? 0,
+    ...(q.is_rental ? {
+      is_rental: true, rental_start: q.rental_start ?? "", rental_end: q.rental_end ?? "",
+      rental_terms: q.rental_terms !== false,
+    } : {}),
+  }, q.business_id);
+  ok(await db().from("invoices").update({ converted_invoice_id: draft.id }).eq("id", quoteId).select().single());
+  return draft.id;
+}
+
+/** Records money received. Once the total is covered the invoice becomes
+ *  paid (dated the day the last payment arrived). Returns the fresh invoice. */
+export async function recordPayment(
+  inv: Invoice, p: { amount_cents: number; paid_on: string; note: string },
+): Promise<Invoice> {
+  if (!(p.amount_cents > 0)) throw new Error("Enter an amount above $0");
+  ok(await db().from("payments").insert({
+    invoice_id: inv.id, business_id: inv.business_id,
+    amount_cents: Math.round(p.amount_cents), paid_on: p.paid_on, note: p.note.trim(),
+  }).select().single());
+  const fresh = await getInvoice(inv.id);
+  if (fresh.status !== "paid" && paidCents(fresh) >= fresh.total_cents) {
+    ok(await db().from("invoices").update({ status: "paid", paid_date: p.paid_on })
+      .eq("id", inv.id).select().single());
+    await logEvent(inv.id, inv.business_id, "paid");
+    return getInvoice(inv.id);
+  }
+  return fresh;
+}
+
+/** Removes a recorded payment; an invoice that is no longer covered goes
+ *  back to unpaid. Returns the fresh invoice. */
+export async function deletePayment(inv: Invoice, paymentId: Payment["id"]): Promise<Invoice> {
+  ok(await db().from("payments").delete().eq("id", paymentId).select());
+  const fresh = await getInvoice(inv.id);
+  const sum = (fresh.payments ?? []).reduce((s, x) => s + x.amount_cents, 0);
+  if (fresh.status === "paid" && sum < fresh.total_cents && sum > 0) {
+    ok(await db().from("invoices").update({ status: "unpaid", paid_date: null })
+      .eq("id", inv.id).select().single());
+    await logEvent(inv.id, inv.business_id, "unpaid");
+    return getInvoice(inv.id);
+  }
+  return fresh;
 }
 
 export async function finalizeInvoice(id: string, businessId: string): Promise<string> {
@@ -178,14 +265,19 @@ export async function markSent(id: string, businessId: string): Promise<void> {
 
 /** Deletes an invoice. If it held the most recently issued number, the
  *  sequence rewinds so that number is reused. Returns true when rewound. */
-export async function deleteInvoice(id: string): Promise<boolean> {
+export async function deleteInvoice(id: string, docType: DocType = "invoice"): Promise<boolean> {
+  // Quotes use their own Q- counter; the rewind RPC only knows invoice numbers.
+  if (docType === "quote") {
+    ok(await db().from("invoices").delete().eq("id", id).select());
+    return false;
+  }
   return ok(await db().rpc("delete_invoice_rewind", { inv_id: id }));
 }
 
 /** Full JSON backup — everything needed to reconstruct the business if
  *  Supabase is ever lost. */
 export async function exportAllData() {
-  const [businesses, invoices] = await Promise.all([listBusinesses(), listInvoices()]);
+  const [businesses, invoices] = await Promise.all([listBusinesses(), listDocs(null)]);
   const perBiz = await Promise.all(businesses.map(async (b) => ({
     customers: await listCustomers(b.id),
     presets: await listPresets(b.id),

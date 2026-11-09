@@ -10,8 +10,9 @@ import {
 import { discountCents, formatSGD, lineTotalCents } from "@/lib/money";
 import { formatSgPhone, formatSgAddress } from "@/lib/phone";
 import {
-  attachesRentalTerms, invoiceDocLabel, isPrintBusiness, isRentalInvoice, type Business, type Invoice,
+  attachesRentalTerms, invoiceDocLabel, isPrintBusiness, isQuote, isRentalInvoice, type Business, type Invoice,
 } from "@/lib/types";
+import { balanceCents, depositCents, depositOutstanding, dueNowCents, isFullUpfront, paidCents } from "@/lib/payments";
 import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
 import {
   RENTAL_ACK, RENTAL_TERMS, RENTAL_TERMS_INTRO, RENTAL_TERMS_SUBTITLE, RENTAL_TERMS_TITLE,
@@ -578,6 +579,32 @@ export default function InvoicePdf({
   // The owner can leave the T&C off when they were sent separately; the
   // invoice still states the rental is subject to them.
   const attachTerms = isRental && attachesRentalTerms(invoice);
+  const isQuoteDoc = isQuote(invoice);
+  const docWord = isQuoteDoc ? "quote" : "invoice";
+  // Deposits and part payments (shoot invoices).
+  const deposit = depositCents(invoice);
+  const paid = isQuoteDoc ? 0 : paidCents(invoice);
+  const dueNow = isQuoteDoc ? invoice.total_cents : dueNowCents(invoice);
+  const outstanding = isQuoteDoc ? invoice.total_cents : balanceCents(invoice);
+  const fullUpfront = isFullUpfront(invoice);
+  const depositPending = !isQuoteDoc && !fullUpfront && depositOutstanding(invoice);
+  const splitTotals = !isQuoteDoc && !isReceipt && ((deposit > 0 && !fullUpfront) || paid > 0);
+  // Receipt lines: each recorded payment; an invoice marked paid outright (or
+  // paid beyond its recorded rows) shows the remainder as one line.
+  const receiptLines = (invoice.payments ?? []).map((p) => ({
+    date: p.paid_on, note: p.note || "Payment", cents: p.amount_cents,
+  }));
+  const recorded = receiptLines.reduce((t, l) => t + l.cents, 0);
+  if (invoice.status === "paid" && recorded < invoice.total_cents) {
+    receiptLines.push({
+      date: invoice.paid_date ?? "", note: receiptLines.length ? "Balance" : "Payment",
+      cents: invoice.total_cents - recorded,
+    });
+  }
+  const received = receiptLines.reduce((t, l) => t + l.cents, 0);
+  // Rentals and deposit invoices carry extra rows; tighter spacing keeps a
+  // typical one on a single page.
+  const tight = isRental || splitTotals || fullUpfront;
 
   return (
     <Document title={invoiceDocLabel(invoice, variant)}>
@@ -590,7 +617,7 @@ export default function InvoicePdf({
 
         {/* ── header ── */}
         {/* Rentals run tighter so a typical gear list + payment card still fit on page 1. */}
-        <View style={[s.header, isRental ? { paddingBottom: 14 } : {}]}>
+        <View style={[s.header, tight ? { paddingBottom: 14 } : {}]}>
           <View>
             {logo ? (
               <Image
@@ -620,12 +647,17 @@ export default function InvoicePdf({
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: C.sage } : {}]}>
-              <Text style={s.invoiceBadgeText}>{isReceipt ? "RECEIPT" : "INVOICE"}</Text>
+              <Text style={s.invoiceBadgeText}>{isReceipt ? "RECEIPT" : isQuoteDoc ? "QUOTE" : "INVOICE"}</Text>
             </View>
             <Text style={s.invoiceNumber}>
               {invoice.invoice_number ?? "DRAFT"}
             </Text>
             <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
+            {isQuoteDoc && invoice.due_date ? (
+              <Text style={[s.invoiceMeta, { fontWeight: 700, color: C.dark }]}>
+                Valid until {formatJobDate(invoice.due_date)}
+              </Text>
+            ) : null}
             {isReceipt && invoice.paid_date && (
               <Text style={[s.invoiceMeta, { color: C.sage, fontWeight: 700 }]}>
                 Paid {invoice.paid_date}
@@ -642,7 +674,7 @@ export default function InvoicePdf({
         <View style={s.divider} />
 
         {/* ── bill-to + job info cards ── */}
-        <View style={[s.infoRow, isRental ? { paddingTop: 12, paddingBottom: 10 } : {}]}>
+        <View style={[s.infoRow, tight ? { paddingTop: 12, paddingBottom: 10 } : {}]}>
           <View style={s.infoCard}>
             <Text style={s.label}>Bill To</Text>
             <Text style={s.infoName}>{invoice.customers?.name}</Text>
@@ -725,7 +757,13 @@ export default function InvoicePdf({
             {/* T&C 2.1: a rental is confirmed only once paid in full, so the
                 business's usual "within 30 days" terms don't apply. */}
             <Text style={s.infoDetail}>
-              {isRental ? "Payment in full before collection" : business.payment_terms}
+              {isRental
+                ? "Payment in full before collection"
+                : fullUpfront
+                  ? "Full payment before the shoot to confirm the booking"
+                  : deposit > 0
+                    ? `${invoice.deposit_percent}% deposit to confirm the booking, balance on delivery`
+                    : business.payment_terms}
             </Text>
           </View>
         </View>
@@ -791,11 +829,11 @@ export default function InvoicePdf({
           <View style={s.totalsBox}>
             {disc > 0 && (
               <>
-                <View style={s.totalRow}>
+                <View style={[s.totalRow, tight ? { paddingVertical: 3 } : {}]}>
                   <Text style={s.totalLabel}>Subtotal</Text>
                   <Text style={s.totalValue}>{formatSGD(sub)}</Text>
                 </View>
-                <View style={s.totalRow}>
+                <View style={[s.totalRow, tight ? { paddingVertical: 3 } : {}]}>
                   <Text style={s.totalLabel}>
                     Discount
                     {invoice.discount_type === "percent"
@@ -808,11 +846,31 @@ export default function InvoicePdf({
                 </View>
               </>
             )}
+            {splitTotals && (
+              <>
+                <View style={[s.totalRow, tight ? { paddingVertical: 3 } : {}]}>
+                  <Text style={s.totalLabel}>Total</Text>
+                  <Text style={s.totalValue}>{formatSGD(invoice.total_cents)}</Text>
+                </View>
+                {paid > 0 ? (
+                  <View style={[s.totalRow, tight ? { paddingVertical: 3 } : {}]}>
+                    <Text style={s.totalLabel}>Received</Text>
+                    <Text style={[s.totalValue, { color: C.sage }]}>-{formatSGD(paid)}</Text>
+                  </View>
+                ) : null}
+              </>
+            )}
             <View style={[s.totalRowFinal, isReceipt ? { backgroundColor: C.sage } : {}]}>
-              <Text style={s.totalLabelFinal}>{isReceipt ? "TOTAL PAID" : "TOTAL DUE"}</Text>
+              <Text style={s.totalLabelFinal}>
+                {isReceipt
+                  ? (outstanding > 0 ? "RECEIVED" : "TOTAL PAID")
+                  : isQuoteDoc ? "TOTAL"
+                  : splitTotals ? (dueNow === 0 ? "PAID IN FULL" : depositPending ? "DEPOSIT DUE" : "BALANCE DUE")
+                  : "TOTAL DUE"}
+              </Text>
               {/* Apex orange clashes with the green paid bar; white reads cleanly. */}
               <Text style={[s.totalValueFinal, isReceipt && sheet === SHEETS.apex ? { color: C.white } : {}]}>
-                {formatSGD(invoice.total_cents)}
+                {formatSGD(isReceipt ? received : splitTotals ? (dueNow === 0 ? invoice.total_cents : dueNow) : invoice.total_cents)}
               </Text>
             </View>
           </View>
@@ -822,23 +880,83 @@ export default function InvoicePdf({
         {isReceipt ? (
           <View style={s.paymentSection} wrap={false}>
             <View style={[s.paymentInfo, { backgroundColor: C.sageBg }]}>
-              <Text style={[s.paymentLabel, { color: C.sage }]}>Payment Received</Text>
-              <Text style={s.paymentText}>
-                Payment of{" "}
-                <Text style={s.paymentHighlight}>{formatSGD(invoice.total_cents)}</Text>
-                {" "}for invoice{" "}
-                <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
-                {invoice.paid_date ? ` was received on ${invoice.paid_date}.` : " has been received."}
+              <Text style={[s.paymentLabel, { color: C.sage }]}>
+                {receiptLines.length > 1 ? "Payments Received" : "Payment Received"}
               </Text>
+              {receiptLines.length > 1 ? (
+                receiptLines.map((l, i) => (
+                  <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={s.paymentText}>{[l.date, l.note].filter(Boolean).join("  ·  ")}</Text>
+                    <Text style={s.paymentHighlight}>{formatSGD(l.cents)}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={s.paymentText}>
+                  Payment of{" "}
+                  <Text style={s.paymentHighlight}>{formatSGD(received)}</Text>
+                  {" "}for invoice{" "}
+                  <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
+                  {receiptLines[0]?.date ? ` was received on ${receiptLines[0].date}.` : " has been received."}
+                </Text>
+              )}
               <Text style={[s.paymentText, { marginTop: 6 }]}>
-                No further payment is due. Thank you!
+                {outstanding > 0
+                  ? <>Balance outstanding: <Text style={s.paymentHighlight}>{formatSGD(outstanding)}</Text>, due on delivery.</>
+                  : "No further payment is due. Thank you!"}
               </Text>
             </View>
           </View>
+        ) : isQuoteDoc ? (
+          <View style={s.paymentSection} wrap={false}>
+            <View style={s.paymentInfo}>
+              <Text style={s.paymentLabel}>To Confirm</Text>
+              <Text style={s.paymentText}>
+                To go ahead, simply reply to accept this quote and we&apos;ll send the invoice.
+              </Text>
+              {fullUpfront ? (
+                <Text style={[s.paymentText, { marginTop: 4 }]}>
+                  Full payment before the shoot secures your date.
+                </Text>
+              ) : deposit > 0 ? (
+                <Text style={[s.paymentText, { marginTop: 4 }]}>
+                  A {invoice.deposit_percent}% deposit of{" "}
+                  <Text style={s.paymentHighlight}>{formatSGD(deposit)}</Text> secures your date; the balance of{" "}
+                  <Text style={s.paymentHighlight}>{formatSGD(invoice.total_cents - deposit)}</Text> is due on delivery.
+                </Text>
+              ) : null}
+              {invoice.due_date ? (
+                <Text style={[s.paymentText, { marginTop: 4 }]}>
+                  This quote is valid until{" "}
+                  <Text style={s.paymentHighlight}>{formatJobDate(invoice.due_date)}</Text>.
+                </Text>
+              ) : null}
+              {isRental ? (
+                <View style={s.termsNotice}>
+                  <Text style={s.termsNoticeText}>
+                    The rental is subject to the Apex Cinematics{" "}
+                    <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
+                    {attachTerms ? ", attached." : ", provided separately."}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
         ) : (
-        <View style={[s.paymentSection, isRental ? { marginTop: 12 } : {}]} wrap={false}>
+        <View style={[s.paymentSection, tight ? { marginTop: 12 } : {}]} wrap={false}>
           <View style={s.paymentInfo}>
             <Text style={s.paymentLabel}>Payment Information</Text>
+            {fullUpfront && paid === 0 ? (
+              <Text style={[s.paymentText, { marginBottom: 4 }]}>
+                Full payment is due before the shoot to confirm your booking.
+              </Text>
+            ) : null}
+            {splitTotals && dueNow > 0 ? (
+              <Text style={[s.paymentText, { marginBottom: 4 }]}>
+                {depositPending
+                  ? <>A deposit of <Text style={s.paymentHighlight}>{formatSGD(dueNow)}</Text> is due now to secure your date; the balance is due on delivery.</>
+                  : <>Balance of <Text style={s.paymentHighlight}>{formatSGD(dueNow)}</Text> due on delivery.</>}
+              </Text>
+            ) : null}
             {business.paynow_number && (
               <Text style={s.paymentText}>
                 Scan the QR code to PayNow the exact amount,{"\n"}
@@ -863,23 +981,23 @@ export default function InvoicePdf({
                   <Text style={s.termsNoticeText}>
                     This rental is subject to the attached{" "}
                     <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
-                    , which form part of this invoice. Please sign the acknowledgement on the last page before collection.
+                    , which form part of this {docWord}. Please sign the acknowledgement on the last page before collection.
                   </Text>
                 ) : (
                   <Text style={s.termsNoticeText}>
                     This rental is subject to the Apex Cinematics{" "}
                     <Text style={{ fontWeight: 700, color: C.dark }}>Equipment Rental Terms {"&"} Conditions</Text>
-                    {" "}provided separately, which form part of this invoice.
+                    {" "}provided separately, which form part of this {docWord}.
                   </Text>
                 )}
               </View>
             ) : null}
           </View>
           {qr && (
-            <View style={[s.qrContainer, isRental ? { padding: 10 } : {}]}>
-              <Image style={s.qr} src={qr} />
+            <View style={[s.qrContainer, tight ? { padding: 10 } : {}]}>
+              <Image style={[s.qr, tight ? { width: 92, height: 92 } : {}]} src={qr} />
               <Text style={s.qrCaption}>PAYNOW</Text>
-              <Text style={s.qrAmount}>{formatSGD(invoice.total_cents)}</Text>
+              <Text style={s.qrAmount}>{formatSGD(dueNow)}</Text>
             </View>
           )}
         </View>

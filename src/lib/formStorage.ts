@@ -1,4 +1,5 @@
 import type { DiscountType, LineItem } from "./money";
+import type { DocType } from "./types";
 import { plusDaysIso, todayLocalIso } from "./date";
 
 export type FormState = {
@@ -31,15 +32,33 @@ export type FormState = {
   rentalEnd?: string;
   /** Attach the rental T&C to the PDF; undefined = yes. */
   rentalTerms?: boolean;
+  /** "quote" forms autosave separately, so a half-typed quote never comes
+   *  back as an invoice (and vice versa). Undefined = invoice. */
+  docType?: DocType;
+  /** Deposit asked upfront on shoot invoices, in percent (0 = none). */
+  depositPercent?: number;
 };
 
-const KEY = "jjv.invoice.form.v1";
+/** Default due date: invoices are due in 30 days; quotes are valid 14. */
+export function defaultDueDays(docType: DocType | undefined): number {
+  return docType === "quote" ? 14 : 30;
+}
 
-export function emptyForm(): FormState {
+/** No deposit unless the owner turns one on: deposits are only taken for
+ *  far-off dates, multi-part projects, weddings and uncertain clients. */
+export const DEFAULT_DEPOSIT_PERCENT = 0;
+
+const KEY = "jjv.invoice.form.v1";
+const QUOTE_KEY = "jjv.quote.form.v1";
+const keyFor = (docType: DocType | undefined) => (docType === "quote" ? QUOTE_KEY : KEY);
+
+export function emptyForm(docType: DocType = "invoice"): FormState {
   const issueDate = todayLocalIso();
   return {
+    docType,
+    depositPercent: DEFAULT_DEPOSIT_PERCENT,
     issueDate,
-    dueDate: plusDaysIso(issueDate, 30),
+    dueDate: plusDaysIso(issueDate, defaultDueDays(docType)),
     issueTouched: false,
     dueTouched: false,
     customerId: null,
@@ -58,7 +77,7 @@ export function emptyForm(): FormState {
 }
 
 export function storeForm(s: FormState): void {
-  localStorage.setItem(KEY, JSON.stringify(s));
+  localStorage.setItem(keyFor(s.docType), JSON.stringify(s));
 }
 
 /** Rolls untouched dates forward to today.
@@ -84,7 +103,7 @@ function refreshDates(form: FormState): FormState {
   return {
     ...form,
     issueDate,
-    dueDate: form.dueTouched ? form.dueDate : plusDaysIso(issueDate, 30),
+    dueDate: form.dueTouched ? form.dueDate : plusDaysIso(issueDate, defaultDueDays(form.docType)),
   };
 }
 
@@ -100,13 +119,13 @@ function refreshDates(form: FormState): FormState {
  *  So when the stored form belongs to a different business — or predates
  *  this field, where we can't tell — the business-specific bits are dropped
  *  and the rest of the typing (job details, line items) is preserved. */
-export function loadForm(businessId?: string): FormState | null {
+export function loadForm(businessId?: string, docType: DocType = "invoice"): FormState | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(keyFor(docType));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null || !("lineItems" in parsed)) return null;
-    const form = refreshDates(parsed as FormState);
+    const form = refreshDates({ ...(parsed as FormState), docType });
     if (businessId && form.businessId === businessId) return form;
     return { ...form, businessId, invoiceId: undefined, customerId: null, newCustomer: null };
   } catch {
@@ -114,6 +133,6 @@ export function loadForm(businessId?: string): FormState | null {
   }
 }
 
-export function clearForm(): void {
-  localStorage.removeItem(KEY);
+export function clearForm(docType: DocType = "invoice"): void {
+  localStorage.removeItem(keyFor(docType));
 }

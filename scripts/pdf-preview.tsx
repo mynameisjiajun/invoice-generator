@@ -1,5 +1,5 @@
 // Dev-only: render a sample invoice PDF to inspect the design.
-// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms]
+// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms|quote|deposit|deposit-paid|deposit-receipt]
 // PREVIEW_LOGO=/path/to/logo.png overrides public/logo.png.
 import React from "react";
 import path from "path";
@@ -9,6 +9,7 @@ import InvoicePdf from "../src/components/InvoicePdf";
 import { paynowPayload } from "../src/lib/paynow";
 import type { Business, Invoice } from "../src/lib/types";
 import { subtotalCents } from "../src/lib/money";
+import { dueNowCents } from "../src/lib/payments";
 
 // InvoicePdf.tsx registers Montserrat with browser paths (/fonts/...) since
 // it's bundled for the client; that registration already ran when the
@@ -114,12 +115,19 @@ async function main() {
   const out = process.argv[2] ?? "/tmp/invoice-preview.pdf";
   const mode = process.argv[3] ?? "invoice";
   const isRental = mode.startsWith("rental");
-  const base = mode === "rental-noterms"
+  const depositPay = { id: "p1", invoice_id: "preview", business_id: business.id,
+    amount_cents: 29250, paid_on: "2026-07-05", note: "Deposit", created_at: "" };
+  const base: Invoice = mode === "rental-noterms"
     ? { ...rentalInvoice, rental_terms: false }
-    : isRental ? rentalInvoice : invoice;
+    : isRental ? rentalInvoice
+    : mode === "quote" ? { ...invoice, doc_type: "quote", invoice_number: "Q-7", due_date: "2026-07-18", deposit_percent: 50 }
+    : mode === "deposit" ? { ...invoice, deposit_percent: 50 }
+    : mode === "full-upfront" ? { ...invoice, deposit_percent: 100 }
+    : mode === "deposit-paid" || mode === "deposit-receipt" ? { ...invoice, deposit_percent: 50, payments: [depositPay] }
+    : invoice;
   const payload = paynowPayload({
     mobile: business.paynow_number,
-    amountCents: base.total_cents,
+    amountCents: dueNowCents(base) || base.total_cents,
     reference: base.invoice_number!,
   });
   const qr = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 512 });
@@ -131,7 +139,8 @@ async function main() {
     logo = `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
   }
   const variant: "invoice" | "receipt" = mode.endsWith("receipt") ? "receipt" : "invoice";
-  const inv = variant === "receipt"
+  // deposit-receipt: a receipt for the deposit alone (invoice still unpaid).
+  const inv = variant === "receipt" && mode !== "deposit-receipt"
     ? { ...base, status: "paid" as const, paid_date: "2026-07-04" }
     : base;
   await renderToFile(<InvoicePdf invoice={inv} business={business} qr={qr} logo={logo} variant={variant} />, out);

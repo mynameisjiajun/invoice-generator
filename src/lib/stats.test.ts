@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { clientStats, monthlyStats, yearlyStats } from "./stats";
 import type { Invoice } from "./types";
 
@@ -44,5 +44,17 @@ describe("stats", () => {
       { name: "Jordan", invoicedCents: 80000 },
       { name: "Acme", invoicedCents: 20000 },
     ]);
+  });
+});
+
+describe("deposits in stats", () => {
+  it("counts money received so far as collected", async () => {
+    const { yearlyStats } = await import("./stats");
+    const pay = { id: "p", invoice_id: "x", business_id: "b", amount_cents: 30000, paid_on: "2026-11-01", note: "Deposit", created_at: "" };
+    const rows = yearlyStats([
+      { status: "unpaid", issue_date: "2026-11-01", total_cents: 100000, payments: [pay] },
+      { status: "paid", issue_date: "2026-03-01", total_cents: 50000, payments: [] },
+    ] as never);
+    expect(rows[0]).toEqual({ year: 2026, invoicedCents: 150000, collectedCents: 80000 });
   });
 });

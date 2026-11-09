@@ -44,8 +44,28 @@ export type Invoice = {
   /** When the renter's signed T&C acknowledgement came back (migration
    *  022); null/absent = not yet. */
   rental_signed_at?: string | null;
+  /** "quote" rows are quotes (migration 023): own Q-numbers, never counted
+   *  as revenue or overdue; due_date is "valid until". */
+  doc_type?: DocType;
+  /** Share of the total asked upfront to confirm a shoot (0 = none). */
+  deposit_percent?: number;
+  /** On a quote: the invoice it was converted into. */
+  converted_invoice_id?: string | null;
+  payments?: Payment[];          // joined
   customers?: Customer | null;   // joined
 };
+
+export type DocType = "invoice" | "quote";
+
+/** One transfer received against an invoice (deposit, balance, …). */
+export type Payment = {
+  id: string; invoice_id: string; business_id: string;
+  amount_cents: number; paid_on: string; note: string; created_at: string;
+};
+
+export function isQuote(inv: Pick<Invoice, "doc_type"> | null | undefined): boolean {
+  return inv?.doc_type === "quote";
+}
 
 export type Business = {
   id: string; name: string; slug: string; address: string; phone: string;
@@ -58,6 +78,7 @@ export type Business = {
   /** "print" switches invoices to the 3D-print form and PDF. Optional
    *  because rows read before migration 019 don't have it. */
   kind?: BusinessKind;
+  next_quote_seq?: number;
 };
 
 export type BusinessKind = "photo" | "print";
@@ -81,7 +102,7 @@ export function awaitingRentalSignature(inv: Pick<Invoice, "is_rental" | "status
 }
 
 export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {
-  if (inv.status !== "unpaid") return false;
+  if (inv.status !== "unpaid" || isQuote(inv)) return false;
   const due = inv.due_date ?? plusDaysIso(inv.issue_date, 30);
   return todayIso > due;
 }

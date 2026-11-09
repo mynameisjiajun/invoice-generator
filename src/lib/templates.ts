@@ -1,6 +1,7 @@
 import { formatSGD } from "@/lib/money";
 import { paynowDisplay } from "@/lib/paynow";
-import { attachesRentalTerms, isPrintBusiness, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
+import { attachesRentalTerms, isPrintBusiness, isQuote, isRentalInvoice, type Business, type Invoice } from "@/lib/types";
+import { balanceCents, depositCents, depositOutstanding, dueNowCents, isFullUpfront, paidCents } from "@/lib/payments";
 import { formatJobDate } from "./printRates";
 
 /** Added to every message for an equipment-rental invoice, whatever the
@@ -24,17 +25,44 @@ function rentalDateRange(inv: Invoice): string {
 
 const SIGN_OFF = /^(best|regards|kind regards|warm(est)? regards|thanks|thank you|cheers|sincerely)\b[^\n]*(\n[^\n]*){0,2}$/i;
 
-function withRentalNote(inv: Invoice, message: string): string {
-  if (!isRentalInvoice(inv)) return message;
-  const note = attachesRentalTerms(inv) ? RENTAL_MESSAGE_NOTE : RENTAL_MESSAGE_NOTE_SEPARATE;
-  // Slot the note in above the sign-off ("Best,\nName") rather than after
-  // the signature, when the message ends with one.
+/** What the client should pay next on a deposit invoice, in words. */
+export function depositMessageNote(inv: Invoice): string | null {
+  if (isQuote(inv) || isRentalInvoice(inv)) return null;
+  if (isFullUpfront(inv) && paidCents(inv) === 0) {
+    return `Full payment of ${formatSGD(inv.total_cents)} is due before the shoot to confirm your booking.`;
+  }
+  if (depositOutstanding(inv)) {
+    const balance = inv.total_cents - depositCents(inv);
+    return `To lock in your date, a ${inv.deposit_percent}% deposit of ${formatSGD(dueNowCents(inv))} is due now; ` +
+      `the balance of ${formatSGD(balance)} is due on delivery.`;
+  }
+  const paid = paidCents(inv);
+  if (paid > 0 && balanceCents(inv) > 0) {
+    return `We've received ${formatSGD(paid)} so far, thank you! The balance of ${formatSGD(balanceCents(inv))} is due on delivery.`;
+  }
+  return null;
+}
+
+/** Slots notes in above the sign-off ("Best,\nName") rather than after the
+ *  signature, when the message ends with one. */
+function insertNotes(message: string, notes: (string | null)[]): string {
+  const add = notes.filter((n): n is string => Boolean(n));
+  if (!add.length) return message;
   const paras = message.split(/\n\s*\n/);
   const last = paras[paras.length - 1] ?? "";
   if (paras.length > 1 && SIGN_OFF.test(last.trim())) {
-    return [...paras.slice(0, -1), note, last].join("\n\n");
+    return [...paras.slice(0, -1), ...add, last].join("\n\n");
   }
-  return `${message}\n\n${note}`;
+  return [message, ...add].join("\n\n");
+}
+
+function rentalNote(inv: Invoice): string | null {
+  if (!isRentalInvoice(inv)) return null;
+  return attachesRentalTerms(inv) ? RENTAL_MESSAGE_NOTE : RENTAL_MESSAGE_NOTE_SEPARATE;
+}
+
+function withRentalNote(inv: Invoice, message: string): string {
+  return insertNotes(message, [depositMessageNote(inv), rentalNote(inv)]);
 }
 
 // The user's real default email copy — seeded here (not in the DB) so it can
@@ -134,6 +162,7 @@ export function tidyMessage(text: string): string {
 }
 
 export function emailMessage(inv: Invoice, biz: Business): string {
+  if (isQuote(inv)) return quoteMessage(QUOTE_EMAIL_TEMPLATE, inv, biz);
   if (isRentalFor(inv, biz)) {
     return withRentalNote(inv, tidyMessage(renderRental(RENTAL_EMAIL_TEMPLATE, templateVars(inv, biz))));
   }
@@ -144,12 +173,13 @@ export function emailMessage(inv: Invoice, biz: Business): string {
 /** Subject line for the invoice email. Not stored in the DB (no migration):
  *  the body is the part worth customising per business, the subject isn't. */
 export function emailSubject(inv: Invoice, biz: Business): string {
-  return renderTemplate(DEFAULT_EMAIL_SUBJECT, templateVars(inv, biz))
+  return renderTemplate(isQuote(inv) ? "Quote for {job}" : DEFAULT_EMAIL_SUBJECT, templateVars(inv, biz))
     .replace(/\s+/g, " ")
     .trim();
 }
 
 export function whatsappMessage(inv: Invoice, biz: Business): string {
+  if (isQuote(inv)) return quoteMessage(QUOTE_WHATSAPP_TEMPLATE, inv, biz);
   if (isRentalFor(inv, biz)) {
     return withRentalNote(inv, tidyMessage(renderRental(RENTAL_WHATSAPP_TEMPLATE, templateVars(inv, biz))));
   }
@@ -166,7 +196,7 @@ export const RECEIPT_EMAIL_TEMPLATE = [
   "",
   "Thank you for your payment! Attached is your receipt for {job}.",
   "",
-  "We've received {total} for invoice {invoice_number}{paid_on}, so nothing further is due.",
+  "We've received {received} for invoice {invoice_number}{paid_on}{balance_line}",
   "",
   "Thanks again, and do let me know if you need anything else!",
   "",
@@ -175,13 +205,24 @@ export const RECEIPT_EMAIL_TEMPLATE = [
 ].join("\n");
 
 export const RECEIPT_WHATSAPP_TEMPLATE =
-  "Hi {first_name}! Thank you for your payment of {total} for invoice {invoice_number}{paid_on}. " +
+  "Hi {first_name}! Thank you for your payment of {received} for invoice {invoice_number}{paid_on}.{balance_short} " +
   "Here's your receipt for {job}. Thanks again!";
 
 function receiptVars(inv: Invoice, biz: Business): Record<string, string> {
+  // A receipt can be for a deposit: say what came in and what's left.
+  const payments = inv.payments ?? [];
+  const lastDate = inv.status === "paid" && inv.paid_date
+    ? inv.paid_date
+    : payments.length ? payments[payments.length - 1].paid_on : inv.paid_date;
+  const balance = balanceCents(inv);
   return {
     ...templateVars(inv, biz),
-    paid_on: inv.paid_date ? ` on ${formatJobDate(inv.paid_date)}` : "",
+    received: formatSGD(paidCents(inv) || inv.total_cents),
+    paid_on: lastDate ? ` on ${formatJobDate(lastDate)}` : "",
+    balance_line: balance > 0
+      ? `. The balance of ${formatSGD(balance)} is due on delivery.`
+      : ", so nothing further is due.",
+    balance_short: balance > 0 ? ` Balance of ${formatSGD(balance)} due on delivery.` : "",
   };
 }
 
@@ -195,4 +236,37 @@ export function receiptWhatsappMessage(inv: Invoice, biz: Business): string {
 
 export function receiptSubject(inv: Invoice, biz: Business): string {
   return renderTemplate("Receipt for {job}", templateVars(inv, biz)).replace(/\s+/g, " ").trim();
+}
+
+// ── Quotes ─────────────────────────────────────────────────────────────
+
+export const QUOTE_EMAIL_TEMPLATE = [
+  "Hello {first_name},",
+  "",
+  "Thanks for reaching out! Attached is the quote for {job}.",
+  "",
+  "The total comes to {total}{quote_deposit}.{valid_line}",
+  "",
+  "To go ahead, simply reply to this email and I'll send over the invoice to confirm your booking.",
+  "",
+  "Best,",
+  "{payee_name}",
+].join("\n");
+
+export const QUOTE_WHATSAPP_TEMPLATE =
+  "Hi {first_name}! Here's quote {invoice_number} for {job}: total {total}{quote_deposit}.{valid_line} " +
+  "Just reply here to go ahead and I'll send the invoice. Thank you!";
+
+function quoteMessage(template: string, inv: Invoice, biz: Business): string {
+  const deposit = depositCents(inv);
+  const vars = {
+    ...templateVars(inv, biz),
+    quote_deposit: isFullUpfront(inv)
+      ? ", payable in full before the shoot to lock in your date"
+      : deposit > 0
+        ? `, with a ${inv.deposit_percent}% deposit (${formatSGD(deposit)}) to lock in your date`
+        : "",
+    valid_line: inv.due_date ? ` This quote is valid until ${formatJobDate(inv.due_date)}.` : "",
+  };
+  return insertNotes(tidyMessage(renderTemplate(template, vars)), [rentalNote(inv)]);
 }

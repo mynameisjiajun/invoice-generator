@@ -203,3 +203,52 @@ describe("receipts", () => {
     expect(receiptEmailMessage({ ...paid, paid_date: null } as Invoice, biz)).toContain("for invoice A-31, so nothing");
   });
 });
+
+import { depositMessageNote } from "./templates";
+
+describe("quotes and deposits in messages", () => {
+  const base = { ...(inv as object), job_event: "Brand film", total_cents: 100000, invoice_number: "A-40", status: "unpaid", payments: [] } as unknown as Invoice;
+
+  it("quote email: total, deposit, validity, how to accept", () => {
+    const q = { ...base, doc_type: "quote", invoice_number: "Q-3", due_date: "2026-11-23", deposit_percent: 50 } as Invoice;
+    const msg = emailMessage(q, biz);
+    expect(msg).toContain("Attached is the quote for Brand film.");
+    expect(msg).toContain("The total comes to $1,000.00, with a 50% deposit ($500.00) to lock in your date.");
+    expect(msg).toContain("valid until 23 Nov 2026");
+    expect(msg).toContain("simply reply to this email");
+    expect(emailSubject(q, biz)).toBe("Quote for Brand film");
+    expect(whatsappMessage(q, biz)).toContain("Here's quote Q-3 for Brand film");
+  });
+
+  it("deposit invoice asks for the deposit now, above the sign-off", () => {
+    const d = { ...base, deposit_percent: 50, email_template: "" } as Invoice;
+    const note = depositMessageNote(d)!;
+    expect(note).toBe("To lock in your date, a 50% deposit of $500.00 is due now; the balance of $500.00 is due on delivery.");
+    const msg = emailMessage(d, { ...biz, email_template: "" } as Business);
+    expect(msg.indexOf(note)).toBeGreaterThan(0);
+    expect(msg.indexOf(note)).toBeLessThan(msg.lastIndexOf("Best,"));
+  });
+
+  it("after the deposit, asks for the balance; a deposit receipt says what's left", () => {
+    const p = { id: "1", invoice_id: "x", business_id: "b", amount_cents: 50000, paid_on: "2026-11-10", note: "Deposit", created_at: "" };
+    const d = { ...base, deposit_percent: 50, payments: [p] } as Invoice;
+    expect(depositMessageNote(d)).toBe("We've received $500.00 so far, thank you! The balance of $500.00 is due on delivery.");
+    const r = receiptEmailMessage(d, biz);
+    expect(r).toContain("We've received $500.00 for invoice A-40 on 10 Nov 2026. The balance of $500.00 is due on delivery.");
+    expect(r).not.toContain("nothing further is due");
+  });
+
+  it("no deposit note without a deposit", () => {
+    expect(depositMessageNote({ ...base, deposit_percent: 0 } as Invoice)).toBeNull();
+  });
+});
+
+describe("full payment before the shoot", () => {
+  const full = { ...(inv as object), job_event: "Corporate event", total_cents: 80000, invoice_number: "A-41", status: "unpaid", payments: [], deposit_percent: 100 } as unknown as Invoice;
+  it("asks for full payment before the shoot, never says deposit", () => {
+    expect(depositMessageNote(full)).toBe("Full payment of $800.00 is due before the shoot to confirm your booking.");
+    const q = emailMessage({ ...full, doc_type: "quote", invoice_number: "Q-9", due_date: null } as Invoice, biz);
+    expect(q).toContain("payable in full before the shoot");
+    expect(q).not.toContain("deposit");
+  });
+});

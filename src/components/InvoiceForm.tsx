@@ -2,9 +2,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createCustomer, finalizeInvoice, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
+  createCustomer, finalizeInvoice, finalizeQuote, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
 } from "@/lib/db";
-import { clearForm, emptyForm, loadForm, storeForm, type FormState } from "@/lib/formStorage";
+import {
+  clearForm, defaultDueDays, emptyForm, loadForm, storeForm, type FormState,
+} from "@/lib/formStorage";
+import DepositField from "@/components/DepositField";
+import type { DocType } from "@/lib/types";
 import { plusDaysIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
@@ -36,8 +40,11 @@ const NEW_CUSTOMER_FIELDS: {
 /** Starting values for a brand-new invoice (e.g. from a website enquiry). */
 export type InvoicePrefill = { customerId: number; jobEvent?: string; jobDate?: string };
 
-export default function InvoiceForm({ duplicateId, draftId, prefill }: {
+export default function InvoiceForm({ duplicateId, draftId, prefill, docType: newDocType = "invoice" }: {
   duplicateId?: string; draftId?: string; prefill?: InvoicePrefill;
+  /** For a brand-new form: invoice or quote. Drafts and duplicates take the
+   *  type of the document they were loaded from. */
+  docType?: DocType;
 }) {
   const router = useRouter();
   const { businesses, activeBusiness } = useBusiness();
@@ -69,7 +76,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   // not have loaded on first mount), which is why activeBusiness is in the
   // dependency list — the "new" key guard, not the deps, is what freezes it.
   useEffect(() => {
-    const key = draftId ?? duplicateId ?? (prefill ? `prefill:${prefill.customerId}` : "new");
+    const key = draftId ?? duplicateId ?? (prefill ? `prefill:${prefill.customerId}:${newDocType}` : `new:${newDocType}`);
     if (loadedRef.current === key) return;
     if (!draftId && !duplicateId && !activeBusiness) return; // wait for a business
     loadedRef.current = key;
@@ -82,7 +89,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         setLoadedRental(inv.is_rental === true);
         setForm({
           invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
-          dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, 30),
+          dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, defaultDueDays(inv.doc_type)),
           // An existing invoice's dates are explicit, not defaults to roll forward.
           issueTouched: true, dueTouched: true,
           customerId: inv.customer_id,
@@ -91,26 +98,28 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           discountType: inv.discount_type, discountValue: inv.discount_value,
           isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
           rentalTerms: inv.rental_terms !== false,
+          docType: inv.doc_type ?? "invoice", depositPercent: inv.deposit_percent ?? 0,
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
         setFormBusinessId(inv.business_id);
         setForm({
-          ...emptyForm(), businessId: inv.business_id, customerId: inv.customer_id, jobEvent: inv.job_event,
+          ...emptyForm(inv.doc_type ?? "invoice"), businessId: inv.business_id, customerId: inv.customer_id, jobEvent: inv.job_event,
           jobDate: inv.job_date, jobLocation: inv.job_location,
           lineItems: inv.line_items, discountType: inv.discount_type,
           discountValue: inv.discount_value,
           // A duplicated rental keeps its gear list and period, ready to re-date.
           isRental: inv.is_rental ?? false, rentalStart: inv.rental_start ?? "", rentalEnd: inv.rental_end ?? "",
           rentalTerms: inv.rental_terms !== false,
+          depositPercent: inv.deposit_percent ?? 0,
         });
       } else {
         const bizId = activeBusiness!.id;
         setFormBusinessId(bizId);
         // A prefilled invoice starts fresh rather than restoring an unrelated autosaved form.
         const start = prefill
-          ? { ...emptyForm(), businessId: bizId, customerId: prefill.customerId, jobEvent: prefill.jobEvent ?? "", jobDate: prefill.jobDate ?? "" }
-          : loadForm(bizId) ?? { ...emptyForm(), businessId: bizId };
+          ? { ...emptyForm(newDocType), businessId: bizId, customerId: prefill.customerId, jobEvent: prefill.jobEvent ?? "", jobDate: prefill.jobDate ?? "" }
+          : loadForm(bizId, newDocType) ?? { ...emptyForm(newDocType), businessId: bizId };
         // A print shop's blank starter line opens as a print card.
         setForm(isPrintBusiness(activeBusiness) ? {
           ...start,
@@ -159,6 +168,13 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   const isPrint = isPrintBusiness(formBusiness);
   // Equipment rental is a photo-business option (Apex Cinematics).
   const isRental = !isPrint && f.isRental === true;
+  const docType: DocType = f.docType ?? "invoice";
+  const isQuoteDoc = docType === "quote";
+  // Deposits are for shoots: rentals are paid in full before collection.
+  const showDeposit = !isPrint && !isRental;
+  const depositPercent = showDeposit ? f.depositPercent ?? 0 : 0;
+  const depositNow = Math.round((totals.total * depositPercent) / 100);
+  const dueDays = defaultDueDays(docType);
   const periodDays = rentalDays(f.rentalStart, f.rentalEnd);
 
   // Rentals are paid before collection (T&C 2.1), so an untouched due date
@@ -182,7 +198,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
       set({
         isRental: false,
         lineItems: fromRentalLines(f.lineItems),
-        ...(f.dueTouched ? {} : { dueDate: plusDaysIso(f.issueDate, 30) }),
+        ...(f.dueTouched ? {} : { dueDate: plusDaysIso(f.issueDate, dueDays) }),
       });
     }
   }
@@ -242,6 +258,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
       job_event: f.jobEvent, job_date: f.jobDate, job_location: f.jobLocation,
       line_items: f.lineItems.filter((li) => li.description.trim() !== ""),
       discount_type: f.discountType, discount_value: f.discountValue,
+      doc_type: docType,
+      deposit_percent: depositPercent,
       // Rental columns are only written when they matter, so ordinary
       // invoices keep saving even on a database without migration 020.
       ...(isRental || loadedRental ? {
@@ -275,8 +293,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
     try {
       const id = await persistDraft(true);
       // persistDraft() throws before this point if formBusinessId is null.
-      await finalizeInvoice(id, formBusinessId!);
-      clearForm();
+      if (isQuoteDoc) await finalizeQuote(id);
+      else await finalizeInvoice(id, formBusinessId!);
+      clearForm(docType);
       router.push(`/invoices_login/invoices/${id}?just=1`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to finalize invoice");
@@ -306,7 +325,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   return (
     <main className="page-container animate-fade-in">
       <h1 className="page-title">
-        {editingFinalized ? `Edit ${loadedNumber}` : f.invoiceId ? "Edit Draft" : "New Invoice"}
+        {editingFinalized ? `Edit ${loadedNumber}` : f.invoiceId ? (isQuoteDoc ? "Edit Quote Draft" : "Edit Draft") : isQuoteDoc ? "New Quote" : "New Invoice"}
       </h1>
       <p className="page-subtitle">
         {editingFinalized
@@ -383,12 +402,12 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
                   set({
                     issueDate,
                     issueTouched: true,
-                    dueDate: f.dueTouched ? f.dueDate : plusDaysIso(issueDate, 30),
+                    dueDate: f.dueTouched ? f.dueDate : plusDaysIso(issueDate, dueDays),
                   });
                 }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label className="input-label">Due date</label>
+              <label className="input-label">{isQuoteDoc ? "Valid until" : "Due date"}</label>
               <input type="date" className="input" value={f.dueDate}
                 onChange={(e) => set({ dueDate: e.target.value, dueTouched: true })} />
             </div>
@@ -530,6 +549,11 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         </div>
       </div>
 
+      {showDeposit && (
+        <DepositField percent={depositPercent} totalCents={totals.total}
+          onChange={(p) => set({ depositPercent: p })} />
+      )}
+
       {/* Totals */}
       <div className="totals-section" style={{ marginBottom: 20 }}>
         <div className="total-row">
@@ -543,9 +567,15 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           </div>
         )}
         <div className="total-row-final">
-          <span>Total Due</span>
+          <span>{isQuoteDoc ? "Total" : "Total Due"}</span>
           <span>{formatSGD(totals.total)}</span>
         </div>
+        {depositPercent > 0 && depositPercent < 100 && totals.total > 0 && (
+          <div className="total-row" style={{ marginTop: 6 }}>
+            <span>Deposit now ({depositPercent}%)</span>
+            <span className="money" style={{ fontWeight: 600 }}>{formatSGD(depositNow)}</span>
+          </div>
+        )}
       </div>
       </div>
       </div>
@@ -580,9 +610,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
         <div className="action-bar" style={{ flexDirection: "column" }}>
           {formBusiness && (
             <p style={{ color: "var(--text-tertiary)", fontSize: "0.78rem", margin: "0 0 8px", width: "100%" }}>
-              This will be invoice{" "}
+              This will be {isQuoteDoc ? "quote" : "invoice"}{" "}
               <span className="money" style={{ fontWeight: 600 }}>
-                {formBusiness.invoice_prefix}{formBusiness.next_invoice_seq}
+                {isQuoteDoc ? `Q-${formBusiness.next_quote_seq ?? 1}` : `${formBusiness.invoice_prefix}${formBusiness.next_invoice_seq}`}
               </span>.
             </p>
           )}
@@ -593,19 +623,21 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           <button onClick={() => setConfirmingFinalize(true)}
             disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
             className="btn btn-primary" style={{ flex: 1 }}>
-            {busy === "final" ? "Finalizing…" : "Finalize Invoice"}
+            {busy === "final" ? (isQuoteDoc ? "Issuing…" : "Finalizing…") : isQuoteDoc ? "Issue Quote" : "Finalize Invoice"}
           </button>
           </div>
         </div>
       )}
       <ConfirmSheet
         open={confirmingFinalize}
-        title="Finalize this invoice?"
+        title={isQuoteDoc ? "Issue this quote?" : "Finalize this invoice?"}
         message={
-          `${customerLabel} · ${formBusiness ? `${formBusiness.invoice_prefix}${formBusiness.next_invoice_seq}` : "next number"} · ${formatSGD(totals.total)}` +
-          "\n\nThis assigns the invoice number and locks it in. Check the total reads what you expect."
+          `${customerLabel} · ${formBusiness ? (isQuoteDoc ? `Q-${formBusiness.next_quote_seq ?? 1}` : `${formBusiness.invoice_prefix}${formBusiness.next_invoice_seq}`) : "next number"} · ${formatSGD(totals.total)}` +
+          (isQuoteDoc
+            ? "\n\nThis gives the quote its number so you can send it. You can still turn it into an invoice later."
+            : "\n\nThis assigns the invoice number and locks it in. Check the total reads what you expect.")
         }
-        confirmLabel="Finalize"
+        confirmLabel={isQuoteDoc ? "Issue quote" : "Finalize"}
         onConfirm={onFinalize}
         onCancel={() => setConfirmingFinalize(false)}
       />

@@ -1,4 +1,5 @@
 import type { Invoice } from "./types";
+import { paidCents } from "./payments";
 
 const real = (invoices: Invoice[]) => invoices.filter((i) => i.status !== "draft");
 
@@ -8,7 +9,7 @@ export function yearlyStats(invoices: Invoice[]) {
     const year = Number(i.issue_date.slice(0, 4));
     const e = map.get(year) ?? { invoicedCents: 0, collectedCents: 0 };
     e.invoicedCents += i.total_cents;
-    if (i.status === "paid") e.collectedCents += i.total_cents;
+    e.collectedCents += Math.min(paidCents(i), i.total_cents); // deposits count as collected
     map.set(year, e);
   }
   return [...map.entries()]
@@ -24,7 +25,7 @@ export function monthlyStats(invoices: Invoice[], year: number) {
     if (Number(i.issue_date.slice(0, 4)) !== year) continue;
     const m = months[Number(i.issue_date.slice(5, 7)) - 1];
     m.invoicedCents += i.total_cents;
-    if (i.status === "paid") m.collectedCents += i.total_cents;
+    m.collectedCents += Math.min(paidCents(i), i.total_cents);
   }
   return months;
 }

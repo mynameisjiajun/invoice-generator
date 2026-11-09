@@ -24,7 +24,9 @@ Build order (each phase ships and is checked before the next):
 
 ## 2. Deposits
 - Shoot invoices (not rentals — rentals are paid in full before collection)
-  can ask for a deposit; default 50%, choices None / 30% / 50% / custom.
+  can ask for a deposit; OFF by default (owner 2026-11-09: only for far-out
+  dates, multi-segment projects, weddings, sus clients); choices None / 30% /
+  50% / custom.
 - PDF: "Deposit due now $X · Balance $Y due on delivery"; PayNow QR is for the
   amount due now. After the deposit is recorded, due-now becomes the balance.
 - Payments are recorded as they arrive (amount, date, note). List shows
@@ -56,3 +58,16 @@ Software & subscriptions, Marketing, Other; note; optional receipt photo).
 Stats: revenue, expenses, profit per month/year. Year-end export: Form B
 4-line statement (revenue, gross profit, allowable expenses, adjusted profit)
 + CSV. Not GST-registered.
+Running "set aside" figure: estimated compulsory MediSave (self-employed;
+applies once net trade income > $6,000/yr, rate by age band and income band,
+capped) + estimated income tax, on profit to date — shown on Stats and in the
+year-end summary. Rates/bands must be checked against CPF/IRAS at build time
+(not from memory); owner's age band needed once (birth year in Settings).
+
+
+## Declined (don't build)
+- Crew/freelancer payments (owner is solo for now).
+- Job status / delivery tracking (Booked → Shot → Editing → Delivered).
+- Income without invoices (owner backfills invoices instead).
+- Bank connection / auto-matching DBS PayNow alert emails (owner declined
+  2026-11-09). Payments are recorded by hand.

@@ -162,11 +162,15 @@ export default function EnquiriesPage() {
                     <IconWhatsApp size={14} /> WhatsApp
                   </a>
                 )}
-                {e.customer_id ? (
-                  <Link className="btn btn-primary icon-btn" href={invoiceHref!}>
+                {e.customer_id ? (<>
+                  {/* Usually a price goes out first: quote, then invoice once they say yes. */}
+                  <Link className="btn btn-primary icon-btn" href={`${invoiceHref!}&type=quote`}>
+                    <IconAdd size={14} /> Create quote
+                  </Link>
+                  <Link className="btn btn-secondary icon-btn" href={invoiceHref!}>
                     <IconAdd size={14} /> Create invoice
                   </Link>
-                ) : (
+                </>) : (
                   <button className="btn btn-secondary icon-btn" disabled={busy || !activeBusiness} onClick={() => saveAsClient(e)}>
                     <IconUser size={14} /> Save as client
                   </button>

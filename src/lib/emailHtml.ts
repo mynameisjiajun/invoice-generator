@@ -11,7 +11,8 @@
 import { formatSGD } from "./money";
 import { formatJobDate } from "./printRates";
 import { formatSgPhone } from "./phone";
-import type { Business, Invoice } from "./types";
+import { isQuote, type Business, type Invoice } from "./types";
+import { balanceCents, depositOutstanding, dueNowCents, isFullUpfront, paidCents } from "./payments";
 import { SITE } from "@/components/portfolio/seo";
 
 const INK = "#191919";
@@ -47,12 +48,37 @@ export function invoiceEmailHtml({ body, invoice, business, variant, logoUrl = E
   logoUrl?: string;
 }): string {
   const isReceipt = variant === "receipt";
+  const quote = isQuote(invoice);
   const number = invoice.invoice_number ?? "Draft";
-  const amountLabel = isReceipt ? "Paid in full" : "Amount due";
-  const meta = isReceipt
-    ? (invoice.paid_date ? `Received ${formatJobDate(invoice.paid_date)}` : "Payment received")
-    : (invoice.due_date ? `Due ${formatJobDate(invoice.due_date)}` : "");
-  const metaLine = [meta, "PDF attached"].filter(Boolean).join(" &nbsp;·&nbsp; ");
+  const docWord = isReceipt ? "Receipt" : quote ? "Quote" : "Invoice";
+  const paid = paidCents(invoice);
+  const balance = balanceCents(invoice);
+  // The card shows what matters now: the quote total, the deposit or balance
+  // due, or what was received.
+  let amountLabel = "Amount due";
+  let amount = invoice.total_cents;
+  let meta = invoice.due_date ? `Due ${formatJobDate(invoice.due_date)}` : "";
+  if (quote) {
+    amountLabel = "Total";
+    meta = invoice.due_date ? `Valid until ${formatJobDate(invoice.due_date)}` : "";
+  } else if (isReceipt) {
+    amountLabel = balance > 0 ? "Received" : "Paid in full";
+    amount = paid || invoice.total_cents;
+    meta = balance > 0
+      ? `Balance ${formatSGD(balance)} due on delivery`
+      : invoice.paid_date ? `Received ${formatJobDate(invoice.paid_date)}` : "Payment received";
+  } else if (isFullUpfront(invoice) && paid === 0) {
+    meta = "Due before the shoot";
+  } else if (depositOutstanding(invoice)) {
+    amountLabel = "Deposit due now";
+    amount = dueNowCents(invoice);
+    meta = `Balance ${formatSGD(invoice.total_cents - paid - amount)} on delivery`;
+  } else if (paid > 0 && balance > 0) {
+    amountLabel = "Balance due";
+    amount = balance;
+    meta = `${formatSGD(paid)} received`;
+  }
+  const metaLine = [esc(meta), "PDF attached"].filter(Boolean).join(" &nbsp;·&nbsp; ");
   const site = SITE.replace(/^https?:\/\//, "");
   const contact = [
     business.phone ? esc(formatSgPhone(business.phone)) : "",
@@ -69,7 +95,7 @@ export function invoiceEmailHtml({ body, invoice, business, variant, logoUrl = E
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>${esc(`${isReceipt ? "Receipt" : "Invoice"} ${number}`)}</title>
+<title>${esc(`${docWord} ${number}`)}</title>
 </head>
 <body style="margin:0;padding:0;background:#ECECEC;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ECECEC" style="background:#ECECEC;">
@@ -90,9 +116,9 @@ export function invoiceEmailHtml({ body, invoice, business, variant, logoUrl = E
         style="background:${PAPER};border-left:4px solid ${ORANGE};margin-top:8px;">
         <tr><td style="padding:16px 20px;font-family:${FONT};">
           <div style="font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${MID};">
-            ${isReceipt ? "Receipt" : "Invoice"} ${esc(number)} &nbsp;·&nbsp; ${amountLabel}
+            ${docWord} ${esc(number)} &nbsp;·&nbsp; ${esc(amountLabel)}
           </div>
-          <div style="font-size:26px;font-weight:bold;color:${INK};margin-top:4px;">${esc(formatSGD(invoice.total_cents))}</div>
+          <div style="font-size:26px;font-weight:bold;color:${INK};margin-top:4px;">${esc(formatSGD(amount))}</div>
           <div style="font-size:13px;color:${MID};margin-top:2px;">${metaLine}</div>
         </td></tr>
       </table>

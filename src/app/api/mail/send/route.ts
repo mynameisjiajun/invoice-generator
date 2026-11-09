@@ -3,6 +3,7 @@ import { createDraft, MailAuthError, MailNotConfiguredError, sendMail } from "@/
 import { emailMessage, emailSubject, receiptEmailMessage, receiptSubject } from "@/lib/templates";
 import { invoiceDocLabel, isPrintBusiness, type Business, type Invoice } from "@/lib/types";
 import { invoiceEmailHtml } from "@/lib/emailHtml";
+import { paidCents } from "@/lib/payments";
 
 // Emails an invoice from the business address (iCloud), with the PDF attached.
 //
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
   // RLS scopes both reads to the signed-in user's businesses.
   const { data: invoice, error: invErr } = await supabase
-    .from("invoices").select("*, customers(*)").eq("id", invoiceId).single<Invoice>();
+    .from("invoices").select("*, customers(*), payments(*)").eq("id", invoiceId).single<Invoice>();
   if (invErr || !invoice) return bad("Invoice not found", 404);
 
   const { data: business, error: bizErr } = await supabase
@@ -72,7 +73,8 @@ export async function POST(request: Request) {
 
   const label = invoiceDocLabel(invoice, variant);
   const isReceipt = variant === "receipt";
-  if (isReceipt && invoice.status !== "paid") return bad("A receipt can only be sent for a paid invoice");
+  // A receipt needs money received: full payment or at least a deposit.
+  if (isReceipt && paidCents(invoice) <= 0) return bad("Record a payment before sending a receipt");
   const message = isReceipt ? receiptEmailMessage(invoice, business) : emailMessage(invoice, business);
   const mail = {
     to,

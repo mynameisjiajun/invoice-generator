@@ -2,7 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid, setRentalSigned } from "@/lib/db";
+import {
+  convertQuote, deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid, setRentalSigned,
+} from "@/lib/db";
+import { todayLocalIso } from "@/lib/date";
 import { formatSGD } from "@/lib/money";
 import { formatJobDate } from "@/lib/printRates";
 import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
@@ -10,12 +13,14 @@ import { paynowPayload } from "@/lib/paynow";
 import { normalizeSgMobile } from "@/lib/phone";
 import { qrDataUrl } from "@/lib/qr";
 import { emailMessage, receiptEmailMessage, receiptWhatsappMessage, whatsappMessage } from "@/lib/templates";
-import { invoiceDocLabel, isOverdue, type Business, type Invoice, type InvoiceEvent } from "@/lib/types";
+import { invoiceDocLabel, isOverdue, isQuote, type Business, type Invoice, type InvoiceEvent } from "@/lib/types";
+import { dueNowCents, paidCents, paymentState } from "@/lib/payments";
+import PaymentsCard from "@/components/PaymentsCard";
 import FocusFrame from "@/components/FocusFrame";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import {
   IconCheck, IconCopy, IconDownload, IconEdit, IconMail, IconReceipt, IconSend,
-  IconShare, IconTrash, IconUndo, IconWarning, IconWhatsApp,
+  IconShare, IconTrash, IconWarning, IconWhatsApp,
 } from "@/components/icons";
 
 /** Blob → bare base64 (no data-URL prefix), for posting a PDF as JSON.
@@ -77,11 +82,14 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
   async function generatePdfBlob(variant: "invoice" | "receipt" = "invoice"): Promise<{ blob: Blob; filename: string }> {
     const inv = invoice!; const st = business!;
-    const hasPaynow = st.paynow_number.trim() !== "";
+    // The QR asks for what's due now (deposit, then balance); quotes and
+    // fully paid invoices get none.
+    const amount = isQuote(inv) ? 0 : dueNowCents(inv);
+    const hasPaynow = st.paynow_number.trim() !== "" && amount > 0;
     const qrPromise = hasPaynow
       ? qrDataUrl(paynowPayload({
           mobile: st.paynow_number,
-          amountCents: inv.total_cents,
+          amountCents: amount,
           reference: inv.invoice_number ?? "",
         }))
       : Promise.resolve(null);
@@ -236,22 +244,48 @@ export default function InvoiceDetail({ id }: { id: string }) {
     }
   }
 
+  // Quote → invoice draft carrying everything over; opens it ready to finalize.
+  async function onConvertQuote() {
+    setBusy(true); setError(null);
+    try {
+      const draftId = await convertQuote(invoice!.id);
+      router.push(`/invoices_login/invoices/new?draft=${draftId}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't convert the quote");
+      setBusy(false);
+    }
+  }
+
   async function onDelete() {
     const inv = invoice!;
     setConfirmingDelete(false);
     try {
-      await deleteInvoice(inv.id);
-      router.push("/invoices_login/invoices");
+      await deleteInvoice(inv.id, inv.doc_type ?? "invoice");
+      router.push(isQuote(inv) ? "/invoices_login/invoices?tab=quotes" : "/invoices_login/invoices");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }
   }
 
-  const statusBadge = invoice.status === "paid"
-    ? <span className="badge badge-paid">Paid</span>
-    : invoice.status === "draft"
-      ? <span className="badge badge-draft">Draft</span>
-      : <span className="badge badge-unpaid">Unpaid</span>;
+  const quote = isQuote(invoice);
+  const quoteExpired = quote && invoice.status !== "draft" && !invoice.converted_invoice_id
+    && !!invoice.due_date && invoice.due_date < todayLocalIso();
+  const pstate = paymentState(invoice);
+  const statusBadge = invoice.status === "draft"
+    ? <span className="badge badge-draft">Draft</span>
+    : quote
+      ? invoice.converted_invoice_id
+        ? <span className="badge badge-paid">Accepted</span>
+        : quoteExpired
+          ? <span className="badge badge-overdue">Expired</span>
+          : <span className="badge badge-unpaid">Open</span>
+      : pstate === "paid"
+        ? <span className="badge badge-paid">Paid</span>
+        : pstate === "deposit-paid"
+          ? <span className="badge badge-unpaid">Deposit paid</span>
+          : pstate === "part-paid"
+            ? <span className="badge badge-unpaid">Part-paid</span>
+            : <span className="badge badge-unpaid">Unpaid</span>;
 
   return (
     <main className="page-container animate-slide-up">
@@ -268,8 +302,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
             Issued {invoice.issue_date}
           </p>
           {invoice.due_date && (
-            <p style={{ color: isOverdue(invoice) ? "var(--warning)" : "var(--text-tertiary)", fontSize: "0.85rem" }}>
-              Due {invoice.due_date}
+            <p style={{ color: isOverdue(invoice) || quoteExpired ? "var(--warning)" : "var(--text-tertiary)", fontSize: "0.85rem" }}>
+              {quote ? "Valid until" : "Due"} {invoice.due_date}
             </p>
           )}
         </div>
@@ -296,7 +330,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
               {invoice.job_location ? (
                 <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>{invoice.job_location}</p>
               ) : null}
-              {invoice.status !== "draft" && (
+              {invoice.status !== "draft" && !quote && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
                   {invoice.rental_signed_at ? (
                     <span className="badge badge-paid">
@@ -338,6 +372,21 @@ export default function InvoiceDetail({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* Quote: the one action that matters once the client says yes */}
+      {quote && invoice.status !== "draft" && (
+        invoice.converted_invoice_id ? (
+          <Link href={`/invoices_login/invoices/${invoice.converted_invoice_id}`} className="btn btn-secondary icon-btn"
+            style={{ display: "flex", width: "100%", marginBottom: 10, textDecoration: "none", justifyContent: "center" }}>
+            <IconCheck /> Accepted · open the invoice
+          </Link>
+        ) : (
+          <button onClick={onConvertQuote} disabled={busy} className="btn btn-primary icon-btn"
+            style={{ width: "100%", marginBottom: 10 }}>
+            <IconCheck /> Client said yes · convert to invoice
+          </button>
+        )
+      )}
+
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
         <button onClick={() => downloadPdf()} disabled={busy} className="btn btn-primary icon-btn" style={{ flex: 1 }}>
@@ -345,7 +394,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
         </button>
         <button onClick={() => sendInvoice()} disabled={busy}
           className={`btn btn-secondary icon-btn ${justFinalized ? "pulse-once" : ""}`} style={{ flex: 1 }}>
-          <IconShare /> Send invoice
+          <IconShare /> {quote ? "Send quote" : "Send invoice"}
         </button>
       </div>
       {invoice.customers?.email?.trim() && (
@@ -371,7 +420,16 @@ export default function InvoiceDetail({ id }: { id: string }) {
           </button>
         )}
       </div>
-      {invoice.status === "paid" && (
+      {!quote && invoice.status !== "draft" && (
+        <PaymentsCard invoice={invoice}
+          onChange={(fresh, recorded) => {
+            setInvoice(fresh);
+            listEvents(fresh.id).then(setEvents).catch(() => {});
+            if (recorded) setOfferReceipt(true);
+          }}
+          onUndoPaid={onTogglePaid} />
+      )}
+      {!quote && paidCents(invoice) > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="section-label">Receipt</div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -400,12 +458,6 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
       {/* Manage row */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {invoice.status !== "draft" && (
-          <button onClick={onTogglePaid} className="btn btn-ghost icon-btn" style={{ flex: 1 }}>
-            {invoice.status === "paid" ? <IconUndo /> : <IconCheck />}
-            {invoice.status === "paid" ? "Undo paid" : "Mark paid"}
-          </button>
-        )}
         {invoice.status !== "paid" && (
           <Link href={`/invoices_login/invoices/new?draft=${invoice.id}`} className="btn btn-ghost icon-btn"
             style={{ flex: 1, textAlign: "center", textDecoration: "none" }}>
@@ -434,13 +486,13 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
       <button onClick={() => setConfirmingDelete(true)} className="btn-danger icon-btn"
         style={{ display: "flex", width: "100%", padding: "10px", borderRadius: "var(--radius-sm)" }}>
-        <IconTrash /> Delete invoice
+        <IconTrash /> {quote ? "Delete quote" : "Delete invoice"}
       </button>
 
       <ConfirmSheet
         open={confirmingDelete}
         danger
-        title={invoice.status === "draft" ? "Delete this draft?" : `Delete invoice ${invoice.invoice_number}?`}
+        title={invoice.status === "draft" ? "Delete this draft?" : `Delete ${quote ? "quote" : "invoice"} ${invoice.invoice_number}?`}
         message={invoice.status === "draft"
           ? "This draft will be permanently removed."
           : "This can't be undone. If it's your most recent invoice, its number will be reused for the next one."}
@@ -451,7 +503,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
       <ConfirmSheet
         open={confirmingEmail}
-        title="Send this invoice now?"
+        title={quote ? "Send this quote now?" : "Send this invoice now?"}
         message={`It will be emailed straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached. An email can't be unsent.`}
         confirmLabel="Send now"
         onConfirm={() => { setConfirmingEmail(false); emailInvoice("send"); }}

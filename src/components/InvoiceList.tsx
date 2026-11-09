@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { deleteInvoice, listInvoices, setPaid } from "@/lib/db";
+import { deleteInvoice, listInvoices, listQuotes, setPaid } from "@/lib/db";
+import { balanceCents, paymentState } from "@/lib/payments";
+import { attentionItems } from "@/lib/attention";
+import AttentionList from "@/components/AttentionList";
+import QuoteList from "@/components/QuoteList";
 import { useBusiness } from "@/lib/businessContext";
 import { todayLocalIso } from "@/lib/date";
 import { formatSGD } from "@/lib/money";
@@ -21,7 +25,7 @@ const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "draft", label: "Draft" },
 ];
 
-export default function InvoiceList() {
+export default function InvoiceList({ initialTab = "invoices" }: { initialTab?: "invoices" | "quotes" }) {
   const { activeBusiness } = useBusiness();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,15 +33,21 @@ export default function InvoiceList() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [pendingDelete, setPendingDelete] = useState<Invoice | null>(null);
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  const [tab, setTab] = useState<"invoices" | "quotes">(initialTab);
+  const [quotes, setQuotes] = useState<Invoice[] | null>(null);
 
   useEffect(() => {
     if (!activeBusiness) return;
     setInvoices(null);
+    setQuotes(null);
     listInvoices(activeBusiness.id)
       .then(setInvoices)
       .catch((e) => {
         setError(e instanceof Error ? e.message : "Something went wrong");
       });
+    // Quotes feed the Quotes tab and the "Needs attention" list; a failure
+    // here shouldn't take the invoice list down with it.
+    listQuotes(activeBusiness.id).then(setQuotes).catch(() => setQuotes([]));
   }, [activeBusiness]);
 
   if (error) {
@@ -65,7 +75,8 @@ export default function InvoiceList() {
 
   const outstanding = invoices
     .filter((i) => i.status === "unpaid")
-    .reduce((s, i) => s + i.total_cents, 0);
+    .reduce((s, i) => s + balanceCents(i), 0);
+  const attention = attentionItems(invoices, quotes ?? [], todayLocalIso());
 
   const unpaidCount = invoices.filter((i) => i.status === "unpaid").length;
   const paidCount = invoices.filter((i) => i.status === "paid").length;
@@ -115,15 +126,39 @@ export default function InvoiceList() {
     if (inv.status === "draft") return <span className="badge badge-draft">Draft</span>;
     if (inv.status === "paid") return <span className="badge badge-paid">Paid</span>;
     if (isOverdue(inv)) return <span className="badge badge-overdue">Overdue</span>;
+    const state = paymentState(inv);
+    if (state === "deposit-paid") return <span className="badge badge-unpaid">Deposit paid</span>;
+    if (state === "part-paid") return <span className="badge badge-unpaid">Part-paid</span>;
     return <span className="badge badge-unpaid">Unpaid</span>;
   }
 
   return (
     <main className="page-container">
-      <h1 className="page-title">Invoices</h1>
-      <p className="page-subtitle">Manage your invoices and track payments</p>
+      <h1 className="page-title">{tab === "quotes" ? "Quotes" : "Invoices"}</h1>
+      <p className="page-subtitle">
+        {tab === "quotes" ? "Prices you've sent, ready to turn into invoices" : "Manage your invoices and track payments"}
+      </p>
 
+      <div className="chip-row" role="tablist" aria-label="Invoices or quotes" style={{ marginBottom: 16 }}>
+        {(["invoices", "quotes"] as const).map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+            className={`chip ${tab === t ? "chip-active" : ""}`}>
+            {t === "invoices" ? "Invoices" : `Quotes${quotes?.length ? ` · ${quotes.length}` : ""}`}
+          </button>
+        ))}
+        {tab === "quotes" && (
+          <Link href="/invoices_login/invoices/new?type=quote" className="chip" style={{ marginLeft: "auto", textDecoration: "none" }}>
+            + New quote
+          </Link>
+        )}
+      </div>
+
+      {tab === "quotes" ? (
+        quotes ? <QuoteList quotes={quotes} /> : <div className="skeleton" style={{ height: 120 }} />
+      ) : (<>
       <OnboardingBanner />
+
+      <AttentionList items={attention} />
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 24 }}>
@@ -235,6 +270,8 @@ export default function InvoiceList() {
           </div>
         ))}
       </div>
+
+      </>)}
 
       <ConfirmSheet
         open={pendingDelete !== null}
