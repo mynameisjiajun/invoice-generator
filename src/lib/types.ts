@@ -55,10 +55,18 @@ export type Invoice = {
   payments?: Payment[];          // joined
   /** Shoot agreement settings (migration 024); null/absent = none attached. */
   contract?: ContractSettings | null;
+  /** Structured shoot date for the calendar (migration 025). */
+  shoot_date?: string | null;
   customers?: Customer | null;   // joined
 };
 
 export type DocType = "invoice" | "quote";
+
+export type ExpenseCategory = "gear" | "crew" | "transport" | "software" | "marketing" | "other";
+export type Expense = {
+  id: string; business_id: string; spent_on: string; amount_cents: number;
+  category: ExpenseCategory; note: string; created_at: string;
+};
 
 /** One transfer received against an invoice (deposit, balance, …). */
 export type Payment = {

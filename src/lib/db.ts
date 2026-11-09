@@ -3,7 +3,7 @@ import { subtotalCents, totalCents } from "@/lib/money";
 import { plusDaysIso, todayLocalIso } from "@/lib/date";
 import { paidCents } from "@/lib/payments";
 import type {
-  Business, Customer, DocType, Invoice, InvoiceEvent, InvoiceEventKind, Payment, Preset,
+  Business, Customer, DocType, Expense, Invoice, InvoiceEvent, InvoiceEventKind, Payment, Preset,
 } from "@/lib/types";
 
 const db = () => createClient();
@@ -138,7 +138,23 @@ export type DraftInput = Pick<Invoice,
   "issue_date" | "due_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
   "line_items" | "discount_type" | "discount_value" |
   "is_rental" | "rental_start" | "rental_end" | "rental_terms" |
-  "doc_type" | "deposit_percent" | "contract"> & { id?: string };
+  "doc_type" | "deposit_percent" | "contract" | "shoot_date"> & { id?: string };
+
+// ── Expenses (migration 025) ──────────────────────────────────────────
+/** Omit businessId for every business (Stats "All businesses"). */
+export async function listExpenses(businessId?: string): Promise<Expense[]> {
+  let q = db().from("expenses").select("*").order("spent_on", { ascending: false });
+  if (businessId) q = q.eq("business_id", businessId);
+  return ok(await q);
+}
+export async function createExpense(
+  e: Pick<Expense, "spent_on" | "amount_cents" | "category" | "note">, businessId: string,
+): Promise<Expense> {
+  return ok(await db().from("expenses").insert({ ...e, business_id: businessId }).select().single());
+}
+export async function deleteExpense(id: string): Promise<void> {
+  ok(await db().from("expenses").delete().eq("id", id).select());
+}
 
 /** businessId is required when creating a new draft (draft.id is unset);
  *  ignored when updating an existing one, since an invoice's business
@@ -191,6 +207,7 @@ export async function convertQuote(quoteId: string): Promise<string> {
     discount_type: q.discount_type, discount_value: q.discount_value,
     deposit_percent: q.deposit_percent ?? 0,
     ...(q.contract ? { contract: q.contract } : {}),
+    ...(q.shoot_date ? { shoot_date: q.shoot_date } : {}),
     ...(q.is_rental ? {
       is_rental: true, rental_start: q.rental_start ?? "", rental_end: q.rental_end ?? "",
       rental_terms: q.rental_terms !== false,

@@ -14,7 +14,7 @@ import { plusDaysIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import { isPrintBusiness, type Customer, type Preset } from "@/lib/types";
-import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec } from "@/lib/printRates";
+import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec, formatJobDate } from "@/lib/printRates";
 import { PrintLineItem, PrintProjectFields } from "@/components/PrintInvoiceFields";
 import { RentalDetailsFields, RentalLineItem, RentalModeChips } from "@/components/RentalInvoiceFields";
 import {
@@ -62,6 +62,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
   const [loadedRental, setLoadedRental] = useState(false);
   // Same idea for the contract column (migration 024).
   const [loadedContract, setLoadedContract] = useState(false);
+  const [loadedShootDate, setLoadedShootDate] = useState(false);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // Which draft/duplicate id (or "new") has already been loaded — see the
@@ -91,6 +92,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
         setLoadedNumber(inv.invoice_number);
         setLoadedRental(inv.is_rental === true);
         setLoadedContract(!!inv.contract);
+        setLoadedShootDate(!!inv.shoot_date);
         setForm({
           invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
           dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, defaultDueDays(inv.doc_type)),
@@ -104,6 +106,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           rentalTerms: inv.rental_terms !== false,
           docType: inv.doc_type ?? "invoice", depositPercent: inv.deposit_percent ?? 0,
           contract: inv.contract ?? null,
+          shootDate: inv.shoot_date ?? "",
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
@@ -270,6 +273,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       // Only written when a contract is (or was) attached, so invoices keep
       // saving on a database without migration 024.
       ...(contract || loadedContract ? { contract } : {}),
+      // Shoot date (migration 025): only sent once one is set.
+      ...(f.shootDate ? { shoot_date: f.shootDate } : loadedShootDate ? { shoot_date: null } : {}),
       // Rental columns are only written when they matter, so ordinary
       // invoices keep saving even on a database without migration 020.
       ...(isRental || loadedRental ? {
@@ -392,10 +397,24 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
             <input className="input" placeholder="e.g. Jordan Birthday Party Shoot"
               value={f.jobEvent} onChange={(e) => set({ jobEvent: e.target.value })} />
           </div>
-          <div>
-            <label className="input-label">Event date & time</label>
-            <input className="input" placeholder="e.g. 20 June 2026, 7-9PM"
-              value={f.jobDate} onChange={(e) => set({ jobDate: e.target.value })} />
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ flex: "0 0 160px" }}>
+              <label className="input-label">Shoot date</label>
+              {/* Puts the job on the calendar; fills the printed line if it's empty. */}
+              <input type="date" className="input" aria-label="Shoot date" value={f.shootDate ?? ""}
+                onChange={(e) => {
+                  const d = e.target.value;
+                  set({
+                    shootDate: d,
+                    ...(!f.jobDate.trim() && d ? { jobDate: formatJobDate(d) } : {}),
+                  });
+                }} />
+            </div>
+            <div style={{ flex: "1 1 180px" }}>
+              <label className="input-label">Date & time on invoice</label>
+              <input className="input" placeholder="e.g. 20 June 2026, 7-9PM"
+                value={f.jobDate} onChange={(e) => set({ jobDate: e.target.value })} />
+            </div>
           </div>
           <div>
             <label className="input-label">Location</label>

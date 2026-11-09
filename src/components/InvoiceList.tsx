@@ -146,6 +146,8 @@ export default function InvoiceList({ initialTab = "invoices" }: { initialTab?: 
             {t === "invoices" ? "Invoices" : `Quotes${quotes?.length ? ` · ${quotes.length}` : ""}`}
           </button>
         ))}
+        <Link href="/invoices_login/calendar" className="chip" style={{ textDecoration: "none" }}>Calendar</Link>
+        <Link href="/invoices_login/expenses" className="chip" style={{ textDecoration: "none" }}>Expenses</Link>
         {tab === "quotes" && (
           <Link href="/invoices_login/invoices/new?type=quote" className="chip" style={{ marginLeft: "auto", textDecoration: "none" }}>
             + New quote

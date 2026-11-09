@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { listInvoices } from "@/lib/db";
+import { listExpenses, listInvoices } from "@/lib/db";
+import YearMoneyCard from "@/components/YearMoneyCard";
 import { todayLocalIso } from "@/lib/date";
 import { formatSGD, formatSGDCompact } from "@/lib/money";
 import { clientStats, monthlyStats, yearlyStats } from "@/lib/stats";
-import type { Invoice } from "@/lib/types";
+import type { Expense, Invoice } from "@/lib/types";
 import { IconFileExport } from "@/components/icons";
 import { useBusiness } from "@/lib/businessContext";
 
@@ -20,6 +21,8 @@ export default function StatsPage() {
   // — otherwise this defaults to today's year and can show an empty chart
   // with no explanation when all your invoices are from an earlier year.
   const [year, setYear] = useState<number | null>(null);
+  // Expenses (migration 025): missing table = "not set up yet", not an error.
+  const [expenses, setExpenses] = useState<{ list: Expense[]; ready: boolean }>({ list: [], ready: true });
 
   useEffect(() => {
     if (scope === "active" && !activeBusiness) return;
@@ -35,6 +38,9 @@ export default function StatsPage() {
         });
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load stats"));
+    listExpenses(scope === "active" ? activeBusiness!.id : undefined)
+      .then((list) => setExpenses({ list, ready: true }))
+      .catch(() => setExpenses({ list: [], ready: false }));
   }, [scope, activeBusiness]);
 
   if (error) return (
@@ -135,6 +141,8 @@ export default function StatsPage() {
           <div className="stat-label">Collected</div>
         </div>
       </div>
+
+      <YearMoneyCard invoices={invoices} expenses={expenses.list} year={year} expensesReady={expenses.ready} />
 
       <div className="stats-grid">
       {/* By year */}

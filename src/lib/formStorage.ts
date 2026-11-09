@@ -40,6 +40,8 @@ export type FormState = {
   depositPercent?: number;
   /** Shoot agreement clauses for this client; null = no contract. */
   contract?: ContractSettings | null;
+  /** ISO date for the calendar ("" = not set). */
+  shootDate?: string;
 };
 
 /** Default due date: invoices are due in 30 days; quotes are valid 14. */
