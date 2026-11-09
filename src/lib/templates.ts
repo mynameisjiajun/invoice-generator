@@ -62,6 +62,38 @@ export const DEFAULT_WHATSAPP_TEMPLATE =
   "Hi {first_name}! Here's your invoice {invoice_number} for {job} — total {total}. " +
   "You can PayNow via the QR in the PDF or to {paynow}. Thank you!";
 
+// Rentals get their own wording (a gear hire isn't "a pleasure working on
+// this with you"), and say payment is due before collection, as the T&C
+// require (2.1). Built-in rather than a Settings template so the payment
+// condition can't be edited out by accident. {job_date} is the rental's date
+// range; the "({job_date})" is dropped when the period isn't set.
+export const RENTAL_EMAIL_TEMPLATE = [
+  "Hello {first_name},",
+  "",
+  "Thanks for renting with {business_name}! Attached is the invoice for {job} ({job_date}).",
+  "",
+  "The total comes up to {total}. Please pay via PayNow using the QR code in the PDF, or directly to {paynow}, before collection to confirm your booking.",
+  "",
+  "Do let me know if you have any questions!",
+  "",
+  "Best,",
+  "{payee_name}",
+].join("\n");
+
+export const RENTAL_WHATSAPP_TEMPLATE =
+  "Hi {first_name}! Here's your rental invoice {invoice_number} for {job} ({job_date}) — total {total}. " +
+  "Please PayNow via the QR in the PDF or to {paynow} before collection to confirm your booking. Thank you!";
+
+/** Fills a rental template; an unset period leaves no empty "()" behind. */
+function renderRental(template: string, vars: Record<string, string>): string {
+  const t = vars.job_date ? template : template.replace(/ \(\{job_date\}\)/g, "");
+  return renderTemplate(t, vars);
+}
+
+function isRentalFor(inv: Invoice, biz: Business): boolean {
+  return isRentalInvoice(inv) && !isPrintBusiness(biz);
+}
+
 export function renderTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, key) => (key in vars ? vars[key] : m));
 }
@@ -102,6 +134,9 @@ export function tidyMessage(text: string): string {
 }
 
 export function emailMessage(inv: Invoice, biz: Business): string {
+  if (isRentalFor(inv, biz)) {
+    return withRentalNote(inv, tidyMessage(renderRental(RENTAL_EMAIL_TEMPLATE, templateVars(inv, biz))));
+  }
   const t = biz.email_template.trim() || DEFAULT_EMAIL_TEMPLATE;
   return withRentalNote(inv, tidyMessage(renderTemplate(t, templateVars(inv, biz))));
 }
@@ -115,6 +150,9 @@ export function emailSubject(inv: Invoice, biz: Business): string {
 }
 
 export function whatsappMessage(inv: Invoice, biz: Business): string {
+  if (isRentalFor(inv, biz)) {
+    return withRentalNote(inv, tidyMessage(renderRental(RENTAL_WHATSAPP_TEMPLATE, templateVars(inv, biz))));
+  }
   const t = biz.whatsapp_template.trim() || DEFAULT_WHATSAPP_TEMPLATE;
   return withRentalNote(inv, tidyMessage(renderTemplate(t, templateVars(inv, biz))));
 }

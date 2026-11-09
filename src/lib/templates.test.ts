@@ -161,3 +161,28 @@ describe("rental note placement", () => {
     expect(msg.trim().endsWith(templateVars(rental, rentalBiz).payee_name)).toBe(true);
   });
 });
+
+describe("rental wording", () => {
+  const rb = { ...(biz as object), kind: "photo", email_template: "Custom {job}", whatsapp_template: "" } as Business;
+  const r = { ...(inv as object), job_event: "", is_rental: true, rental_start: "2026-11-14T10:00", rental_end: "2026-11-17T10:00" } as Invoice;
+
+  it("uses rental wording, with pay-before-collection, even over a custom template", () => {
+    const msg = emailMessage(r, rb);
+    expect(msg).toContain("Thanks for renting with");
+    expect(msg).toContain("your equipment rental (14 Nov 2026 to 17 Nov 2026)");
+    expect(msg).toContain("before collection to confirm your booking");
+    expect(msg).not.toContain("pleasure working on this");
+    expect(msg).not.toContain("Custom");
+    expect(whatsappMessage(r, rb)).toContain("rental invoice");
+  });
+
+  it("drops the empty brackets when the period isn't set", () => {
+    const msg = emailMessage({ ...r, rental_start: "", rental_end: "" } as Invoice, rb);
+    expect(msg).toContain("for your equipment rental.");
+    expect(msg).not.toContain("()");
+  });
+
+  it("leaves non-rental invoices on the business's own template", () => {
+    expect(emailMessage({ ...r, is_rental: false } as Invoice, rb)).toBe("Custom your equipment rental".replace("your equipment rental", "the shoot"));
+  });
+});

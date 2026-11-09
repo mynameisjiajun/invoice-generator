@@ -161,9 +161,17 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
   const isRental = !isPrint && f.isRental === true;
   const periodDays = rentalDays(f.rentalStart, f.rentalEnd);
 
+  // Rentals are paid before collection (T&C 2.1), so an untouched due date
+  // follows the collection date; a hand-set due date is left alone.
+  function rentalDue(start: string | undefined): Partial<FormState> {
+    const day = (start ?? "").slice(0, 10);
+    return !f.dueTouched && /^\d{4}-\d{2}-\d{2}$/.test(day) ? { dueDate: day } : {};
+  }
+
   function setRental(on: boolean) {
     if (on) {
       set({
+        ...rentalDue(f.rentalStart),
         isRental: true,
         lineItems: toRentalLines(f.lineItems, periodDays ?? 1),
         jobLocation: f.jobLocation.trim()
@@ -171,7 +179,11 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
           : formBusiness?.address ? `Self-collect & return: ${formBusiness.address}` : "",
       });
     } else {
-      set({ isRental: false, lineItems: fromRentalLines(f.lineItems) });
+      set({
+        isRental: false,
+        lineItems: fromRentalLines(f.lineItems),
+        ...(f.dueTouched ? {} : { dueDate: plusDaysIso(f.issueDate, 30) }),
+      });
     }
   }
 
@@ -181,7 +193,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
     const start = patch.rentalStart ?? f.rentalStart ?? "";
     const end = patch.rentalEnd ?? f.rentalEnd ?? "";
     const next = rentalDays(start, end);
-    set(next === null ? patch : { ...patch, lineItems: syncRentalDays(f.lineItems, periodDays ?? 1, next) });
+    const due = patch.rentalStart !== undefined ? rentalDue(patch.rentalStart) : {};
+    set(next === null ? { ...patch, ...due } : { ...patch, ...due, lineItems: syncRentalDays(f.lineItems, periodDays ?? 1, next) });
   }
   // Functional updater: merges onto the latest state rather than the `f`
   // snapshot closed over at render time. persistDraft() below calls set()
@@ -398,7 +411,10 @@ export default function InvoiceForm({ duplicateId, draftId, prefill }: {
                     { description: `${p.name}${p.description ? `\n${p.description}` : ""}`,
                       qty: p.default_qty, unitPriceCents: p.unit_price_cents,
                       // In a rental the preset's price is that item's day rate.
-                      ...(isRental ? { rental: { days: periodDays ?? 1 } } : {}) }],
+                      ...(isRental ? { rental: {
+                        days: periodDays ?? 1,
+                        ...(p.replacement_cents ? { replacementCents: p.replacement_cents } : {}),
+                      } } : {}) }],
                 });
               }}>
               <option value="">+ Add preset</option>

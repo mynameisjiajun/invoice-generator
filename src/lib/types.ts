@@ -9,6 +9,8 @@ export type Customer = {
 export type Preset = {
   id: string; business_id: string; name: string; description: string;
   unit_price_cents: number; default_qty: number;
+  /** Replacement value for rental gear (migration 022); 0/absent = none. */
+  replacement_cents?: number;
 };
 
 export type InvoiceStatus = "draft" | "unpaid" | "paid";
@@ -39,6 +41,9 @@ export type Invoice = {
   /** Attach the rental T&C to the PDF (migration 021). false = the T&C
    *  were sent separately; undefined (older rows) counts as attached. */
   rental_terms?: boolean;
+  /** When the renter's signed T&C acknowledgement came back (migration
+   *  022); null/absent = not yet. */
+  rental_signed_at?: string | null;
   customers?: Customer | null;   // joined
 };
 
@@ -68,6 +73,11 @@ export function isRentalInvoice(inv: Pick<Invoice, "is_rental"> | null | undefin
 /** A rental invoice whose PDF carries the T&C pages. */
 export function attachesRentalTerms(inv: Pick<Invoice, "is_rental" | "rental_terms"> | null | undefined): boolean {
   return isRentalInvoice(inv) && inv?.rental_terms !== false;
+}
+
+/** A finalized rental still waiting on the renter's signed acknowledgement. */
+export function awaitingRentalSignature(inv: Pick<Invoice, "is_rental" | "status" | "rental_signed_at">): boolean {
+  return inv.is_rental === true && inv.status !== "draft" && !inv.rental_signed_at;
 }
 
 export function isOverdue(inv: Invoice, todayIso = todayLocalIso()): boolean {

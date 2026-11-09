@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Space_Mono, Work_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { BusinessProvider } from "@/lib/businessContext";
@@ -9,23 +9,35 @@ import ServiceWorker from "@/components/ServiceWorker";
 // "magazine" voice) against a humanist grotesque for UI text, with a
 // typewriter mono for EXIF-style captions — a photographer's contact sheet,
 // not a SaaS dashboard.
-const fraunces = Fraunces({
+//
+// Self-hosted from src/fonts (Latin subsets from Google Fonts, OFL) rather
+// than next/font/google, whose build-time download made Vercel builds fail
+// intermittently. Fraunces is the full variable font (opsz, SOFT, WONK axes).
+const fraunces = localFont({
+  src: [
+    { path: "../../fonts/Fraunces-latin-var.woff2", weight: "100 900", style: "normal" },
+    { path: "../../fonts/Fraunces-Italic-latin-var.woff2", weight: "100 900", style: "italic" },
+  ],
   variable: "--font-display",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["opsz", "SOFT", "WONK"],
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const workSans = Work_Sans({
+const workSans = localFont({
+  src: [{ path: "../../fonts/WorkSans-latin-var.woff2", weight: "400 700", style: "normal" }],
   variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
-const spaceMono = Space_Mono({
+const spaceMono = localFont({
+  src: [
+    { path: "../../fonts/SpaceMono-Regular-latin.woff2", weight: "400", style: "normal" },
+    { path: "../../fonts/SpaceMono-Bold-latin.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  display: "swap",
+  adjustFontFallback: false,
+  fallback: ["ui-monospace", "Menlo", "monospace"],
 });
 
 export const metadata: Metadata = {

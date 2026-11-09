@@ -32,7 +32,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState<Business | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [saved, setSaved] = useState(false);
-  const [np, setNp] = useState({ name: "", description: "", price: "", qty: "1" });
+  const [np, setNp] = useState({ name: "", description: "", price: "", qty: "1", replacement: "" });
   const [newBizName, setNewBizName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendingArchive, setPendingArchive] = useState<Business | null>(null);
@@ -156,14 +156,20 @@ export default function SettingsPage() {
       setError("Quantity must be a valid positive number");
       return;
     }
+    const replacement = parseFloat(np.replacement || "0");
+    if (Number.isNaN(replacement) || replacement < 0) {
+      setError("Replacement value must be a valid non-negative number");
+      return;
+    }
     try {
       const p = await createPreset({
         name: np.name, description: np.description,
         unit_price_cents: Math.round(price * 100),
         default_qty: qty,
+        replacement_cents: Math.round(replacement * 100),
       }, activeBusiness!.id);
       setPresets([...presets, p]);
-      setNp({ name: "", description: "", price: "", qty: "1" });
+      setNp({ name: "", description: "", price: "", qty: "1", replacement: "" });
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add preset");
@@ -387,6 +393,11 @@ export default function SettingsPage() {
                       {p.description}
                     </div>
                   )}
+                  {p.replacement_cents ? (
+                    <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", marginTop: 2 }}>
+                      Replacement value {formatSGD(p.replacement_cents)}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="money" style={{ fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
                   {formatSGD(p.unit_price_cents)}
@@ -425,6 +436,15 @@ export default function SettingsPage() {
                 <input className="input" placeholder="1" inputMode="decimal"
                   value={np.qty} onChange={(e) => setNp({ ...np, qty: e.target.value })} />
               </div>
+            </div>
+            <div>
+              <label className="input-label">Replacement value ($, rental gear only)</label>
+              <input className="input" placeholder="e.g. 5500" inputMode="decimal"
+                value={np.replacement} onChange={(e) => setNp({ ...np, replacement: e.target.value })} />
+              <p style={{ margin: "4px 0 0", fontSize: "0.72rem", color: "var(--text-tertiary)" }}>
+                For gear you rent out: the unit price is the day rate, and this fills the
+                item&apos;s replacement value on rental invoices.
+              </p>
             </div>
             <button onClick={onAddPreset} disabled={!np.name || !np.price}
               className="btn btn-secondary icon-btn" style={{ alignSelf: "flex-start" }}>

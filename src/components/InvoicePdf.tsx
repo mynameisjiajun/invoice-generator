@@ -722,7 +722,11 @@ export default function InvoicePdf({
               </>
             )}
             <Text style={[s.label, { marginTop: 10 }]}>Payment Terms</Text>
-            <Text style={s.infoDetail}>{business.payment_terms}</Text>
+            {/* T&C 2.1: a rental is confirmed only once paid in full, so the
+                business's usual "within 30 days" terms don't apply. */}
+            <Text style={s.infoDetail}>
+              {isRental ? "Payment in full before collection" : business.payment_terms}
+            </Text>
           </View>
         </View>
 

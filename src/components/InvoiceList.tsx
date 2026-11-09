@@ -5,7 +5,7 @@ import { deleteInvoice, listInvoices, setPaid } from "@/lib/db";
 import { useBusiness } from "@/lib/businessContext";
 import { todayLocalIso } from "@/lib/date";
 import { formatSGD } from "@/lib/money";
-import { isOverdue, type Invoice } from "@/lib/types";
+import { awaitingRentalSignature, isOverdue, type Invoice } from "@/lib/types";
 import FocusFrame from "@/components/FocusFrame";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import ConfirmSheet from "@/components/ConfirmSheet";
@@ -200,6 +200,7 @@ export default function InvoiceList() {
                   </span>
                   {badge(inv)}
                   {inv.is_rental ? <span className="badge badge-draft">Rental</span> : null}
+                  {awaitingRentalSignature(inv) ? <span className="badge badge-unpaid">T&amp;C unsigned</span> : null}
                 </div>
                 <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
                   {inv.customers?.name ?? "—"} · {inv.job_event || (inv.is_rental ? "Equipment rental" : "No event")}

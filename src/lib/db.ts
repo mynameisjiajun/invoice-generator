@@ -86,7 +86,11 @@ export async function listPresets(businessId: string): Promise<Preset[]> {
   return ok(await db().from("presets").select("*").eq("business_id", businessId).order("name"));
 }
 export async function createPreset(p: Omit<Preset, "id" | "business_id">, businessId: string): Promise<Preset> {
-  return ok(await db().from("presets").insert({ ...p, business_id: businessId }).select().single());
+  // Only send replacement_cents when set, so presets still save on a
+  // database without migration 022.
+  const { replacement_cents, ...rest } = p;
+  const row = replacement_cents ? { ...rest, replacement_cents } : rest;
+  return ok(await db().from("presets").insert({ ...row, business_id: businessId }).select().single());
 }
 export async function deletePreset(id: string): Promise<void> {
   ok(await db().from("presets").delete().eq("id", id).select());
@@ -147,6 +151,13 @@ export async function finalizeInvoice(id: string, businessId: string): Promise<s
   const num: string = ok(await db().rpc("finalize_invoice", { inv_id: id }));
   await logEvent(id, businessId, "created");
   return num;
+}
+
+/** Record (or clear) that the renter's signed T&C acknowledgement is back. */
+export async function setRentalSigned(id: string, signed: boolean): Promise<string | null> {
+  const at = signed ? new Date().toISOString() : null;
+  ok(await db().from("invoices").update({ rental_signed_at: at }).eq("id", id).select().single());
+  return at;
 }
 
 export async function setPaid(id: string, paid: boolean, businessId: string): Promise<void> {

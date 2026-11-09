@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid } from "@/lib/db";
+import { deleteInvoice, getBusiness, getInvoice, listEvents, markSent, setPaid, setRentalSigned } from "@/lib/db";
 import { formatSGD } from "@/lib/money";
 import { formatJobDate } from "@/lib/printRates";
 import { daysLabel, formatRentalDateTime, rentalDays } from "@/lib/rental";
@@ -223,6 +223,16 @@ export default function InvoiceDetail({ id }: { id: string }) {
     }
   }
 
+  async function onToggleSigned() {
+    const inv = invoice!;
+    try {
+      const at = await setRentalSigned(inv.id, !inv.rental_signed_at);
+      setInvoice({ ...inv, rental_signed_at: at });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't update the T&C status");
+    }
+  }
+
   async function onDelete() {
     const inv = invoice!;
     setConfirmingDelete(false);
@@ -283,6 +293,21 @@ export default function InvoiceDetail({ id }: { id: string }) {
               {invoice.job_location ? (
                 <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>{invoice.job_location}</p>
               ) : null}
+              {invoice.status !== "draft" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                  {invoice.rental_signed_at ? (
+                    <span className="badge badge-paid">
+                      T&amp;C signed {new Date(invoice.rental_signed_at).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+                    </span>
+                  ) : (
+                    <span className="badge badge-unpaid">T&amp;C not signed yet</span>
+                  )}
+                  <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.78rem" }}
+                    onClick={onToggleSigned}>
+                    {invoice.rental_signed_at ? "Undo" : "Mark T&C signed"}
+                  </button>
+                </div>
+              )}
             </>
           );
         })() : (

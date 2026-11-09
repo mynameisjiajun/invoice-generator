@@ -44,3 +44,11 @@ yarn-error.log*
 next-env.d.ts
 supabase/.temp/
 .agy/
+
+# Loose media in the project root (reference/working files, not site assets).
+/*.mp4
+/*.mov
+/*.jpg
+/*.jpeg
+/JJ Visuals Logo.png
+*.code-workspace
