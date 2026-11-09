@@ -888,7 +888,9 @@ export default function InvoicePdf({
         {/* ── footer ── */}
         <View style={s.footer} fixed>
           <View style={s.footerBar}>
-            <Text style={s.footerText}>THANK YOU FOR YOUR BUSINESS</Text>
+            <Text style={s.footerText}>
+              {isReceipt ? "THANK YOU FOR YOUR PAYMENT" : isRental ? "THANKS FOR RENTING WITH US" : "THANKS FOR WORKING WITH US"}
+            </Text>
             <Text style={s.footerDot}>·</Text>
             <Text style={s.footerText}>
               {business.name.toUpperCase()}
