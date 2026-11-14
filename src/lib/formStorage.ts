@@ -151,7 +151,11 @@ export function loadForm(businessId?: string, docType: DocType = "invoice"): For
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null || !("lineItems" in parsed)) return null;
-    const form = refreshDates({ ...(parsed as FormState), docType });
+    let form = refreshDates({ ...(parsed as FormState), docType });
+    // Forms autosaved before shoot dates existed: give them today's date too.
+    if (!form.shootTouched && !form.shootDate && !form.isRental) {
+      form = { ...form, ...followShootDate(form, todayLocalIso()) };
+    }
     if (businessId && form.businessId === businessId) return form;
     return { ...form, businessId, invoiceId: undefined, customerId: null, newCustomer: null };
   } catch {

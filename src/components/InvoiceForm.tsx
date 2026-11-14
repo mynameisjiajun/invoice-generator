@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createCustomer, finalizeInvoice, finalizeQuote, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
+  createCustomer, finalizeInvoice, finalizeQuote, getInvoice, listCustomers, listInvoicesForCustomer, listPresets,
+  saveInvoiceDraft,
 } from "@/lib/db";
 import {
   clearForm, defaultDueDays, emptyForm, followShootDate, loadForm, storeForm, type FormState,
@@ -14,8 +15,8 @@ import type { DocType } from "@/lib/types";
 import { plusDaysIso, todayLocalIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
-import { isPrintBusiness, type Customer, type Preset } from "@/lib/types";
-import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec } from "@/lib/printRates";
+import { isPrintBusiness, type Customer, type Invoice, type Preset } from "@/lib/types";
+import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec, formatJobDate } from "@/lib/printRates";
 import { PrintLineItem, PrintProjectFields } from "@/components/PrintInvoiceFields";
 import { RentalDetailsFields, RentalLineItem, RentalModeChips } from "@/components/RentalInvoiceFields";
 import {
@@ -65,6 +66,10 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
   const [loadedContract, setLoadedContract] = useState(false);
   const [loadedShootDate, setLoadedShootDate] = useState(false);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
+  // "Finalize & email": finalize, then send it straight from the invoice page.
+  const [emailAfter, setEmailAfter] = useState(false);
+  // The selected client's most recent invoice, for "Same as last time".
+  const [lastJob, setLastJob] = useState<Invoice | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // Which draft/duplicate id (or "new") has already been loaded — see the
   // effect below.
@@ -108,6 +113,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           docType: inv.doc_type ?? "invoice", depositPercent: inv.deposit_percent ?? 0,
           contract: inv.contract ?? null,
           shootDate: inv.shoot_date ?? "",
+          // A draft with no date yet (e.g. just converted from a quote) gets today's.
+          ...(inv.status === "draft" && !inv.shoot_date && !inv.job_date?.trim() && !inv.is_rental
+            ? { shootDate: todayLocalIso(), jobDate: formatJobDate(todayLocalIso()) } : {}),
         });
       } else if (duplicateId) {
         const inv = await getInvoice(duplicateId);
@@ -157,6 +165,14 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
     listCustomers(formBusinessId).then(setCustomers).catch((e) => setError(e instanceof Error ? e.message : "Failed to load customers"));
     listPresets(formBusinessId).then(setPresets).catch((e) => setError(e instanceof Error ? e.message : "Failed to load presets"));
   }, [formBusinessId]);
+
+  const pickedCustomer = form?.customerId ?? null;
+  useEffect(() => {
+    if (!pickedCustomer) return;
+    listInvoicesForCustomer(pickedCustomer)
+      .then((list) => setLastJob(list.find((i) => i.status !== "draft") ?? null))
+      .catch(() => {});
+  }, [pickedCustomer]);
 
   // Autosave to localStorage — but never for finalized invoices being edited,
   // so a finalized edit can't resurface later as a stray "new invoice" form.
@@ -224,6 +240,31 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
         ...(f.dueTouched ? {} : { dueDate: plusDaysIso(f.issueDate, dueDays) }),
       });
     }
+  }
+
+  const linesBlank = f.lineItems.every((li) => !li.description.trim() && !li.unitPriceCents);
+  const clientEmail = f.newCustomer?.email.trim()
+    || customers.find((c) => c.id === f.customerId)?.email?.trim() || "";
+
+  // Repeat client: copy their last job's items, pricing and terms; dates stay
+  // as today (a rental keeps its length, starting today).
+  function copyLastJob() {
+    const j = lastJob!;
+    const start = todayLocalIso();
+    const rental = j.is_rental && !isPrint;
+    const days = rental ? rentalDays(j.rental_start, j.rental_end) ?? 1 : 0;
+    set({
+      lineItems: j.line_items,
+      discountType: j.discount_type, discountValue: j.discount_value,
+      depositPercent: j.deposit_percent ?? 0,
+      contract: j.contract ?? null,
+      jobEvent: f.jobEvent.trim() ? f.jobEvent : j.job_event,
+      jobLocation: f.jobLocation.trim() ? f.jobLocation : j.job_location,
+      ...(rental ? {
+        ...rentalDue(start), isRental: true, rentalStart: start,
+        rentalEnd: plusDaysIso(start, days), rentalTerms: j.rental_terms !== false,
+      } : {}),
+    });
   }
 
   // A new collection/return time re-counts the days on every item still on
@@ -324,7 +365,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       if (isQuoteDoc) await finalizeQuote(id);
       else await finalizeInvoice(id, formBusinessId!);
       clearForm(docType);
-      router.push(`/invoices_login/invoices/${id}?just=1`);
+      // email=1: the invoice page sends it as soon as it opens.
+      router.push(`/invoices_login/invoices/${id}?just=1${emailAfter ? "&email=1" : ""}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to finalize invoice");
       setBusy("");
@@ -376,6 +418,12 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name} (#{c.id})</option>)}
           <option value="new">+ New customer</option>
         </select>
+        {!f.newCustomer && lastJob && lastJob.customer_id === f.customerId && linesBlank && (
+          <button type="button" className="btn btn-secondary" style={{ width: "100%", marginTop: 10, fontSize: "0.85rem" }}
+            onClick={copyLastJob}>
+            ↺ Same as last time: {lastJob.job_event || lastJob.invoice_number} · {formatSGD(lastJob.total_cents)}
+          </button>
+        )}
         {f.newCustomer && (
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
             {NEW_CUSTOMER_FIELDS.map(({ k, label, type, ac, placeholder }) => (
@@ -457,11 +505,13 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div className="section-label" style={{ marginBottom: 0 }}>{isPrint ? "Prints" : isRental ? "Equipment" : "Line Items"}</div>
-          {presets.length > 0 && (
-            <select className="input" style={{ width: "auto", padding: "6px 32px 6px 10px", fontSize: "0.8rem" }} value=""
-              onChange={(e) => {
-                const p = presets.find((x) => x.id === e.target.value);
-                if (p) set({
+        </div>
+        {/* Saved services / gear as one-tap buttons. */}
+        {presets.length > 0 && (
+          <div className="chip-row" style={{ paddingBottom: 0, marginBottom: 12 }} role="group" aria-label="Add a saved item">
+            {presets.map((p) => (
+              <button key={p.id} type="button" className="chip"
+                onClick={() => set({
                   lineItems: [...f.lineItems.filter((li) => li.description || li.unitPriceCents),
                     { description: `${p.name}${p.description ? `\n${p.description}` : ""}`,
                       qty: p.default_qty, unitPriceCents: p.unit_price_cents,
@@ -470,13 +520,12 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
                         days: periodDays ?? 1,
                         ...(p.replacement_cents ? { replacementCents: p.replacement_cents } : {}),
                       } } : {}) }],
-                });
-              }}>
-              <option value="">+ Add preset</option>
-              {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          )}
-        </div>
+                })}>
+                + {p.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {f.lineItems.map((li, i) => isPrint && li.print ? (
@@ -660,24 +709,33 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           <button onClick={onSaveDraft} disabled={busy !== ""} className="btn btn-secondary" style={{ flex: 1 }}>
             {busy === "draft" ? "Saving…" : "Save Draft"}
           </button>
-          <button onClick={() => setConfirmingFinalize(true)}
+          <button onClick={() => { setEmailAfter(false); setConfirmingFinalize(true); }}
             disabled={busy !== "" || totals.total <= 0 || (!f.customerId && !f.newCustomer?.name.trim())}
             className="btn btn-primary" style={{ flex: 1 }}>
             {busy === "final" ? (isQuoteDoc ? "Issuing…" : "Finalizing…") : isQuoteDoc ? "Issue Quote" : "Finalize Invoice"}
           </button>
           </div>
+          {clientEmail && (
+            <button onClick={() => { setEmailAfter(true); setConfirmingFinalize(true); }}
+              disabled={busy !== "" || totals.total <= 0}
+              className="btn btn-accent" style={{ width: "100%", marginTop: 10 }}>
+              {isQuoteDoc ? "Issue & email quote" : "Finalize & email"} to {clientEmail}
+            </button>
+          )}
         </div>
       )}
       <ConfirmSheet
         open={confirmingFinalize}
-        title={isQuoteDoc ? "Issue this quote?" : "Finalize this invoice?"}
+        title={emailAfter
+          ? `${isQuoteDoc ? "Issue" : "Finalize"} and email to ${clientEmail}?`
+          : isQuoteDoc ? "Issue this quote?" : "Finalize this invoice?"}
         message={
           `${customerLabel} · ${formBusiness ? (isQuoteDoc ? `Q-${formBusiness.next_quote_seq ?? 1}` : `${formBusiness.invoice_prefix}${formBusiness.next_invoice_seq}`) : "next number"} · ${formatSGD(totals.total)}` +
           (isQuoteDoc
             ? "\n\nThis gives the quote its number so you can send it. You can still turn it into an invoice later."
             : "\n\nThis assigns the invoice number and locks it in. Check the total reads what you expect.")
         }
-        confirmLabel={isQuoteDoc ? "Issue quote" : "Finalize"}
+        confirmLabel={emailAfter ? (isQuoteDoc ? "Issue & email" : "Finalize & email") : isQuoteDoc ? "Issue quote" : "Finalize"}
         onConfirm={onFinalize}
         onCancel={() => setConfirmingFinalize(false)}
       />

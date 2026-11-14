@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -43,7 +43,11 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 export default function InvoiceDetail({ id }: { id: string }) {
   const router = useRouter();
-  const justFinalized = useSearchParams().get("just") === "1";
+  const params = useSearchParams();
+  const justFinalized = params.get("just") === "1";
+  // From "Finalize & email" (already confirmed on the form): send once.
+  const autoEmail = params.get("email") === "1";
+  const autoEmailed = useRef(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [events, setEvents] = useState<InvoiceEvent[]>([]);
@@ -65,6 +69,15 @@ export default function InvoiceDetail({ id }: { id: string }) {
       .catch((e) => setError(e.message));
     listEvents(id).then(setEvents).catch(() => {});
   }, [id]);
+
+  useEffect(() => {
+    if (!autoEmail || autoEmailed.current || !invoice || !business || invoice.status === "draft") return;
+    autoEmailed.current = true;
+    router.replace(`/invoices_login/invoices/${invoice.id}?just=1`);
+    void Promise.resolve().then(() => emailInvoice("send"));
+    // emailInvoice reads the loaded invoice; run once when it's ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEmail, invoice, business]);
 
   if (error) return (
     <div className="page-container">
