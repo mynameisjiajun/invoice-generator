@@ -97,10 +97,13 @@ export function invoiceEmailHtml({ body, invoice, business, variant, logoUrl = E
 <meta name="supported-color-schemes" content="light">
 <title>${esc(`${docWord} ${number}`)}</title>
 </head>
-<body style="margin:0;padding:0;background:#ECECEC;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ECECEC" style="background:#ECECEC;">
-<tr><td align="center" style="padding:24px 12px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
+<body style="margin:0;padding:0;">
+<!-- No page backdrop and left-aligned: Apple Mail shows the attached PDF
+     inline below the message, flush left on the reader's own background, so
+     a grey backdrop or a centred card left the two mismatched. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="left" style="padding:16px 0;">
+  <table role="presentation" width="600" align="left" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
 
     <tr><td bgcolor="${INK}" style="background:${INK};padding:28px 32px 24px;">
       <a href="${SITE}" style="text-decoration:none;">
