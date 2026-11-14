@@ -196,7 +196,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Sending failed");
 
       if (mode === "draft") {
-        setNotice(`Draft for ${json.to} saved to Drafts in Apple Mail.`);
+        // iCloud can take a minute or two to sync the draft to Apple Mail.
+        setNotice(`Draft for ${json.to} saved to your iCloud Drafts. It can take a minute or two to appear in Apple Mail.`);
       } else {
         const what = variant === "receipt" ? "Receipt sent" : "Sent";
         setNotice(json.savedToSent
