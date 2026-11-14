@@ -5,16 +5,17 @@ import {
   createCustomer, finalizeInvoice, finalizeQuote, getInvoice, listCustomers, listPresets, saveInvoiceDraft,
 } from "@/lib/db";
 import {
-  clearForm, defaultDueDays, emptyForm, loadForm, storeForm, type FormState,
+  clearForm, defaultDueDays, emptyForm, followShootDate, loadForm, storeForm, type FormState,
 } from "@/lib/formStorage";
 import DepositField from "@/components/DepositField";
+import { parseLooseDate } from "@/lib/calendar";
 import ContractField from "@/components/ContractField";
 import type { DocType } from "@/lib/types";
-import { plusDaysIso } from "@/lib/date";
+import { plusDaysIso, todayLocalIso } from "@/lib/date";
 import { formatSgPhone } from "@/lib/phone";
 import { discountCents, formatSGD, subtotalCents, totalCents } from "@/lib/money";
 import { isPrintBusiness, type Customer, type Preset } from "@/lib/types";
-import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec, formatJobDate } from "@/lib/printRates";
+import { EXPRESS_CENTS_PER_PLATE, emptyPrintSpec } from "@/lib/printRates";
 import { PrintLineItem, PrintProjectFields } from "@/components/PrintInvoiceFields";
 import { RentalDetailsFields, RentalLineItem, RentalModeChips } from "@/components/RentalInvoiceFields";
 import {
@@ -112,8 +113,9 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
         const inv = await getInvoice(duplicateId);
         setFormBusinessId(inv.business_id);
         setForm({
+          // A duplicate is a new job: its date starts as today, not the old one.
           ...emptyForm(inv.doc_type ?? "invoice"), businessId: inv.business_id, customerId: inv.customer_id, jobEvent: inv.job_event,
-          jobDate: inv.job_date, jobLocation: inv.job_location,
+          jobLocation: inv.job_location,
           lineItems: inv.line_items, discountType: inv.discount_type,
           discountValue: inv.discount_value,
           // A duplicated rental keeps its gear list and period, ready to re-date.
@@ -127,7 +129,13 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
         setFormBusinessId(bizId);
         // A prefilled invoice starts fresh rather than restoring an unrelated autosaved form.
         const start = prefill
-          ? { ...emptyForm(newDocType), businessId: bizId, customerId: prefill.customerId, jobEvent: prefill.jobEvent ?? "", jobDate: prefill.jobDate ?? "" }
+          ? (() => {
+              // An enquiry's shoot date becomes the shoot date when readable.
+              const base = { ...emptyForm(newDocType), businessId: bizId, customerId: prefill.customerId, jobEvent: prefill.jobEvent ?? "" };
+              const day = parseLooseDate(prefill.jobDate);
+              return day ? { ...base, ...followShootDate(base, day), shootTouched: true }
+                : prefill.jobDate ? { ...base, jobDate: prefill.jobDate } : base;
+            })()
           : loadForm(bizId, newDocType) ?? { ...emptyForm(newDocType), businessId: bizId };
         // A print shop's blank starter line opens as a print card.
         setForm(isPrintBusiness(activeBusiness) ? {
@@ -196,10 +204,15 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
 
   function setRental(on: boolean) {
     if (on) {
+      // Dates only, defaulting to a 1-day hire from today.
+      const start = f.rentalStart || todayLocalIso();
+      const end = f.rentalEnd || plusDaysIso(start.slice(0, 10), 1);
       set({
-        ...rentalDue(f.rentalStart),
+        ...rentalDue(start),
         isRental: true,
-        lineItems: toRentalLines(f.lineItems, periodDays ?? 1),
+        rentalStart: start,
+        rentalEnd: end,
+        lineItems: toRentalLines(f.lineItems, rentalDays(start, end) ?? 1),
         jobLocation: f.jobLocation.trim()
           ? f.jobLocation
           : formBusiness?.address ? `Self-collect & return: ${formBusiness.address}` : "",
@@ -402,17 +415,11 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
               <label className="input-label">Shoot date</label>
               {/* Puts the job on the calendar; fills the printed line if it's empty. */}
               <input type="date" className="input" aria-label="Shoot date" value={f.shootDate ?? ""}
-                onChange={(e) => {
-                  const d = e.target.value;
-                  set({
-                    shootDate: d,
-                    ...(!f.jobDate.trim() && d ? { jobDate: formatJobDate(d) } : {}),
-                  });
-                }} />
+                onChange={(e) => set({ ...followShootDate(f, e.target.value), shootTouched: true })} />
             </div>
             <div style={{ flex: "1 1 180px" }}>
-              <label className="input-label">Date & time on invoice</label>
-              <input className="input" placeholder="e.g. 20 June 2026, 7-9PM"
+              <label className="input-label">Date on invoice</label>
+              <input className="input" placeholder="e.g. 20 Jun 2026"
                 value={f.jobDate} onChange={(e) => set({ jobDate: e.target.value })} />
             </div>
           </div>

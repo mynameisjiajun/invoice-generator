@@ -1,6 +1,7 @@
 import type { DiscountType, LineItem } from "./money";
 import type { DocType } from "./types";
 import type { ContractSettings } from "./shootTerms";
+import { formatJobDate } from "./printRates";
 import { plusDaysIso, todayLocalIso } from "./date";
 
 export type FormState = {
@@ -40,8 +41,10 @@ export type FormState = {
   depositPercent?: number;
   /** Shoot agreement clauses for this client; null = no contract. */
   contract?: ContractSettings | null;
-  /** ISO date for the calendar ("" = not set). */
+  /** ISO date for the calendar ("" = not set). Defaults to today. */
   shootDate?: string;
+  /** Set once the owner picks a shoot date; until then it rolls to today. */
+  shootTouched?: boolean;
 };
 
 /** Default due date: invoices are due in 30 days; quotes are valid 14. */
@@ -69,7 +72,10 @@ export function emptyForm(docType: DocType = "invoice"): FormState {
     customerId: null,
     newCustomer: null,
     jobEvent: "",
-    jobDate: "",
+    // The shoot date starts as today and the printed date line follows it.
+    shootDate: issueDate,
+    shootTouched: false,
+    jobDate: formatJobDate(issueDate),
     jobLocation: "",
     lineItems: [{ description: "", qty: 1, unitPriceCents: 0 }],
     discountType: "none",
@@ -83,6 +89,20 @@ export function emptyForm(docType: DocType = "invoice"): FormState {
 
 export function storeForm(s: FormState): void {
   localStorage.setItem(keyFor(s.docType), JSON.stringify(s));
+}
+
+/** The printed date line follows the shoot date while it still reads as the
+ *  automatic text for it (or is empty); anything typed by hand is kept. */
+export function followShootDate(form: FormState, newShootDate: string): Partial<FormState> {
+  const auto = !form.jobDate.trim() || (form.shootDate ? form.jobDate === formatJobDate(form.shootDate) : false);
+  return { shootDate: newShootDate, ...(auto ? { jobDate: newShootDate ? formatJobDate(newShootDate) : "" } : {}) };
+}
+
+/** An untouched default shoot date rolls forward to today with the form. */
+function refreshShootDate(form: FormState): FormState {
+  const today = todayLocalIso();
+  if (form.shootTouched || !form.shootDate || form.shootDate === today) return form;
+  return { ...form, ...followShootDate(form, today) };
 }
 
 /** Rolls untouched dates forward to today.
@@ -102,6 +122,7 @@ export function storeForm(s: FormState): void {
  *  have them undefined, and so are treated as untouched — correct for the
  *  common case of a stale scratch form. */
 function refreshDates(form: FormState): FormState {
+  form = refreshShootDate(form);
   if (form.issueTouched) return form;
   const issueDate = todayLocalIso();
   if (issueDate === form.issueDate) return form;

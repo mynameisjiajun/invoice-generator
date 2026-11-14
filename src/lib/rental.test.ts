@@ -44,10 +44,10 @@ import { fromRentalLines, newRentalLine, rentalPeriodError, syncRentalDays, toRe
 describe("rentalPeriodError", () => {
   it("allows an unfinished period on a draft, not when finalizing", () => {
     expect(rentalPeriodError("", "")).toBeNull();
-    expect(rentalPeriodError("", "", true)).toMatch(/collection and return/);
+    expect(rentalPeriodError("", "", true)).toMatch(/collection and return dates/);
   });
   it("rejects a return before collection", () => {
-    expect(rentalPeriodError("2026-11-15T10:00", "2026-11-14T10:00")).toMatch(/after the collection/);
+    expect(rentalPeriodError("2026-11-15T10:00", "2026-11-14T10:00")).toMatch(/before the collection date/);
     expect(rentalPeriodError("2026-11-14T10:00", "2026-11-15T10:00", true)).toBeNull();
   });
 });
@@ -94,5 +94,14 @@ describe("attachesRentalTerms", () => {
   it("leaves them off when sent separately, and never for non-rentals", () => {
     expect(attachesRentalTerms({ is_rental: true, rental_terms: false })).toBe(false);
     expect(attachesRentalTerms({ is_rental: false })).toBe(false);
+  });
+});
+
+describe("date-only rentals", () => {
+  it("counts days between dates; same day is 1; return before collection is invalid", () => {
+    expect(rentalDays("2026-11-14", "2026-11-17")).toBe(3);
+    expect(rentalDays("2026-11-14", "2026-11-14")).toBe(1);
+    expect(rentalDays("2026-11-14", "2026-11-13")).toBeNull();
+    expect(formatRentalDateTime("2026-11-14")).toBe("Sat 14 Nov 2026");
   });
 });

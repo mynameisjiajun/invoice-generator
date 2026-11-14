@@ -46,14 +46,14 @@ export function RentalDetailsFields({ project, start, end, location, attachTerms
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 180px" }}>
           <label className="input-label">Collection</label>
-          <input type="datetime-local" className="input" aria-label="Collection date and time"
-            value={start} onChange={(e) => onChange({ rentalStart: e.target.value })} />
+          <input type="date" className="input" aria-label="Collection date"
+            value={start.slice(0, 10)} onChange={(e) => onChange({ rentalStart: e.target.value })} />
         </div>
         <div style={{ flex: "1 1 180px" }}>
           <label className="input-label">Return</label>
-          <input type="datetime-local" className="input" aria-label="Return date and time"
-            min={start || undefined}
-            value={end} onChange={(e) => onChange({ rentalEnd: e.target.value })} />
+          <input type="date" className="input" aria-label="Return date"
+            min={start ? start.slice(0, 10) : undefined}
+            value={end.slice(0, 10)} onChange={(e) => onChange({ rentalEnd: e.target.value })} />
         </div>
       </div>
       <p role={problem ? "alert" : undefined} style={{

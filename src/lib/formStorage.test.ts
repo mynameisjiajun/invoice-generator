@@ -83,3 +83,19 @@ describe("stale dates on a restored form", () => {
     expect(loadForm()).toEqual(fresh);
   });
 });
+
+import { followShootDate } from "./formStorage";
+
+describe("shoot date defaults", () => {
+  test("starts as today with the printed date following it", () => {
+    const f = emptyForm();
+    expect(f.shootDate).toBe(todayLocalIso());
+    expect(f.jobDate).not.toBe("");
+    const moved = { ...f, ...followShootDate(f, "2026-12-20") };
+    expect(moved.jobDate).toBe("20 Dec 2026");
+  });
+  test("keeps a printed date typed by hand", () => {
+    const f = { ...emptyForm(), jobDate: "Weekend of 20 Dec" };
+    expect(followShootDate(f, "2026-12-20").jobDate).toBeUndefined();
+  });
+});
