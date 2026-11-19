@@ -74,6 +74,15 @@ export default function InvoiceDetail({ id }: { id: string }) {
     if (!autoEmail || autoEmailed.current || !invoice || !business || invoice.status === "draft") return;
     autoEmailed.current = true;
     router.replace(`/invoices_login/invoices/${invoice.id}?just=1`);
+    // One-time token set by the form's "Yes, send it". Without it (a URL
+    // reopened from history, a shared link) nothing is sent.
+    const tokenKey = `apex:email-after:${invoice.id}`;
+    let confirmed = false;
+    try { confirmed = sessionStorage.getItem(tokenKey) === "1"; sessionStorage.removeItem(tokenKey); } catch { /* blocked storage */ }
+    if (!confirmed) {
+      setConfirmingEmail(true); // ask instead of sending
+      return;
+    }
     void Promise.resolve().then(() => emailInvoice("send"));
     // emailInvoice reads the loaded invoice; run once when it's ready.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -417,18 +426,19 @@ export default function InvoiceDetail({ id }: { id: string }) {
         </button>
         <button onClick={() => sendInvoice()} disabled={busy}
           className={`btn btn-secondary icon-btn ${justFinalized ? "pulse-once" : ""}`} style={{ flex: 1 }}>
-          <IconShare /> {quote ? "Send quote" : "Send invoice"}
+          <IconShare /> Share PDF
         </button>
       </div>
       {invoice.customers?.email?.trim() && (
         <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-          <button onClick={() => setConfirmingEmail(true)} disabled={busy}
-            className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
-            <IconSend /> Email now
-          </button>
+          {/* Draft first: the safe default. Sending always goes through a confirm. */}
           <button onClick={() => emailInvoice("draft")} disabled={busy}
-            className="btn btn-ghost icon-btn" style={{ flex: 1 }}>
+            className="btn btn-secondary icon-btn" style={{ flex: 1 }}>
             <IconMail /> Draft email
+          </button>
+          <button onClick={() => setConfirmingEmail(true)} disabled={busy}
+            className="btn btn-ghost icon-btn" style={{ flex: 1 }}>
+            <IconSend /> Send email…
           </button>
         </div>
       )}
@@ -557,9 +567,9 @@ export default function InvoiceDetail({ id }: { id: string }) {
 
       <ConfirmSheet
         open={confirmingEmail}
-        title={quote ? "Send this quote now?" : "Send this invoice now?"}
-        message={`It will be emailed straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached. An email can't be unsent.`}
-        confirmLabel="Send now"
+        title={`Email ${quote ? "quote" : "invoice"} ${invoice.invoice_number ?? ""} to the client now?`}
+        message={`It goes straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached. An email can't be unsent.\n\nNot sure yet? Cancel and use Draft email instead.`}
+        confirmLabel="Yes, send it"
         onConfirm={() => { setConfirmingEmail(false); emailInvoice("send"); }}
         onCancel={() => setConfirmingEmail(false)}
       />
@@ -582,8 +592,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
       <ConfirmSheet
         open={confirmingReceiptEmail}
         title="Email the receipt now?"
-        message={`The receipt will be emailed straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached.`}
-        confirmLabel="Send receipt"
+        message={`It goes straight to ${invoice.customers?.email?.trim()} from chuajiajun@apexcinematics.tech, with the PDF attached. An email can't be unsent.`}
+        confirmLabel="Yes, send it"
         onConfirm={() => { setConfirmingReceiptEmail(false); emailInvoice("send", "receipt"); }}
         onCancel={() => setConfirmingReceiptEmail(false)}
       />

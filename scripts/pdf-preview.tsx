@@ -39,7 +39,7 @@ const business: Business = {
   email: "contact@apexcinematics.tech",
   paynow_number: "+6596561716",
   payee_name: "Chua Jia Jun",
-  bank_details: "Bank Name: DBS",
+  bank_details: process.env.PREVIEW_BANK ? "Bank: DBS\nAccount name: Chua Jia Jun\nAccount no.: 123-456789-0" : "Bank Name: DBS",
   payment_terms: "paynow within 30 days of invoice",
   invoice_prefix: "A-",
   next_invoice_seq: 31,
@@ -124,6 +124,7 @@ async function main() {
     : isRental ? rentalInvoice
     : mode === "quote" ? { ...invoice, doc_type: "quote", invoice_number: "Q-7", due_date: "2026-07-18", deposit_percent: 50 }
     : mode === "corporate" ? { ...invoice, po_number: "PO-4500123", due_date: "2026-07-20" }
+    : mode === "corporate-bank" ? { ...invoice, po_number: "PO-4500123", due_date: "2026-07-20", deposit_percent: 50, contract: presetContract("standard") }
     : mode === "deposit" ? { ...invoice, deposit_percent: 50 }
     : mode === "full-upfront" ? { ...invoice, deposit_percent: 100 }
     : mode === "contract" ? { ...invoice, deposit_percent: 50, contract: presetContract("standard") }

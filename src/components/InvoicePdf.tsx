@@ -610,7 +610,9 @@ export default function InvoicePdf({
   const received = receiptLines.reduce((t, l) => t + l.cents, 0);
   // Rentals and deposit invoices carry extra rows; tighter spacing keeps a
   // typical one on a single page.
-  const tight = isRental || splitTotals || fullUpfront || !!contract;
+  // Full bank details (account name + number) add lines to the payment card too.
+  const tight = isRental || splitTotals || fullUpfront || !!contract
+    || (business.bank_details ?? "").trim().includes("\n");
 
   return (
     <Document title={invoiceDocLabel(invoice, variant)}>
@@ -649,10 +651,8 @@ export default function InvoicePdf({
             ))}
             <Text style={s.businessDetail}>
               {formatSgPhone(business.phone)} · {business.email}
+              {business.uen?.trim() ? ` · UEN ${business.uen.trim()}` : ""}
             </Text>
-            {business.uen?.trim() ? (
-              <Text style={s.businessDetail}>UEN {business.uen.trim()}</Text>
-            ) : null}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: C.sage } : {}]}>
@@ -682,11 +682,6 @@ export default function InvoicePdf({
                 PO / Ref: {invoice.po_number.trim()}
               </Text>
             ) : null}
-            {invoice.customer_id != null && (
-              <Text style={s.invoiceMeta}>
-                Customer ID: {invoice.customer_id}
-              </Text>
-            )}
           </View>
         </View>
 
@@ -914,7 +909,7 @@ export default function InvoicePdf({
               {receiptLines.length > 1 ? (
                 receiptLines.map((l, i) => (
                   <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={s.paymentText}>{[l.date && formatJobDate(l.date), l.note].filter(Boolean).join("  ·  ")}</Text>
+                    <Text style={s.paymentText}>{[l.date && formatJobDate(l.date), l.note].filter(Boolean).join(" · ")}</Text>
                     <Text style={s.paymentHighlight}>{formatSGD(l.cents)}</Text>
                   </View>
                 ))
@@ -972,7 +967,10 @@ export default function InvoicePdf({
         ) : (
         <View style={[s.paymentSection, tight ? { marginTop: 12 } : {}]} wrap={false}>
           <View style={s.paymentInfo}>
-            <Text style={s.paymentLabel}>Payment Information</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={s.paymentLabel}>Payment Information</Text>
+              <Text style={[s.paymentLabel, { color: C.dark }]}>Ref {invoice.invoice_number}</Text>
+            </View>
             {fullUpfront && paid === 0 ? (
               <Text style={[s.paymentText, { marginBottom: 4 }]}>
                 Full payment is due before the shoot to confirm your booking.
@@ -992,17 +990,19 @@ export default function InvoicePdf({
                 <Text style={s.paymentHighlight}>{paynowDisplay(business.paynow_number)}</Text>
               </Text>
             )}
-            <Text style={[s.paymentText, { marginTop: 4 }]}>
-              Reference:{" "}
-              <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
-            </Text>
             {business.payee_name && (
-              <Text style={[s.paymentText, { marginTop: 8 }]}>
+              <Text style={[s.paymentText, { marginTop: tight ? 4 : 8 }]}>
                 Cheques crossed, payable to{" "}
                 <Text style={s.paymentHighlight}>{business.payee_name}</Text>
               </Text>
             )}
-            {business.bank_details && <Text style={s.paymentText}>{business.bank_details}</Text>}
+            {business.bank_details?.trim() ? (
+              // Settings keeps one detail per line; joined here so the card
+              // stays short enough to share page 1 with the totals.
+              <Text style={s.paymentText}>
+                {business.bank_details.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).join("  ·  ")}
+              </Text>
+            ) : null}
             {isRental ? (
               <View style={s.termsNotice}>
                 {attachTerms ? (

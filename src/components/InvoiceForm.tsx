@@ -370,7 +370,12 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       if (isQuoteDoc) await finalizeQuote(id);
       else await finalizeInvoice(id, formBusinessId!);
       clearForm(docType);
-      // email=1: the invoice page sends it as soon as it opens.
+      // email=1: the invoice page sends it as soon as it opens — but only with
+      // this one-time token from the confirm just pressed, so reopening the
+      // URL from history can never send it again.
+      if (emailAfter) {
+        try { sessionStorage.setItem(`apex:email-after:${id}`, "1"); } catch { /* private mode */ }
+      }
       router.push(`/invoices_login/invoices/${id}?just=1${emailAfter ? "&email=1" : ""}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to finalize invoice");
@@ -747,11 +752,13 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           : isQuoteDoc ? "Issue this quote?" : "Finalize this invoice?"}
         message={
           `${customerLabel} · ${formBusiness ? (isQuoteDoc ? `Q-${formBusiness.next_quote_seq ?? 1}` : `${formBusiness.invoice_prefix}${formBusiness.next_invoice_seq}`) : "next number"} · ${formatSGD(totals.total)}` +
-          (isQuoteDoc
-            ? "\n\nThis gives the quote its number so you can send it. You can still turn it into an invoice later."
-            : "\n\nThis assigns the invoice number and locks it in. Check the total reads what you expect.")
+          (emailAfter
+            ? `\n\nThis gives it its number AND emails it straight to ${clientEmail} with the PDF attached. An email can't be unsent.\n\nOnly want to check it first? Cancel and use ${isQuoteDoc ? "Issue Quote" : "Finalize Invoice"}. Nothing is sent that way.`
+            : isQuoteDoc
+              ? "\n\nThis gives the quote its number. Nothing is emailed: you send it yourself from the next screen."
+              : "\n\nThis assigns the invoice number and locks it in. Nothing is emailed: you send it yourself from the next screen.")
         }
-        confirmLabel={emailAfter ? (isQuoteDoc ? "Issue & email" : "Finalize & email") : isQuoteDoc ? "Issue quote" : "Finalize"}
+        confirmLabel={emailAfter ? "Yes, send it" : isQuoteDoc ? "Issue quote" : "Finalize"}
         onConfirm={onFinalize}
         onCancel={() => setConfirmingFinalize(false)}
       />

@@ -274,9 +274,17 @@ export default function SettingsPage() {
           {FIELDS.map(({ key, label }) => (
             <div key={key}>
               <label className="input-label">{label}</label>
-              <input className="input"
-                value={String(form[key] ?? "")}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+              {key === "bank_details" ? (
+                // One line per detail, printed as-is on the invoice.
+                <textarea className="input" rows={3}
+                  placeholder={"Bank: DBS\nAccount name: …\nAccount no.: …"}
+                  value={String(form[key] ?? "")}
+                  onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+              ) : (
+                <input className="input"
+                  value={String(form[key] ?? "")}
+                  onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+              )}
             </div>
           ))}
 
