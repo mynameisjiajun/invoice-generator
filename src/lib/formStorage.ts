@@ -45,6 +45,8 @@ export type FormState = {
   shootDate?: string;
   /** Set once the owner picks a shoot date; until then it rolls to today. */
   shootTouched?: boolean;
+  /** Client's PO / reference number, printed in the PDF header. */
+  poNumber?: string;
 };
 
 /** Default due date: invoices are due in 30 days; quotes are valid 14. */

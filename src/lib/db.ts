@@ -138,7 +138,7 @@ export type DraftInput = Pick<Invoice,
   "issue_date" | "due_date" | "customer_id" | "job_event" | "job_date" | "job_location" |
   "line_items" | "discount_type" | "discount_value" |
   "is_rental" | "rental_start" | "rental_end" | "rental_terms" |
-  "doc_type" | "deposit_percent" | "contract" | "shoot_date"> & { id?: string };
+  "doc_type" | "deposit_percent" | "contract" | "shoot_date" | "po_number"> & { id?: string };
 
 // ── Expenses (migration 025) ──────────────────────────────────────────
 /** Omit businessId for every business (Stats "All businesses"). */
@@ -208,6 +208,7 @@ export async function convertQuote(quoteId: string): Promise<string> {
     deposit_percent: q.deposit_percent ?? 0,
     ...(q.contract ? { contract: q.contract } : {}),
     ...(q.shoot_date ? { shoot_date: q.shoot_date } : {}),
+    ...(q.po_number ? { po_number: q.po_number } : {}),
     ...(q.is_rental ? {
       is_rental: true, rental_start: q.rental_start ?? "", rental_end: q.rental_end ?? "",
       rental_terms: q.rental_terms !== false,

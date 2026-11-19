@@ -65,6 +65,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
   // Same idea for the contract column (migration 024).
   const [loadedContract, setLoadedContract] = useState(false);
   const [loadedShootDate, setLoadedShootDate] = useState(false);
+  const [loadedPo, setLoadedPo] = useState(false);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
   // "Finalize & email": finalize, then send it straight from the invoice page.
   const [emailAfter, setEmailAfter] = useState(false);
@@ -99,6 +100,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
         setLoadedRental(inv.is_rental === true);
         setLoadedContract(!!inv.contract);
         setLoadedShootDate(!!inv.shoot_date);
+        setLoadedPo(!!inv.po_number);
         setForm({
           invoiceId: inv.id, businessId: inv.business_id, issueDate: inv.issue_date,
           dueDate: inv.due_date ?? plusDaysIso(inv.issue_date, defaultDueDays(inv.doc_type)),
@@ -113,6 +115,7 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
           docType: inv.doc_type ?? "invoice", depositPercent: inv.deposit_percent ?? 0,
           contract: inv.contract ?? null,
           shootDate: inv.shoot_date ?? "",
+          poNumber: inv.po_number ?? "",
           // A draft with no date yet (e.g. just converted from a quote) gets today's.
           ...(inv.status === "draft" && !inv.shoot_date && !inv.job_date?.trim() && !inv.is_rental
             ? { shootDate: todayLocalIso(), jobDate: formatJobDate(todayLocalIso()) } : {}),
@@ -329,6 +332,8 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
       ...(contract || loadedContract ? { contract } : {}),
       // Shoot date (migration 025): only sent once one is set.
       ...(f.shootDate ? { shoot_date: f.shootDate } : loadedShootDate ? { shoot_date: null } : {}),
+      // PO / reference no. (migration 026): only sent once one is typed.
+      ...(f.poNumber?.trim() ? { po_number: f.poNumber.trim() } : loadedPo ? { po_number: null } : {}),
       // Rental columns are only written when they matter, so ordinary
       // invoices keep saving even on a database without migration 020.
       ...(isRental || loadedRental ? {
@@ -495,6 +500,17 @@ export default function InvoiceForm({ duplicateId, draftId, prefill, docType: ne
               <input type="date" className="input" value={f.dueDate}
                 onChange={(e) => set({ dueDate: e.target.value, dueTouched: true })} />
             </div>
+          </div>
+          {!isQuoteDoc && !isPrint && !isRental && f.shootDate && f.dueDate !== f.shootDate && (
+            <button type="button" className="chip" style={{ alignSelf: "flex-start", marginTop: -4 }}
+              onClick={() => set({ dueDate: f.shootDate!, dueTouched: true })}>
+              Due on the shoot day
+            </button>
+          )}
+          <div>
+            <label className="input-label">PO / reference no. (optional)</label>
+            <input className="input" placeholder="For corporate clients, e.g. PO-4500123"
+              value={f.poNumber ?? ""} onChange={(e) => set({ poNumber: e.target.value })} />
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 // Dev-only: render a sample invoice PDF to inspect the design.
-// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms|quote|deposit|deposit-paid|deposit-receipt|full-upfront|contract|contract-strict]
+// Run: npx tsx scripts/pdf-preview.tsx <output.pdf> [invoice|receipt|rental|rental-receipt|rental-noterms|quote|deposit|deposit-paid|deposit-receipt|full-upfront|contract|contract-strict|corporate]
 // PREVIEW_LOGO=/path/to/logo.png overrides public/logo.png.
 import React from "react";
 import path from "path";
@@ -47,6 +47,7 @@ const business: Business = {
   email_template: "",
   whatsapp_template: "",
   logo_data_url: null,
+  uen: "53123456X",
 };
 
 const invoice: Invoice = {
@@ -122,6 +123,7 @@ async function main() {
     ? { ...rentalInvoice, rental_terms: false }
     : isRental ? rentalInvoice
     : mode === "quote" ? { ...invoice, doc_type: "quote", invoice_number: "Q-7", due_date: "2026-07-18", deposit_percent: 50 }
+    : mode === "corporate" ? { ...invoice, po_number: "PO-4500123", due_date: "2026-07-20" }
     : mode === "deposit" ? { ...invoice, deposit_percent: 50 }
     : mode === "full-upfront" ? { ...invoice, deposit_percent: 100 }
     : mode === "contract" ? { ...invoice, deposit_percent: 50, contract: presetContract("standard") }

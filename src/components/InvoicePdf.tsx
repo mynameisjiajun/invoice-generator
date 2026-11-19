@@ -650,6 +650,9 @@ export default function InvoicePdf({
             <Text style={s.businessDetail}>
               {formatSgPhone(business.phone)} · {business.email}
             </Text>
+            {business.uen?.trim() ? (
+              <Text style={s.businessDetail}>UEN {business.uen.trim()}</Text>
+            ) : null}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <View style={[s.invoiceBadge, isReceipt ? { backgroundColor: C.sage } : {}]}>
@@ -658,7 +661,12 @@ export default function InvoicePdf({
             <Text style={s.invoiceNumber}>
               {invoice.invoice_number ?? "DRAFT"}
             </Text>
-            <Text style={s.invoiceMeta}>Issued {invoice.issue_date}</Text>
+            <Text style={s.invoiceMeta}>Issued {formatJobDate(invoice.issue_date)}</Text>
+            {!isQuoteDoc && !isReceipt && invoice.due_date ? (
+              <Text style={[s.invoiceMeta, { fontWeight: 700, color: C.dark }]}>
+                Due {formatJobDate(invoice.due_date)}
+              </Text>
+            ) : null}
             {isQuoteDoc && invoice.due_date ? (
               <Text style={[s.invoiceMeta, { fontWeight: 700, color: C.dark }]}>
                 Valid until {formatJobDate(invoice.due_date)}
@@ -666,9 +674,14 @@ export default function InvoicePdf({
             ) : null}
             {isReceipt && invoice.paid_date && (
               <Text style={[s.invoiceMeta, { color: C.sage, fontWeight: 700 }]}>
-                Paid {invoice.paid_date}
+                Paid {formatJobDate(invoice.paid_date)}
               </Text>
             )}
+            {invoice.po_number?.trim() ? (
+              <Text style={[s.invoiceMeta, { fontWeight: 700, color: C.dark }]}>
+                PO / Ref: {invoice.po_number.trim()}
+              </Text>
+            ) : null}
             {invoice.customer_id != null && (
               <Text style={s.invoiceMeta}>
                 Customer ID: {invoice.customer_id}
@@ -769,7 +782,11 @@ export default function InvoicePdf({
                   ? "Full payment before the shoot to confirm the booking"
                   : deposit > 0
                     ? `${invoice.deposit_percent}% deposit to confirm the booking, balance on delivery`
-                    : business.payment_terms}
+                    // A set due date beats the generic "within 30 days" so the
+                    // terms never contradict the Due line in the header.
+                    : invoice.due_date && !isQuoteDoc && !isReceipt
+                      ? `Payment due by ${formatJobDate(invoice.due_date)}`
+                      : business.payment_terms}
             </Text>
             {contract ? (
               <Text style={[s.infoDetail, { marginTop: 4, color: C.dark }]}>
@@ -897,7 +914,7 @@ export default function InvoicePdf({
               {receiptLines.length > 1 ? (
                 receiptLines.map((l, i) => (
                   <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={s.paymentText}>{[l.date, l.note].filter(Boolean).join("  ·  ")}</Text>
+                    <Text style={s.paymentText}>{[l.date && formatJobDate(l.date), l.note].filter(Boolean).join("  ·  ")}</Text>
                     <Text style={s.paymentHighlight}>{formatSGD(l.cents)}</Text>
                   </View>
                 ))
@@ -907,7 +924,7 @@ export default function InvoicePdf({
                   <Text style={s.paymentHighlight}>{formatSGD(received)}</Text>
                   {" "}for invoice{" "}
                   <Text style={s.paymentHighlight}>{invoice.invoice_number}</Text>
-                  {receiptLines[0]?.date ? ` was received on ${receiptLines[0].date}.` : " has been received."}
+                  {receiptLines[0]?.date ? ` was received on ${formatJobDate(receiptLines[0].date)}.` : " has been received."}
                 </Text>
               )}
               <Text style={[s.paymentText, { marginTop: 6 }]}>

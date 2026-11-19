@@ -57,6 +57,8 @@ export type Invoice = {
   contract?: ContractSettings | null;
   /** Structured shoot date for the calendar (migration 025). */
   shoot_date?: string | null;
+  /** Client's purchase order / reference number (migration 026). */
+  po_number?: string | null;
   customers?: Customer | null;   // joined
 };
 
@@ -90,6 +92,8 @@ export type Business = {
    *  because rows read before migration 019 don't have it. */
   kind?: BusinessKind;
   next_quote_seq?: number;
+  /** The business's own UEN, printed under its address (migration 026). */
+  uen?: string | null;
 };
 
 export type BusinessKind = "photo" | "print";

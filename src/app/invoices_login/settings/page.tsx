@@ -20,6 +20,7 @@ import { clearOfflineData } from "@/components/ServiceWorker";
 const FIELDS: Array<{ key: keyof Business; label: string }> = [
   { key: "name", label: "Business name" },
   { key: "address", label: "Address" },
+  { key: "uen", label: "Business UEN (printed on invoices)" },
   { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
   { key: "paynow_number", label: "PayNow number or UEN" },

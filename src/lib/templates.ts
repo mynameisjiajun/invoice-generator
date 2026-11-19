@@ -183,9 +183,15 @@ export function emailMessage(inv: Invoice, biz: Business): string {
 /** Subject line for the invoice email. Not stored in the DB (no migration):
  *  the body is the part worth customising per business, the subject isn't. */
 export function emailSubject(inv: Invoice, biz: Business): string {
-  return renderTemplate(isQuote(inv) ? "Quote for {job}" : DEFAULT_EMAIL_SUBJECT, templateVars(inv, biz))
+  return withPo(inv, renderTemplate(isQuote(inv) ? "Quote for {job}" : DEFAULT_EMAIL_SUBJECT, templateVars(inv, biz))
     .replace(/\s+/g, " ")
-    .trim();
+    .trim());
+}
+
+/** Corporate accounts teams match payments by PO, so it rides in the subject. */
+function withPo(inv: Invoice, subject: string): string {
+  const po = inv.po_number?.trim();
+  return po ? `${subject} (PO ${po})` : subject;
 }
 
 export function whatsappMessage(inv: Invoice, biz: Business): string {
@@ -245,7 +251,7 @@ export function receiptWhatsappMessage(inv: Invoice, biz: Business): string {
 }
 
 export function receiptSubject(inv: Invoice, biz: Business): string {
-  return renderTemplate("Receipt for {job}", templateVars(inv, biz)).replace(/\s+/g, " ").trim();
+  return withPo(inv, renderTemplate("Receipt for {job}", templateVars(inv, biz)).replace(/\s+/g, " ").trim());
 }
 
 // ── Quotes ─────────────────────────────────────────────────────────────
